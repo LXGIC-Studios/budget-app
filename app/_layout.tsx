@@ -1,11 +1,28 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { AppProvider, useApp } from "../src/context/AppContext";
 import { colors } from "../src/theme";
 import { useRouter, useSegments } from "expo-router";
+
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {error: Error | null}> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{flex:1,backgroundColor:'#050505',padding:20,justifyContent:'center'}}>
+          <Text style={{color:'#FF003C',fontSize:18,fontWeight:'bold'}}>CRASH</Text>
+          <Text style={{color:'#F0F0F0',fontSize:14,marginTop:10}}>{this.state.error.message}</Text>
+          <Text style={{color:'#666',fontSize:12,marginTop:10}}>{this.state.error.stack?.substring(0,500)}</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function RootGuard() {
   const { user, loading: authLoading } = useAuth();
@@ -69,9 +86,11 @@ function AuthenticatedApp() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <AuthenticatedApp />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AuthenticatedApp />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
