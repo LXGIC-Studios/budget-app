@@ -11,7 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { impact } from "../../src/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, spacing } from "../../src/theme";
 
 export default function OnboardingIncome() {
   const router = useRouter();
@@ -34,10 +34,15 @@ export default function OnboardingIncome() {
         style={styles.inner}
       >
         <View style={styles.content}>
-          <Text style={styles.step}>Step 1 of 3</Text>
-          <Text style={styles.title}>How much do you{"\n"}make per month?</Text>
+          <View style={styles.stepRow}>
+            <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
+            <View style={styles.stepDotInactive} />
+            <View style={styles.stepDotInactive} />
+            <Text style={styles.step}>STEP 1 OF 3</Text>
+          </View>
+          <Text style={styles.title}>HOW MUCH DO YOU{"\n"}MAKE PER MONTH?</Text>
           <Text style={styles.subtitle}>
-            After taxes. We'll use this to build your budget.
+            AFTER TAXES. WE'LL USE THIS TO BUILD YOUR BUDGET.
           </Text>
 
           <View style={styles.inputRow}>
@@ -58,7 +63,7 @@ export default function OnboardingIncome() {
           onPress={handleNext}
           style={[styles.btn, !income && styles.btnDisabled]}
         >
-          <Text style={styles.btnText}>Next</Text>
+          <Text style={styles.btnText}>NEXT</Text>
         </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -80,42 +85,63 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.md,
   },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+  },
+  stepDotInactive: {
+    width: 8,
+    height: 8,
+    backgroundColor: colors.dimmed,
+  },
   step: {
     color: colors.primary,
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginLeft: spacing.sm,
   },
   title: {
     color: colors.white,
-    fontSize: 32,
-    fontWeight: "800",
-    lineHeight: 40,
+    fontSize: 36,
+    fontWeight: "900",
+    lineHeight: 42,
+    letterSpacing: -1,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 16,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1,
     marginBottom: spacing.lg,
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+    paddingBottom: spacing.sm,
   },
   dollar: {
     fontSize: 48,
-    fontWeight: "700",
-    color: colors.textSecondary,
+    fontWeight: "900",
+    color: colors.primary,
   },
   input: {
     flex: 1,
     fontSize: 48,
-    fontWeight: "700",
+    fontWeight: "900",
     color: colors.white,
+    fontVariant: ["tabular-nums"],
   },
   btn: {
     backgroundColor: colors.primary,
-    borderRadius: radius.md,
     paddingVertical: spacing.md + 2,
     alignItems: "center",
   },
@@ -125,6 +151,7 @@ const styles = StyleSheet.create({
   btnText: {
     color: colors.bg,
     fontSize: 17,
-    fontWeight: "700",
+    fontWeight: "900",
+    letterSpacing: 3,
   },
 });

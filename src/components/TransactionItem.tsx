@@ -1,7 +1,6 @@
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import { colors, radius, spacing } from "../theme";
+import { colors, spacing } from "../theme";
 import { formatCurrency, formatShortDate } from "../utils";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
 import type { Transaction } from "../types";
 
 interface Props {
@@ -9,33 +8,46 @@ interface Props {
   onLongPress?: () => void;
 }
 
-function getCategoryEmoji(category: string, type: string): string {
-  const cats =
-    type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-  return (cats as readonly { id: string; emoji: string }[]).find((c) => c.id === category)?.emoji ?? "\uD83D\uDCE6";
+const CATEGORY_DOT_COLORS: Record<string, string> = {
+  food: "#FF9500",
+  shopping: colors.pink,
+  transport: colors.cyan,
+  bills: colors.red,
+  fun: colors.yellow,
+  health: colors.primary,
+  other: colors.textSecondary,
+  salary: colors.primary,
+  freelance: colors.cyan,
+  transfer: colors.yellow,
+  gift: colors.pink,
+};
+
+function getCategoryColor(category: string): string {
+  return CATEGORY_DOT_COLORS[category.toLowerCase()] || colors.textSecondary;
 }
 
 export function TransactionItem({ transaction, onLongPress }: Props) {
   const isExpense = transaction.type === "expense";
-  const emoji = getCategoryEmoji(transaction.category, transaction.type);
+  const dotColor = getCategoryColor(transaction.category);
 
   return (
     <Pressable onLongPress={onLongPress} style={styles.container}>
-      <View style={styles.emojiBox}>
-        <Text style={styles.emoji}>{emoji}</Text>
-      </View>
+      <View style={[styles.dot, { backgroundColor: dotColor }]} />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
           {transaction.note || transaction.category}
         </Text>
+        <Text style={styles.category}>{transaction.category.toUpperCase()}</Text>
+      </View>
+      <View style={styles.right}>
+        <Text
+          style={[styles.amount, { color: isExpense ? colors.red : colors.primary }]}
+        >
+          {isExpense ? "-" : "+"}
+          {formatCurrency(transaction.amount)}
+        </Text>
         <Text style={styles.date}>{formatShortDate(transaction.date)}</Text>
       </View>
-      <Text
-        style={[styles.amount, { color: isExpense ? colors.red : colors.primary }]}
-      >
-        {isExpense ? "-" : "+"}
-        {formatCurrency(transaction.amount)}
-      </Text>
     </Pressable>
   );
 }
@@ -44,22 +56,15 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     gap: spacing.sm + 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
   },
-  emojiBox: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emoji: {
-    fontSize: 18,
+  dot: {
+    width: 6,
+    height: 6,
   },
   info: {
     flex: 1,
@@ -67,16 +72,28 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.white,
-    fontSize: 15,
-    fontWeight: "500",
-    textTransform: "capitalize",
+    fontSize: 14,
+    fontWeight: "600",
   },
-  date: {
+  category: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  right: {
+    alignItems: "flex-end",
+    gap: 2,
   },
   amount: {
     fontSize: 16,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.5,
+  },
+  date: {
+    color: colors.textSecondary,
+    fontSize: 10,
     fontWeight: "600",
   },
 });

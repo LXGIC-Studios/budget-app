@@ -10,23 +10,25 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.cardBorder,
-          borderTopWidth: 1,
-          height: 85,
-          paddingBottom: 28,
+          backgroundColor: colors.bg,
+          borderTopColor: colors.primary,
+          borderTopWidth: 2,
+          height: 72,
+          paddingBottom: 20,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "500",
+          fontSize: 10,
+          fontWeight: "800",
+          textTransform: "uppercase",
+          letterSpacing: 1.5,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "HOME",
           tabBarIcon: ({ color, size }) => (
             <Home size={size} color={color} />
           ),
@@ -35,7 +37,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="budget"
         options={{
-          title: "Budget",
+          title: "BUDGET",
           tabBarIcon: ({ color, size }) => (
             <BarChart3 size={size} color={color} />
           ),
@@ -44,7 +46,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="insights"
         options={{
-          title: "Insights",
+          title: "INSIGHTS",
           tabBarIcon: ({ color, size }) => (
             <TrendingUp size={size} color={color} />
           ),
@@ -53,7 +55,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: "History",
+          title: "HISTORY",
           tabBarIcon: ({ color, size }) => (
             <List size={size} color={color} />
           ),
@@ -62,7 +64,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: "SETTINGS",
           tabBarIcon: ({ color, size }) => (
             <Settings size={size} color={color} />
           ),

@@ -1,13 +1,18 @@
 export const colors = {
-  bg: "#0A0A0A",
-  card: "#141414",
-  cardBorder: "#222222",
+  bg: "#050505",
+  card: "#0A0A0A",
+  cardBorder: "#1A1A1A",
+  surface: "#111111",
   primary: "#00FF66",
-  red: "#FF3B30",
-  white: "#FFFFFF",
-  textSecondary: "#888888",
-  inputBg: "#1A1A1A",
-  dimmed: "#333333",
+  accent: "#FF003C",
+  pink: "#FF00FF",
+  cyan: "#00FFFF",
+  yellow: "#CCFF00",
+  white: "#F0F0F0",
+  textSecondary: "#666666",
+  dimmed: "#2A2A2A",
+  red: "#FF003C",
+  inputBg: "#0A0A0A",
 } as const;
 
 export const spacing = {
@@ -19,9 +24,9 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  full: 999,
+  sm: 0,
+  md: 0,
+  lg: 0,
+  xl: 0,
+  full: 2,
 } as const;

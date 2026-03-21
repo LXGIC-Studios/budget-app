@@ -10,12 +10,27 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { impact } from "../../src/lib/haptics";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { FAB } from "../../src/components/FAB";
 import { QuickAddSheet } from "../../src/components/QuickAddSheet";
 import { formatCurrency } from "../../src/utils";
 import type { BudgetCategory } from "../../src/types";
+
+const CAT_BORDER_COLORS: Record<string, string> = {
+  food: "#FF9500",
+  shopping: colors.pink,
+  transport: colors.cyan,
+  bills: colors.red,
+  fun: colors.yellow,
+  health: colors.primary,
+  savings: colors.primary,
+  other: colors.textSecondary,
+};
+
+function getCatBorderColor(name: string): string {
+  return CAT_BORDER_COLORS[name.toLowerCase()] || colors.cyan;
+}
 
 function CategoryRow({
   cat,
@@ -29,16 +44,16 @@ function CategoryRow({
   const pct = cat.allocated > 0 ? Math.min(spent / cat.allocated, 1.5) : 0;
   const isOver = spent > cat.allocated;
   const barColor = isOver ? colors.red : colors.primary;
+  const borderColor = getCatBorderColor(cat.name);
 
   return (
-    <Pressable onPress={onPress} style={styles.catCard}>
+    <Pressable onPress={onPress} style={[styles.catCard, { borderLeftColor: borderColor, borderLeftWidth: 4 }]}>
       <View style={styles.catHeader}>
         <View style={styles.catInfo}>
-          <Text style={styles.catEmoji}>{cat.emoji}</Text>
-          <Text style={styles.catName}>{cat.name}</Text>
+          <Text style={styles.catName}>{cat.name.toUpperCase()}</Text>
           {cat.type === "fixed" && (
             <View style={styles.fixedBadge}>
-              <Text style={styles.fixedText}>Fixed</Text>
+              <Text style={styles.fixedText}>FIXED</Text>
             </View>
           )}
         </View>
@@ -55,6 +70,7 @@ function CategoryRow({
               width: `${Math.min(pct * 100, 100)}%`,
               backgroundColor: barColor,
             },
+            isOver && styles.barOverspent,
           ]}
         />
       </View>
@@ -112,17 +128,17 @@ export default function BudgetScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.header}>Budget</Text>
+      <Text style={styles.header}>BUDGET</Text>
 
       {/* Summary */}
       <View style={styles.summaryRow}>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Budgeted</Text>
+          <Text style={styles.summaryLabel}>BUDGETED</Text>
           <Text style={styles.summaryValue}>{formatCurrency(totalBudget)}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Spent</Text>
+          <Text style={styles.summaryLabel}>SPENT</Text>
           <Text
             style={[
               styles.summaryValue,
@@ -134,7 +150,7 @@ export default function BudgetScreen() {
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Remaining</Text>
+          <Text style={styles.summaryLabel}>REMAINING</Text>
           <Text
             style={[
               styles.summaryValue,
@@ -175,7 +191,7 @@ export default function BudgetScreen() {
         <Pressable style={styles.modalBackdrop} onPress={() => setEditCat(null)}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {editCat?.emoji} {editCat?.name} Budget
+              {editCat?.name?.toUpperCase()} BUDGET
             </Text>
             <View style={styles.modalInputRow}>
               <Text style={styles.modalDollar}>$</Text>
@@ -188,7 +204,7 @@ export default function BudgetScreen() {
               />
             </View>
             <Pressable onPress={handleEditSave} style={styles.modalBtn}>
-              <Text style={styles.modalBtnText}>Save</Text>
+              <Text style={styles.modalBtnText}>SAVE</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -204,17 +220,17 @@ const styles = StyleSheet.create({
   },
   header: {
     color: colors.white,
-    fontSize: 28,
-    fontWeight: "800",
+    fontSize: 36,
+    fontWeight: "900",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
+    letterSpacing: -1,
   },
   summaryRow: {
     flexDirection: "row",
     backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     marginHorizontal: spacing.md,
     marginBottom: spacing.lg,
@@ -226,18 +242,20 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   summaryDivider: {
-    width: 1,
-    backgroundColor: colors.cardBorder,
+    width: 2,
+    backgroundColor: colors.primary,
   },
   summaryLabel: {
     color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
   },
   summaryValue: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
   },
   catList: {
     padding: spacing.md,
@@ -246,8 +264,7 @@ const styles = StyleSheet.create({
   },
   catCard: {
     backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     padding: spacing.md,
     gap: spacing.sm,
@@ -262,57 +279,61 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
-  catEmoji: {
-    fontSize: 18,
-  },
   catName: {
     color: colors.white,
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   fixedBadge: {
     backgroundColor: colors.primary + "20",
-    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
   fixedText: {
     color: colors.primary,
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   catSpent: {
     color: colors.white,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
   },
   catOf: {
     color: colors.textSecondary,
     fontWeight: "400",
   },
   barBg: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
     backgroundColor: colors.dimmed,
     overflow: "hidden",
   },
   barFill: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
+  },
+  barOverspent: {
+    shadowColor: colors.red,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
   },
   // Edit modal
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.lg,
   },
   modalCard: {
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderWidth: 2,
+    borderColor: colors.primary,
     padding: spacing.lg,
     width: "100%",
     maxWidth: 340,
@@ -321,37 +342,40 @@ const styles = StyleSheet.create({
   modalTitle: {
     color: colors.white,
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "900",
     textAlign: "center",
+    letterSpacing: 1,
   },
   modalInputRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
     backgroundColor: colors.bg,
-    borderRadius: radius.sm,
+    borderWidth: 2,
+    borderColor: colors.dimmed,
     padding: spacing.md,
   },
   modalDollar: {
-    color: colors.textSecondary,
-    fontSize: 24,
-    fontWeight: "600",
+    color: colors.primary,
+    fontSize: 28,
+    fontWeight: "900",
   },
   modalInput: {
     flex: 1,
     color: colors.white,
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 28,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
   },
   modalBtn: {
     backgroundColor: colors.primary,
-    borderRadius: radius.md,
     paddingVertical: spacing.md,
     alignItems: "center",
   },
   modalBtnText: {
     color: colors.bg,
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "900",
+    letterSpacing: 2,
   },
 });

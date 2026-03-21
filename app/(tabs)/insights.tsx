@@ -15,7 +15,7 @@ import Svg, {
   Text as SvgText,
   G,
 } from "react-native-svg";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import {
   formatCurrency,
@@ -31,12 +31,12 @@ const CHART_WIDTH = SCREEN_WIDTH - CHART_PADDING * 2;
 
 const CATEGORY_COLORS: Record<string, string> = {
   food: "#FF9500",
-  shopping: "#AF52DE",
-  transport: "#5AC8FA",
-  bills: "#FF3B30",
-  fun: "#FFD60A",
-  health: "#34C759",
-  other: "#8E8E93",
+  shopping: "#FF00FF",
+  transport: "#00FFFF",
+  bills: "#FF003C",
+  fun: "#CCFF00",
+  health: "#00FF66",
+  other: "#666666",
 };
 
 function getCategoryColor(categoryId: string): string {
@@ -46,13 +46,13 @@ function getCategoryColor(categoryId: string): string {
 function getCategoryMeta(name: string) {
   const lower = name.toLowerCase();
   const found = EXPENSE_CATEGORIES.find((c) => c.id === lower || c.name.toLowerCase() === lower);
-  return found || { id: lower, name, emoji: "📦" };
+  return found || { id: lower, name, emoji: "\uD83D\uDCE6" };
 }
 
 function EmptyState({ message }: { message: string }) {
   return (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyText}>{message}</Text>
+      <Text style={styles.emptyText}>{message.toUpperCase()}</Text>
     </View>
   );
 }
@@ -72,14 +72,14 @@ function TopStats({
 }) {
   return (
     <View style={styles.statsGrid}>
-      <View style={styles.statCard}>
-        <Text style={styles.statLabel}>Avg Daily Spend</Text>
+      <View style={[styles.statCard, { borderLeftColor: colors.cyan, borderLeftWidth: 3 }]}>
+        <Text style={styles.statLabel}>AVG DAILY SPEND</Text>
         <Text style={styles.statValue}>{formatCurrency(avgDaily)}</Text>
       </View>
-      <View style={styles.statCard}>
-        <Text style={styles.statLabel}>Biggest Expense</Text>
+      <View style={[styles.statCard, { borderLeftColor: colors.pink, borderLeftWidth: 3 }]}>
+        <Text style={styles.statLabel}>BIGGEST EXPENSE</Text>
         <Text style={styles.statValue} numberOfLines={1}>
-          {biggestExpense ? formatCurrency(biggestExpense.amount) : "—"}
+          {biggestExpense ? formatCurrency(biggestExpense.amount) : "\u2014"}
         </Text>
         {biggestExpense && (
           <Text style={styles.statSub} numberOfLines={1}>
@@ -87,17 +87,17 @@ function TopStats({
           </Text>
         )}
       </View>
-      <View style={styles.statCard}>
-        <Text style={styles.statLabel}>Top Category</Text>
+      <View style={[styles.statCard, { borderLeftColor: colors.yellow, borderLeftWidth: 3 }]}>
+        <Text style={styles.statLabel}>TOP CATEGORY</Text>
         <Text style={styles.statValue} numberOfLines={1}>
-          {topCategory ? `${topCategory.emoji} ${topCategory.name}` : "—"}
+          {topCategory ? topCategory.name.toUpperCase() : "\u2014"}
         </Text>
         {topCategory && (
           <Text style={styles.statSub}>{formatCurrency(topCategory.amount)}</Text>
         )}
       </View>
-      <View style={styles.statCard}>
-        <Text style={styles.statLabel}>Days Left</Text>
+      <View style={[styles.statCard, { borderLeftColor: colors.primary, borderLeftWidth: 3 }]}>
+        <Text style={styles.statLabel}>DAYS LEFT</Text>
         <Text style={styles.statValue}>{daysLeft}</Text>
       </View>
     </View>
@@ -132,17 +132,17 @@ function SpendingByCategoryChart({
               x={0}
               y={y + barHeight / 2 + 5}
               fill={colors.white}
-              fontSize={13}
-              fontWeight="500"
+              fontSize={12}
+              fontWeight="700"
             >
-              {item.emoji} {item.name}
+              {item.name.toUpperCase()}
             </SvgText>
             <Rect
               x={leftLabelWidth}
               y={y + 2}
               width={Math.max(barW, 2)}
               height={barHeight - 4}
-              rx={4}
+              rx={0}
               fill={getCategoryColor(item.id)}
             />
             <SvgText
@@ -150,7 +150,7 @@ function SpendingByCategoryChart({
               y={y + barHeight / 2 + 5}
               fill={colors.textSecondary}
               fontSize={12}
-              fontWeight="600"
+              fontWeight="700"
               textAnchor="end"
             >
               {formatCurrency(item.amount)}
@@ -245,7 +245,7 @@ function DailySpendingChart({
       )}
 
       {/* Line */}
-      <Path d={linePath} stroke={colors.primary} strokeWidth={2} fill="none" />
+      <Path d={linePath} stroke={colors.cyan} strokeWidth={2} fill="none" />
 
       {/* Dots on non-zero days */}
       {points.map(
@@ -256,7 +256,7 @@ function DailySpendingChart({
               cx={p.x}
               cy={p.y}
               r={3}
-              fill={colors.primary}
+              fill={colors.cyan}
             />
           )
       )}
@@ -320,7 +320,7 @@ function BudgetVsActualChart({
               y={padTop + plotH - allocH}
               width={barWidth}
               height={allocH}
-              rx={3}
+              rx={0}
               fill={colors.textSecondary}
               opacity={0.4}
             />
@@ -330,8 +330,8 @@ function BudgetVsActualChart({
               y={padTop + plotH - spentH}
               width={barWidth}
               height={spentH}
-              rx={3}
-              fill={isOver ? colors.red : colors.primary}
+              rx={0}
+              fill={isOver ? colors.red : colors.pink}
             />
             {/* Label */}
             <SvgText
@@ -371,6 +371,7 @@ function MonthlyComparisonChart({
   const maxVal = Math.max(...data.map((d) => d.total), 1);
   const barWidth = Math.min(plotW / data.length * 0.5, 48);
   const gridLines = 4;
+  const barColors = [colors.yellow, colors.pink, colors.cyan];
 
   return (
     <Svg width={CHART_WIDTH} height={chartH}>
@@ -413,8 +414,8 @@ function MonthlyComparisonChart({
               y={padTop + plotH - barH}
               width={barWidth}
               height={barH}
-              rx={4}
-              fill={colors.primary}
+              rx={0}
+              fill={barColors[i % barColors.length]}
             />
             <SvgText
               x={centerX}
@@ -422,8 +423,9 @@ function MonthlyComparisonChart({
               fill={colors.textSecondary}
               fontSize={10}
               textAnchor="middle"
+              fontWeight="700"
             >
-              {item.label}
+              {item.label.toUpperCase()}
             </SvgText>
           </G>
         );
@@ -444,7 +446,7 @@ function ChartLegend({
       {items.map((item) => (
         <View key={item.label} style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-          <Text style={styles.legendText}>{item.label}</Text>
+          <Text style={styles.legendText}>{item.label.toUpperCase()}</Text>
         </View>
       ))}
     </View>
@@ -560,7 +562,7 @@ export default function InsightsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.header}>Insights</Text>
+        <Text style={styles.header}>INSIGHTS</Text>
 
         {/* Top Stats */}
         <TopStats
@@ -570,25 +572,34 @@ export default function InsightsScreen() {
           daysLeft={topStatsData.daysLeft}
         />
 
+        {/* Accent bar */}
+        <View style={styles.sectionDivider} />
+
         {/* Spending by Category */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Spending by Category</Text>
+          <Text style={styles.chartTitle}>SPENDING BY CATEGORY</Text>
+          <View style={styles.chartTitleLine} />
           <SpendingByCategoryChart data={categorySpending} />
         </View>
 
         {/* Daily Spending Trend */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Daily Spending</Text>
+          <Text style={styles.chartTitle}>DAILY SPENDING</Text>
+          <View style={[styles.chartTitleLine, { backgroundColor: colors.cyan }]} />
           <DailySpendingChart dailyData={dailyData} daysInMonth={daysInMonth} />
         </View>
 
+        {/* Accent bar */}
+        <View style={[styles.sectionDivider, { backgroundColor: colors.yellow }]} />
+
         {/* Budget vs Actual */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Budget vs Actual</Text>
+          <Text style={styles.chartTitle}>BUDGET VS ACTUAL</Text>
+          <View style={[styles.chartTitleLine, { backgroundColor: colors.pink }]} />
           <ChartLegend
             items={[
               { color: colors.textSecondary, label: "Budget" },
-              { color: colors.primary, label: "Spent" },
+              { color: colors.pink, label: "Spent" },
               { color: colors.red, label: "Over" },
             ]}
           />
@@ -597,7 +608,8 @@ export default function InsightsScreen() {
 
         {/* Monthly Comparison */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Monthly Comparison</Text>
+          <Text style={styles.chartTitle}>MONTHLY COMPARISON</Text>
+          <View style={[styles.chartTitleLine, { backgroundColor: colors.yellow }]} />
           <MonthlyComparisonChart data={monthlyComparison} />
         </View>
       </ScrollView>
@@ -616,11 +628,18 @@ const styles = StyleSheet.create({
   },
   header: {
     color: colors.white,
-    fontSize: 28,
-    fontWeight: "800",
+    fontSize: 36,
+    fontWeight: "900",
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
+    letterSpacing: -1,
+  },
+
+  sectionDivider: {
+    height: 2,
+    backgroundColor: colors.pink,
+    marginVertical: spacing.md,
   },
 
   // Stats grid
@@ -634,32 +653,34 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: "45%",
     backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     padding: spacing.md,
     gap: spacing.xs,
   },
   statLabel: {
     color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   statValue: {
     color: colors.white,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.5,
   },
   statSub: {
     color: colors.textSecondary,
     fontSize: 11,
+    fontWeight: "600",
   },
 
   // Chart cards
   chartCard: {
     backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -667,8 +688,14 @@ const styles = StyleSheet.create({
   },
   chartTitle: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  chartTitleLine: {
+    height: 2,
+    backgroundColor: colors.primary,
+    width: 40,
   },
 
   // Legend
@@ -684,11 +711,12 @@ const styles = StyleSheet.create({
   legendDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
   },
   legendText: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 
   // Empty state
@@ -698,6 +726,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
 });
