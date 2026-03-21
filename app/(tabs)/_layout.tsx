@@ -13,13 +13,16 @@ export default function TabLayout() {
           backgroundColor: "#080808",
           borderTopColor: colors.cardBorder,
           borderTopWidth: 1,
-          height: 72,
-          paddingBottom: 20,
+          height: 84,
+          paddingBottom: 28,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: "500",
+        },
+        tabBarIconStyle: {
+          marginBottom: 2,
         },
       }}
     >
@@ -27,8 +30,8 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Home size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Home size={20} color={color} />
           ),
         }}
       />
@@ -37,7 +40,7 @@ export default function TabLayout() {
         options={{
           title: "Budget",
           tabBarIcon: ({ color, size }) => (
-            <BarChart3 size={size} color={color} />
+            <BarChart3 size={20} color={color} />
           ),
         }}
       />
@@ -46,7 +49,7 @@ export default function TabLayout() {
         options={{
           title: "Debt",
           tabBarIcon: ({ color, size }) => (
-            <CreditCard size={size} color={color} />
+            <CreditCard size={20} color={color} />
           ),
         }}
       />
@@ -55,7 +58,7 @@ export default function TabLayout() {
         options={{
           title: "Insights",
           tabBarIcon: ({ color, size }) => (
-            <TrendingUp size={size} color={color} />
+            <TrendingUp size={20} color={color} />
           ),
         }}
       />
@@ -64,7 +67,7 @@ export default function TabLayout() {
         options={{
           title: "History",
           tabBarIcon: ({ color, size }) => (
-            <List size={size} color={color} />
+            <List size={20} color={color} />
           ),
         }}
       />
@@ -73,7 +76,7 @@ export default function TabLayout() {
         options={{
           title: "Settings",
           tabBarIcon: ({ color, size }) => (
-            <Settings size={size} color={color} />
+            <Settings size={20} color={color} />
           ),
         }}
       />
