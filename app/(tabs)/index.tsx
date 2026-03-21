@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { impact, notification } from "../../src/lib/haptics";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { StatCard } from "../../src/components/StatCard";
 import { TransactionItem } from "../../src/components/TransactionItem";
@@ -73,11 +73,11 @@ export default function Dashboard() {
       {/* Month selector */}
       <View style={styles.monthRow}>
         <Pressable onPress={() => navigateMonth(-1)} hitSlop={12}>
-          <ChevronLeft size={22} color={colors.textSecondary} />
+          <ChevronLeft size={26} color={colors.white} strokeWidth={3} />
         </Pressable>
-        <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth)}</Text>
+        <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
         <Pressable onPress={() => navigateMonth(1)} hitSlop={12}>
-          <ChevronRight size={22} color={colors.textSecondary} />
+          <ChevronRight size={26} color={colors.white} strokeWidth={3} />
         </Pressable>
       </View>
 
@@ -103,8 +103,9 @@ export default function Dashboard() {
 
       {/* Recent transactions */}
       <View style={styles.recentHeader}>
-        <Text style={styles.recentTitle}>Recent</Text>
-        <Text style={styles.recentCount}>{monthTxns.length} this month</Text>
+        <Text style={styles.recentTitle}>RECENT</Text>
+        <View style={styles.accentLine} />
+        <Text style={styles.recentCount}>{monthTxns.length} THIS MONTH</Text>
       </View>
 
       <FlatList
@@ -118,10 +119,10 @@ export default function Dashboard() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>{"\uD83D\uDCB8"}</Text>
-            <Text style={styles.emptyText}>No transactions yet</Text>
+            <View style={styles.emptyDot} />
+            <Text style={styles.emptyText}>NO TRANSACTIONS YET</Text>
             <Text style={styles.emptySubtext}>
-              Tap the + button to add one
+              TAP THE + BUTTON TO ADD ONE
             </Text>
           </View>
         }
@@ -150,15 +151,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.md,
+    gap: spacing.lg,
     paddingVertical: spacing.md,
   },
   monthLabel: {
     color: colors.white,
-    fontSize: 17,
-    fontWeight: "600",
-    minWidth: 160,
+    fontSize: 20,
+    fontWeight: "900",
+    minWidth: 180,
     textAlign: "center",
+    letterSpacing: 2,
   },
   statsRow: {
     flexDirection: "row",
@@ -168,19 +170,27 @@ const styles = StyleSheet.create({
   },
   recentHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   recentTitle: {
     color: colors.white,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  accentLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.cyan,
   },
   recentCount: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   list: {
     flexGrow: 1,
@@ -192,16 +202,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl * 2,
     gap: spacing.sm,
   },
-  emptyEmoji: {
-    fontSize: 40,
+  emptyDot: {
+    width: 12,
+    height: 12,
+    backgroundColor: colors.dimmed,
   },
   emptyText: {
     color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
   emptySubtext: {
     color: colors.dimmed,
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 1,
   },
 });

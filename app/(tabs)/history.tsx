@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Search } from "lucide-react-native";
 import { notification, impact } from "../../src/lib/haptics";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { TransactionItem } from "../../src/components/TransactionItem";
 import { FAB } from "../../src/components/FAB";
@@ -83,21 +83,21 @@ export default function HistoryScreen() {
   );
 
   const filters: { label: string; value: Filter }[] = [
-    { label: "All", value: "all" },
-    { label: "Income", value: "income" },
-    { label: "Expenses", value: "expense" },
+    { label: "ALL", value: "all" },
+    { label: "INCOME", value: "income" },
+    { label: "EXPENSES", value: "expense" },
   ];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.header}>History</Text>
+      <Text style={styles.header}>HISTORY</Text>
 
       {/* Search */}
       <View style={styles.searchRow}>
-        <Search size={18} color={colors.textSecondary} />
+        <Search size={18} color={colors.primary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search transactions..."
+          placeholder="SEARCH TRANSACTIONS..."
           placeholderTextColor={colors.dimmed}
           value={search}
           onChangeText={setSearch}
@@ -141,12 +141,13 @@ export default function HistoryScreen() {
         )}
         renderSectionHeader={({ section }) => (
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+            <View style={styles.sectionLine} />
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No transactions found</Text>
+            <Text style={styles.emptyText}>NO TRANSACTIONS FOUND</Text>
           </View>
         }
         contentContainerStyle={styles.list}
@@ -170,11 +171,12 @@ const styles = StyleSheet.create({
   },
   header: {
     color: colors.white,
-    fontSize: 28,
-    fontWeight: "800",
+    fontSize: 36,
+    fontWeight: "900",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
+    letterSpacing: -1,
   },
   searchRow: {
     flexDirection: "row",
@@ -183,8 +185,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginBottom: spacing.sm,
     backgroundColor: colors.card,
-    borderRadius: radius.sm,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -192,7 +193,9 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: colors.white,
-    fontSize: 15,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   filterRow: {
     flexDirection: "row",
@@ -203,34 +206,42 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.full,
+    borderRadius: 2,
     backgroundColor: colors.card,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
   },
   filterChipActive: {
-    backgroundColor: colors.primary + "20",
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   filterText: {
     color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   filterTextActive: {
-    color: colors.primary,
+    color: colors.bg,
   },
   sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
+    gap: spacing.sm,
   },
   sectionTitle: {
     color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.pink,
   },
   list: {
     paddingBottom: 100,
@@ -241,6 +252,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: colors.textSecondary,
-    fontSize: 15,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
 });

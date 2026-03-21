@@ -8,7 +8,7 @@ import {
   FlatList,
   ScrollView,
 } from "react-native";
-import { colors, radius, spacing } from "../theme";
+import { colors, spacing } from "../theme";
 import { EXPENSE_CATEGORIES } from "../types";
 import type { Transaction } from "../types";
 import { formatCurrency, formatShortDate } from "../utils";
@@ -23,15 +23,15 @@ interface Props {
 
 const CATEGORY_COLORS: Record<string, string> = {
   food: "#FF6B35",
-  shopping: "#7C4DFF",
-  transport: "#00BCD4",
+  shopping: colors.pink,
+  transport: colors.cyan,
   bills: "#FF9800",
-  fun: "#E91E63",
-  health: "#4CAF50",
-  other: "#78909C",
+  fun: colors.yellow,
+  health: colors.primary,
+  other: colors.textSecondary,
   salary: colors.primary,
-  freelance: "#26A69A",
-  transfer: "#42A5F5",
+  freelance: colors.cyan,
+  transfer: colors.yellow,
 };
 
 function getCategoryEmoji(id: string): string {
@@ -72,9 +72,9 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
       </Pressable>
       <View style={styles.centeredWrap}>
         <View style={styles.card}>
-          <Text style={styles.title}>Import Preview</Text>
+          <Text style={styles.title}>IMPORT PREVIEW</Text>
           <Text style={styles.subtitle}>
-            {items.length} transaction{items.length !== 1 ? "s" : ""} found
+            {items.length} TRANSACTION{items.length !== 1 ? "S" : ""} FOUND
           </Text>
 
           <View style={styles.list}>
@@ -117,7 +117,7 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
                           { color: CATEGORY_COLORS[item.category] || colors.textSecondary },
                         ]}
                       >
-                        {getCategoryName(item.category)}
+                        {getCategoryName(item.category).toUpperCase()}
                       </Text>
                     </Pressable>
                   </View>
@@ -127,7 +127,7 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
             />
             {remaining > 0 && (
               <Text style={styles.moreText}>
-                +{remaining} more transaction{remaining !== 1 ? "s" : ""}
+                +{remaining} MORE TRANSACTION{remaining !== 1 ? "S" : ""}
               </Text>
             )}
           </View>
@@ -151,7 +151,7 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
                         items[pickerIndex]?.category === cat.id && styles.pickerLabelActive,
                       ]}
                     >
-                      {cat.name}
+                      {cat.name.toUpperCase()}
                     </Text>
                   </Pressable>
                 ))}
@@ -161,11 +161,11 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
 
           <View style={styles.buttons}>
             <Pressable onPress={onClose} style={styles.cancelBtn}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={styles.cancelBtnText}>CANCEL</Text>
             </Pressable>
             <Pressable onPress={handleImport} style={styles.importBtn}>
               <Text style={styles.importBtnText}>
-                Import {items.length} Transaction{items.length !== 1 ? "s" : ""}
+                IMPORT {items.length}
               </Text>
             </Pressable>
           </View>
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.7)",
   },
   centeredWrap: {
     flex: 1,
@@ -191,24 +191,26 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: radius.xl,
     padding: spacing.lg,
     maxHeight: "80%",
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderWidth: 2,
+    borderColor: colors.cyan,
   },
   title: {
     color: colors.white,
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "900",
     textAlign: "center",
+    letterSpacing: 2,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 12,
     textAlign: "center",
     marginTop: spacing.xs,
     marginBottom: spacing.md,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   list: {
     maxHeight: 340,
@@ -225,12 +227,14 @@ const styles = StyleSheet.create({
   },
   txnDate: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   txnDesc: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 13,
+    fontWeight: "600",
     marginTop: 2,
   },
   txnRight: {
@@ -239,7 +243,8 @@ const styles = StyleSheet.create({
   },
   txnAmount: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
   },
   categoryPill: {
     flexDirection: "row",
@@ -247,14 +252,15 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: radius.full,
+    borderRadius: 2,
   },
   categoryPillEmoji: {
     fontSize: 11,
   },
   categoryPillText: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   separator: {
     height: 1,
@@ -262,14 +268,16 @@ const styles = StyleSheet.create({
   },
   moreText: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 11,
     textAlign: "center",
     paddingTop: spacing.sm,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   pickerWrap: {
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
-    borderTopWidth: 1,
+    borderTopWidth: 2,
     borderTopColor: colors.cardBorder,
   },
   pickerRow: {
@@ -281,13 +289,13 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.xs + 2,
-    borderRadius: radius.full,
+    borderRadius: 2,
     backgroundColor: colors.bg,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
   },
   pickerPillActive: {
-    backgroundColor: colors.primary + "20",
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   pickerEmoji: {
@@ -295,11 +303,12 @@ const styles = StyleSheet.create({
   },
   pickerLabel: {
     color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   pickerLabelActive: {
-    color: colors.primary,
+    color: colors.bg,
   },
   buttons: {
     flexDirection: "row",
@@ -309,26 +318,26 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     paddingVertical: spacing.sm + 4,
-    borderRadius: radius.md,
     alignItems: "center",
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
   },
   cancelBtnText: {
     color: colors.textSecondary,
-    fontWeight: "600",
-    fontSize: 15,
+    fontWeight: "800",
+    fontSize: 14,
+    letterSpacing: 1,
   },
   importBtn: {
     flex: 2,
     paddingVertical: spacing.sm + 4,
-    borderRadius: radius.md,
     alignItems: "center",
     backgroundColor: colors.primary,
   },
   importBtnText: {
     color: colors.bg,
-    fontWeight: "700",
-    fontSize: 15,
+    fontWeight: "900",
+    fontSize: 14,
+    letterSpacing: 1,
   },
 });

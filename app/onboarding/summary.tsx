@@ -2,11 +2,22 @@ import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { notification } from "../../src/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { generateBudgetCategories } from "../../src/budget";
 import { formatCurrency, getMonthKey } from "../../src/utils";
 import type { Bill } from "../../src/types";
+
+const CAT_COLORS: Record<string, string> = {
+  food: "#FF9500",
+  shopping: colors.pink,
+  transport: colors.cyan,
+  bills: colors.red,
+  fun: colors.yellow,
+  health: colors.primary,
+  savings: colors.primary,
+  other: colors.textSecondary,
+};
 
 export default function OnboardingSummary() {
   const router = useRouter();
@@ -42,37 +53,46 @@ export default function OnboardingSummary() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
       >
-        <Text style={styles.step}>Step 3 of 3</Text>
-        <Text style={styles.title}>Nice.{"\n"}Here's your budget.</Text>
+        <View style={styles.stepRow}>
+          <View style={styles.stepDotDone} />
+          <View style={styles.stepDotDone} />
+          <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
+          <Text style={styles.step}>STEP 3 OF 3</Text>
+        </View>
+        <Text style={styles.title}>NICE.{"\n"}HERE'S YOUR BUDGET.</Text>
         <Text style={styles.subtitle}>
-          {formatCurrency(income)}/mo income {"\u2192"} {formatCurrency(totalBudget)}{" "}
-          budgeted
+          {formatCurrency(income)}/MO INCOME {"\u2192"} {formatCurrency(totalBudget)}{" "}
+          BUDGETED
         </Text>
 
+        <View style={styles.accentLine} />
+
         <View style={styles.catList}>
-          {categories.map((cat) => (
-            <View key={cat.id} style={styles.catRow}>
-              <View style={styles.catInfo}>
-                <Text style={styles.catEmoji}>{cat.emoji}</Text>
-                <Text style={styles.catName}>{cat.name}</Text>
-                {cat.type === "fixed" && (
-                  <View style={styles.fixedBadge}>
-                    <Text style={styles.fixedText}>Fixed</Text>
-                  </View>
-                )}
+          {categories.map((cat) => {
+            const borderColor = CAT_COLORS[cat.name.toLowerCase()] || colors.cyan;
+            return (
+              <View key={cat.id} style={[styles.catRow, { borderLeftWidth: 3, borderLeftColor: borderColor }]}>
+                <View style={styles.catInfo}>
+                  <Text style={styles.catName}>{cat.name.toUpperCase()}</Text>
+                  {cat.type === "fixed" && (
+                    <View style={styles.fixedBadge}>
+                      <Text style={styles.fixedText}>FIXED</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.catAmount}>
+                  {formatCurrency(cat.allocated)}
+                </Text>
               </View>
-              <Text style={styles.catAmount}>
-                {formatCurrency(cat.allocated)}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
 
       <View style={styles.bottom}>
-        <Text style={styles.hint}>You can adjust these anytime in Budget</Text>
+        <Text style={styles.hint}>YOU CAN ADJUST THESE ANYTIME IN BUDGET</Text>
         <Pressable onPress={handleFinish} style={styles.btn}>
-          <Text style={styles.btnText}>Let's go</Text>
+          <Text style={styles.btnText}>LET'S GO</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -91,22 +111,45 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+  },
+  stepDotDone: {
+    width: 8,
+    height: 8,
+    backgroundColor: colors.primary,
+    opacity: 0.4,
+  },
   step: {
     color: colors.primary,
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginLeft: spacing.sm,
   },
   title: {
     color: colors.white,
-    fontSize: 32,
-    fontWeight: "800",
-    lineHeight: 40,
+    fontSize: 36,
+    fontWeight: "900",
+    lineHeight: 42,
+    letterSpacing: -1,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 15,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1,
     marginBottom: spacing.sm,
+  },
+  accentLine: {
+    height: 2,
+    backgroundColor: colors.cyan,
   },
   catList: {
     gap: spacing.sm,
@@ -116,8 +159,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     padding: spacing.md,
   },
@@ -126,29 +168,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
-  catEmoji: {
-    fontSize: 20,
-  },
   catName: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   fixedBadge: {
     backgroundColor: colors.primary + "20",
-    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
   fixedText: {
     color: colors.primary,
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   catAmount: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
   },
   bottom: {
     padding: spacing.lg,
@@ -156,18 +199,20 @@ const styles = StyleSheet.create({
   },
   hint: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 11,
     textAlign: "center",
+    fontWeight: "700",
+    letterSpacing: 2,
   },
   btn: {
     backgroundColor: colors.primary,
-    borderRadius: radius.md,
     paddingVertical: spacing.md + 2,
     alignItems: "center",
   },
   btnText: {
     color: colors.bg,
     fontSize: 17,
-    fontWeight: "700",
+    fontWeight: "900",
+    letterSpacing: 3,
   },
 });

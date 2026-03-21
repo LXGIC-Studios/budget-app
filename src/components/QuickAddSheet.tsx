@@ -11,7 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { notification, impact } from "../lib/haptics";
-import { colors, radius, spacing } from "../theme";
+import { colors, spacing } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
 import type { Transaction } from "../types";
@@ -97,7 +97,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
                   mode === "expense" && styles.modeBtnTextActive,
                 ]}
               >
-                Expense
+                EXPENSE
               </Text>
             </Pressable>
             <Pressable
@@ -113,7 +113,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
                   mode === "income" && styles.modeBtnTextActiveGreen,
                 ]}
               >
-                Income
+                INCOME
               </Text>
             </Pressable>
           </View>
@@ -152,7 +152,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
           {/* Note */}
           <TextInput
             style={styles.noteInput}
-            placeholder="What was it for? (optional)"
+            placeholder="WHAT WAS IT FOR? (OPTIONAL)"
             placeholderTextColor={colors.dimmed}
             value={note}
             onChangeText={setNote}
@@ -167,7 +167,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
               !amount && styles.saveBtnDisabled,
             ]}
           >
-            <Text style={styles.saveBtnText}>Save</Text>
+            <Text style={styles.saveBtnText}>SAVE</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -178,7 +178,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
   sheetWrap: {
     position: "absolute",
@@ -188,47 +188,47 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.card,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    borderTopWidth: 2,
+    borderTopColor: colors.primary,
     padding: spacing.lg,
     paddingBottom: spacing.xl + 16,
     gap: spacing.lg,
   },
   handle: {
     width: 40,
-    height: 4,
-    borderRadius: 2,
+    height: 3,
     backgroundColor: colors.dimmed,
     alignSelf: "center",
   },
   modeToggle: {
     flexDirection: "row",
     backgroundColor: colors.bg,
-    borderRadius: radius.sm,
+    borderWidth: 2,
+    borderColor: colors.cardBorder,
     padding: 3,
   },
   modeBtn: {
     flex: 1,
     paddingVertical: spacing.sm + 2,
-    borderRadius: radius.sm - 2,
     alignItems: "center",
   },
   modeBtnActive: {
-    backgroundColor: colors.red + "30",
+    backgroundColor: colors.red,
   },
   modeBtnActiveGreen: {
-    backgroundColor: colors.primary + "30",
+    backgroundColor: colors.primary,
   },
   modeBtnText: {
     color: colors.textSecondary,
-    fontWeight: "600",
-    fontSize: 15,
+    fontWeight: "800",
+    fontSize: 14,
+    letterSpacing: 1.5,
   },
   modeBtnTextActive: {
-    color: colors.red,
+    color: colors.white,
   },
   modeBtnTextActiveGreen: {
-    color: colors.primary,
+    color: colors.bg,
   },
   amountRow: {
     flexDirection: "row",
@@ -236,31 +236,39 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   dollar: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: colors.textSecondary,
+    fontSize: 48,
+    fontWeight: "900",
+    color: colors.primary,
   },
   amountInput: {
     flex: 1,
-    fontSize: 36,
-    fontWeight: "700",
+    fontSize: 48,
+    fontWeight: "900",
     color: colors.white,
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -1,
   },
   catRow: {
     gap: spacing.sm,
   },
   noteInput: {
     backgroundColor: colors.bg,
-    borderRadius: radius.sm,
+    borderWidth: 2,
+    borderColor: colors.dimmed,
     padding: spacing.md,
     color: colors.white,
-    fontSize: 15,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   saveBtn: {
     backgroundColor: colors.primary,
-    borderRadius: radius.md,
     paddingVertical: spacing.md,
     alignItems: "center",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   saveBtnDisabled: {
     opacity: 0.4,
@@ -268,6 +276,7 @@ const styles = StyleSheet.create({
   saveBtnText: {
     color: colors.bg,
     fontSize: 17,
-    fontWeight: "700",
+    fontWeight: "900",
+    letterSpacing: 3,
   },
 });
