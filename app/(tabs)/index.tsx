@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { impact, notification } from "../../src/lib/haptics";
-import { colors, spacing } from "../../src/theme";
+import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { StatCard } from "../../src/components/StatCard";
 import { TransactionItem } from "../../src/components/TransactionItem";
@@ -73,11 +73,11 @@ export default function Dashboard() {
       {/* Month selector */}
       <View style={styles.monthRow}>
         <Pressable onPress={() => navigateMonth(-1)} hitSlop={12}>
-          <ChevronLeft size={26} color={colors.white} strokeWidth={3} />
+          <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
         </Pressable>
-        <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
+        <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth)}</Text>
         <Pressable onPress={() => navigateMonth(1)} hitSlop={12}>
-          <ChevronRight size={26} color={colors.white} strokeWidth={3} />
+          <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -103,9 +103,8 @@ export default function Dashboard() {
 
       {/* Recent transactions */}
       <View style={styles.recentHeader}>
-        <Text style={styles.recentTitle}>RECENT</Text>
-        <View style={styles.accentLine} />
-        <Text style={styles.recentCount}>{monthTxns.length} THIS MONTH</Text>
+        <Text style={styles.recentTitle}>Recent Transactions</Text>
+        <Text style={styles.recentCount}>{monthTxns.length} this month</Text>
       </View>
 
       <FlatList
@@ -119,10 +118,9 @@ export default function Dashboard() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <View style={styles.emptyDot} />
-            <Text style={styles.emptyText}>NO TRANSACTIONS YET</Text>
+            <Text style={styles.emptyText}>No transactions yet</Text>
             <Text style={styles.emptySubtext}>
-              TAP THE + BUTTON TO ADD ONE
+              Tap the + button to add one
             </Text>
           </View>
         }
@@ -156,41 +154,32 @@ const styles = StyleSheet.create({
   },
   monthLabel: {
     color: colors.white,
-    fontSize: 20,
-    fontWeight: "900",
-    minWidth: 180,
+    fontSize: 18,
+    fontWeight: "600",
+    minWidth: 160,
     textAlign: "center",
-    letterSpacing: 2,
   },
   statsRow: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: 10,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.lg,
   },
   recentHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.md,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
-    gap: spacing.sm,
   },
   recentTitle: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  accentLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.cyan,
+    fontSize: 18,
+    fontWeight: "700",
   },
   recentCount: {
     color: colors.textSecondary,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 13,
   },
   list: {
     flexGrow: 1,
@@ -202,21 +191,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl * 2,
     gap: spacing.sm,
   },
-  emptyDot: {
-    width: 12,
-    height: 12,
-    backgroundColor: colors.dimmed,
-  },
   emptyText: {
     color: colors.textSecondary,
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 2,
+    fontSize: 16,
+    fontWeight: "500",
   },
   emptySubtext: {
     color: colors.dimmed,
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 1,
+    fontSize: 14,
   },
 });

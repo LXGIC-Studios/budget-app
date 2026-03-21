@@ -1,5 +1,5 @@
 import { Pressable, Text, StyleSheet } from "react-native";
-import { colors, spacing } from "../theme";
+import { colors, spacing, radius } from "../theme";
 import * as Haptics from "expo-haptics";
 
 interface Props {
@@ -22,7 +22,7 @@ export function CategoryPill({ emoji, label, selected, onPress }: Props) {
     >
       <Text style={styles.emoji}>{emoji}</Text>
       <Text style={[styles.label, selected && styles.selectedLabel]}>
-        {label.toUpperCase()}
+        {label}
       </Text>
     </Pressable>
   );
@@ -32,16 +32,16 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs + 2,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: 2,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.full,
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   selected: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     borderColor: colors.primary,
   },
   emoji: {
@@ -49,11 +49,10 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontSize: 13,
+    fontWeight: "500",
   },
   selectedLabel: {
-    color: colors.bg,
+    color: colors.primary,
   },
 });

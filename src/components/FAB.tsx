@@ -15,7 +15,7 @@ export function FAB({ onPress }: Props) {
 
   return (
     <Pressable onPress={handlePress} style={styles.fab}>
-      <Plus size={28} color={colors.bg} strokeWidth={3} />
+      <Plus size={26} color={colors.bg} strokeWidth={2.5} />
     </Pressable>
   );
 }
@@ -27,14 +27,14 @@ const styles = StyleSheet.create({
     right: spacing.lg,
     width: 56,
     height: 56,
-    borderRadius: 0,
+    borderRadius: 999,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
     elevation: 8,
     zIndex: 100,
   },

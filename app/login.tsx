@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../src/context/AuthContext";
-import { colors, spacing } from "../src/theme";
+import { colors, spacing, radius } from "../src/theme";
 
 export default function LoginScreen() {
   const { signIn, signUp } = useAuth();
@@ -47,9 +47,8 @@ export default function LoginScreen() {
         style={styles.inner}
       >
         <View style={styles.content}>
-          <Text style={styles.logo}>STACKD</Text>
-          <View style={styles.accentLine} />
-          <Text style={styles.tagline}>BUDGET SMARTER.</Text>
+          <Text style={styles.logo}>Stackd</Text>
+          <Text style={styles.tagline}>Budget smarter.</Text>
 
           <View style={styles.toggle}>
             <Pressable
@@ -59,7 +58,7 @@ export default function LoginScreen() {
               <Text
                 style={[styles.toggleText, mode === "login" && styles.toggleTextActive]}
               >
-                LOG IN
+                Log In
               </Text>
             </Pressable>
             <Pressable
@@ -69,14 +68,14 @@ export default function LoginScreen() {
               <Text
                 style={[styles.toggleText, mode === "signup" && styles.toggleTextActive]}
               >
-                SIGN UP
+                Sign Up
               </Text>
             </Pressable>
           </View>
 
           <TextInput
             style={styles.input}
-            placeholder="EMAIL"
+            placeholder="Email"
             placeholderTextColor={colors.dimmed}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -87,7 +86,7 @@ export default function LoginScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="PASSWORD"
+            placeholder="Password"
             placeholderTextColor={colors.dimmed}
             secureTextEntry
             value={password}
@@ -105,7 +104,7 @@ export default function LoginScreen() {
               <ActivityIndicator color={colors.bg} />
             ) : (
               <Text style={styles.btnText}>
-                {mode === "login" ? "LOG IN" : "CREATE ACCOUNT"}
+                {mode === "login" ? "Log In" : "Create Account"}
               </Text>
             )}
           </Pressable>
@@ -130,74 +129,66 @@ const styles = StyleSheet.create({
   },
   logo: {
     color: colors.primary,
-    fontSize: 56,
-    fontWeight: "900",
+    fontSize: 44,
+    fontWeight: "800",
     textAlign: "center",
-    letterSpacing: -3,
-  },
-  accentLine: {
-    height: 2,
-    backgroundColor: colors.cyan,
-    marginHorizontal: 80,
-    marginVertical: spacing.xs,
+    letterSpacing: -1,
   },
   tagline: {
-    color: colors.cyan,
+    color: colors.textSecondary,
     fontSize: 16,
-    fontWeight: "700",
     textAlign: "center",
-    letterSpacing: 4,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   toggle: {
     flexDirection: "row",
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.full,
     padding: 3,
   },
   toggleBtn: {
     flex: 1,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: 10,
     alignItems: "center",
+    borderRadius: radius.full,
   },
   toggleBtnActive: {
     backgroundColor: colors.primary,
   },
   toggleText: {
     color: colors.textSecondary,
-    fontWeight: "800",
-    fontSize: 14,
-    letterSpacing: 1.5,
+    fontWeight: "600",
+    fontSize: 15,
   },
   toggleTextActive: {
     color: colors.bg,
   },
   input: {
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.dimmed,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
     padding: spacing.md,
     color: colors.white,
     fontSize: 15,
-    fontWeight: "600",
-    letterSpacing: 1,
   },
   error: {
     color: colors.red,
     fontSize: 14,
     textAlign: "center",
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   btn: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: 16,
     alignItems: "center",
     marginTop: spacing.sm,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    borderRadius: radius.md,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   btnDisabled: {
     opacity: 0.6,
@@ -205,7 +196,6 @@ const styles = StyleSheet.create({
   btnText: {
     color: colors.bg,
     fontSize: 17,
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontWeight: "700",
   },
 });

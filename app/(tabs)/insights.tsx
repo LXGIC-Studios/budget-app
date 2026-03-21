@@ -15,7 +15,7 @@ import Svg, {
   Text as SvgText,
   G,
 } from "react-native-svg";
-import { colors, spacing } from "../../src/theme";
+import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import {
   formatCurrency,
@@ -35,8 +35,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   transport: "#00FFFF",
   bills: "#FF003C",
   fun: "#CCFF00",
-  health: "#00FF66",
-  other: "#666666",
+  health: "#00FFCC",
+  other: "#707070",
 };
 
 function getCategoryColor(categoryId: string): string {
@@ -52,12 +52,12 @@ function getCategoryMeta(name: string) {
 function EmptyState({ message }: { message: string }) {
   return (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyText}>{message.toUpperCase()}</Text>
+      <Text style={styles.emptyText}>{message}</Text>
     </View>
   );
 }
 
-// ─── Top Stats ───────────────────────────────────────────────────────────────
+// --- Top Stats ---
 
 function TopStats({
   avgDaily,
@@ -72,11 +72,11 @@ function TopStats({
 }) {
   return (
     <View style={styles.statsGrid}>
-      <View style={[styles.statCard, { borderLeftColor: colors.cyan, borderLeftWidth: 3 }]}>
+      <View style={styles.statCard}>
         <Text style={styles.statLabel}>AVG DAILY SPEND</Text>
         <Text style={styles.statValue}>{formatCurrency(avgDaily)}</Text>
       </View>
-      <View style={[styles.statCard, { borderLeftColor: colors.pink, borderLeftWidth: 3 }]}>
+      <View style={styles.statCard}>
         <Text style={styles.statLabel}>BIGGEST EXPENSE</Text>
         <Text style={styles.statValue} numberOfLines={1}>
           {biggestExpense ? formatCurrency(biggestExpense.amount) : "\u2014"}
@@ -87,16 +87,16 @@ function TopStats({
           </Text>
         )}
       </View>
-      <View style={[styles.statCard, { borderLeftColor: colors.yellow, borderLeftWidth: 3 }]}>
+      <View style={styles.statCard}>
         <Text style={styles.statLabel}>TOP CATEGORY</Text>
         <Text style={styles.statValue} numberOfLines={1}>
-          {topCategory ? topCategory.name.toUpperCase() : "\u2014"}
+          {topCategory ? topCategory.name : "\u2014"}
         </Text>
         {topCategory && (
           <Text style={styles.statSub}>{formatCurrency(topCategory.amount)}</Text>
         )}
       </View>
-      <View style={[styles.statCard, { borderLeftColor: colors.primary, borderLeftWidth: 3 }]}>
+      <View style={styles.statCard}>
         <Text style={styles.statLabel}>DAYS LEFT</Text>
         <Text style={styles.statValue}>{daysLeft}</Text>
       </View>
@@ -104,7 +104,7 @@ function TopStats({
   );
 }
 
-// ─── Spending by Category (Horizontal Bar) ───────────────────────────────────
+// --- Spending by Category (Horizontal Bar) ---
 
 function SpendingByCategoryChart({
   data,
@@ -133,16 +133,16 @@ function SpendingByCategoryChart({
               y={y + barHeight / 2 + 5}
               fill={colors.white}
               fontSize={12}
-              fontWeight="700"
+              fontWeight="600"
             >
-              {item.name.toUpperCase()}
+              {item.name}
             </SvgText>
             <Rect
               x={leftLabelWidth}
               y={y + 2}
               width={Math.max(barW, 2)}
               height={barHeight - 4}
-              rx={0}
+              rx={4}
               fill={getCategoryColor(item.id)}
             />
             <SvgText
@@ -150,7 +150,7 @@ function SpendingByCategoryChart({
               y={y + barHeight / 2 + 5}
               fill={colors.textSecondary}
               fontSize={12}
-              fontWeight="700"
+              fontWeight="600"
               textAnchor="end"
             >
               {formatCurrency(item.amount)}
@@ -162,7 +162,7 @@ function SpendingByCategoryChart({
   );
 }
 
-// ─── Daily Spending Trend (Line Chart) ───────────────────────────────────────
+// --- Daily Spending Trend (Line Chart) ---
 
 function DailySpendingChart({
   dailyData,
@@ -245,7 +245,7 @@ function DailySpendingChart({
       )}
 
       {/* Line */}
-      <Path d={linePath} stroke={colors.cyan} strokeWidth={2} fill="none" />
+      <Path d={linePath} stroke={colors.primary} strokeWidth={2} fill="none" />
 
       {/* Dots on non-zero days */}
       {points.map(
@@ -256,7 +256,7 @@ function DailySpendingChart({
               cx={p.x}
               cy={p.y}
               r={3}
-              fill={colors.cyan}
+              fill={colors.primary}
             />
           )
       )}
@@ -264,7 +264,7 @@ function DailySpendingChart({
   );
 }
 
-// ─── Budget vs Actual ────────────────────────────────────────────────────────
+// --- Budget vs Actual ---
 
 function BudgetVsActualChart({
   data,
@@ -320,7 +320,7 @@ function BudgetVsActualChart({
               y={padTop + plotH - allocH}
               width={barWidth}
               height={allocH}
-              rx={0}
+              rx={4}
               fill={colors.textSecondary}
               opacity={0.4}
             />
@@ -330,8 +330,8 @@ function BudgetVsActualChart({
               y={padTop + plotH - spentH}
               width={barWidth}
               height={spentH}
-              rx={0}
-              fill={isOver ? colors.red : colors.pink}
+              rx={4}
+              fill={isOver ? colors.red : colors.primary}
             />
             {/* Label */}
             <SvgText
@@ -350,7 +350,7 @@ function BudgetVsActualChart({
   );
 }
 
-// ─── Monthly Comparison ──────────────────────────────────────────────────────
+// --- Monthly Comparison ---
 
 function MonthlyComparisonChart({
   data,
@@ -371,7 +371,6 @@ function MonthlyComparisonChart({
   const maxVal = Math.max(...data.map((d) => d.total), 1);
   const barWidth = Math.min(plotW / data.length * 0.5, 48);
   const gridLines = 4;
-  const barColors = [colors.yellow, colors.pink, colors.cyan];
 
   return (
     <Svg width={CHART_WIDTH} height={chartH}>
@@ -414,8 +413,9 @@ function MonthlyComparisonChart({
               y={padTop + plotH - barH}
               width={barWidth}
               height={barH}
-              rx={0}
-              fill={barColors[i % barColors.length]}
+              rx={6}
+              fill={colors.primary}
+              opacity={0.4 + (i / data.length) * 0.6}
             />
             <SvgText
               x={centerX}
@@ -423,9 +423,9 @@ function MonthlyComparisonChart({
               fill={colors.textSecondary}
               fontSize={10}
               textAnchor="middle"
-              fontWeight="700"
+              fontWeight="600"
             >
-              {item.label.toUpperCase()}
+              {item.label}
             </SvgText>
           </G>
         );
@@ -434,7 +434,7 @@ function MonthlyComparisonChart({
   );
 }
 
-// ─── Legend ───────────────────────────────────────────────────────────────────
+// --- Legend ---
 
 function ChartLegend({
   items,
@@ -446,14 +446,14 @@ function ChartLegend({
       {items.map((item) => (
         <View key={item.label} style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-          <Text style={styles.legendText}>{item.label.toUpperCase()}</Text>
+          <Text style={styles.legendText}>{item.label}</Text>
         </View>
       ))}
     </View>
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+// --- Main Screen ---
 
 export default function InsightsScreen() {
   const { transactions, currentBudget, currentMonth } = useApp();
@@ -466,8 +466,7 @@ export default function InsightsScreen() {
     [transactions, currentMonth]
   );
 
-  // ── Top Stats ────────────────────────────────────────────────────────
-
+  // Top Stats
   const topStatsData = useMemo(() => {
     const now = new Date();
     const [y, m] = currentMonth.split("-").map(Number);
@@ -496,8 +495,7 @@ export default function InsightsScreen() {
     return { avgDaily, biggest, topCategory, daysLeft };
   }, [monthExpenses, currentMonth]);
 
-  // ── Spending by Category ─────────────────────────────────────────────
-
+  // Spending by Category
   const categorySpending = useMemo(() => {
     const map: Record<string, number> = {};
     monthExpenses.forEach((t) => {
@@ -512,8 +510,7 @@ export default function InsightsScreen() {
       .sort((a, b) => b.amount - a.amount);
   }, [monthExpenses]);
 
-  // ── Daily Spending ───────────────────────────────────────────────────
-
+  // Daily Spending
   const { dailyData, daysInMonth } = useMemo(() => {
     const [y, m] = currentMonth.split("-").map(Number);
     const dim = new Date(y, m, 0).getDate();
@@ -525,8 +522,7 @@ export default function InsightsScreen() {
     return { dailyData: daily, daysInMonth: dim };
   }, [monthExpenses, currentMonth]);
 
-  // ── Budget vs Actual ─────────────────────────────────────────────────
-
+  // Budget vs Actual
   const budgetVsActual = useMemo(() => {
     if (!currentBudget) return [];
     const spentMap: Record<string, number> = {};
@@ -542,8 +538,7 @@ export default function InsightsScreen() {
     }));
   }, [currentBudget, monthExpenses]);
 
-  // ── Monthly Comparison (last 3 months) ───────────────────────────────
-
+  // Monthly Comparison (last 3 months)
   const monthlyComparison = useMemo(() => {
     const months = [
       shiftMonth(currentMonth, -2),
@@ -562,7 +557,7 @@ export default function InsightsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.header}>INSIGHTS</Text>
+        <Text style={styles.header}>Insights</Text>
 
         {/* Top Stats */}
         <TopStats
@@ -572,34 +567,25 @@ export default function InsightsScreen() {
           daysLeft={topStatsData.daysLeft}
         />
 
-        {/* Accent bar */}
-        <View style={styles.sectionDivider} />
-
         {/* Spending by Category */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>SPENDING BY CATEGORY</Text>
-          <View style={styles.chartTitleLine} />
+          <Text style={styles.chartTitle}>Spending by Category</Text>
           <SpendingByCategoryChart data={categorySpending} />
         </View>
 
         {/* Daily Spending Trend */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>DAILY SPENDING</Text>
-          <View style={[styles.chartTitleLine, { backgroundColor: colors.cyan }]} />
+          <Text style={styles.chartTitle}>Daily Spending</Text>
           <DailySpendingChart dailyData={dailyData} daysInMonth={daysInMonth} />
         </View>
 
-        {/* Accent bar */}
-        <View style={[styles.sectionDivider, { backgroundColor: colors.yellow }]} />
-
         {/* Budget vs Actual */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>BUDGET VS ACTUAL</Text>
-          <View style={[styles.chartTitleLine, { backgroundColor: colors.pink }]} />
+          <Text style={styles.chartTitle}>Budget vs Actual</Text>
           <ChartLegend
             items={[
               { color: colors.textSecondary, label: "Budget" },
-              { color: colors.pink, label: "Spent" },
+              { color: colors.primary, label: "Spent" },
               { color: colors.red, label: "Over" },
             ]}
           />
@@ -608,8 +594,7 @@ export default function InsightsScreen() {
 
         {/* Monthly Comparison */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>MONTHLY COMPARISON</Text>
-          <View style={[styles.chartTitleLine, { backgroundColor: colors.yellow }]} />
+          <Text style={styles.chartTitle}>Monthly Comparison</Text>
           <MonthlyComparisonChart data={monthlyComparison} />
         </View>
       </ScrollView>
@@ -628,74 +613,62 @@ const styles = StyleSheet.create({
   },
   header: {
     color: colors.white,
-    fontSize: 36,
-    fontWeight: "900",
+    fontSize: 32,
+    fontWeight: "800",
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    letterSpacing: -1,
-  },
-
-  sectionDivider: {
-    height: 2,
-    backgroundColor: colors.pink,
-    marginVertical: spacing.md,
+    paddingBottom: spacing.md,
+    letterSpacing: -0.5,
   },
 
   // Stats grid
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    gap: 10,
+    marginBottom: spacing.lg,
   },
   statCard: {
     flex: 1,
     minWidth: "45%",
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
     padding: spacing.md,
     gap: spacing.xs,
   },
   statLabel: {
     color: colors.textSecondary,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "600",
     letterSpacing: 1,
   },
   statValue: {
     color: colors.white,
     fontSize: 20,
-    fontWeight: "900",
-    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
     letterSpacing: -0.5,
   },
   statSub: {
     color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 12,
   },
 
   // Chart cards
   chartCard: {
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
   chartTitle: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  chartTitleLine: {
-    height: 2,
-    backgroundColor: colors.primary,
-    width: 40,
+    fontSize: 16,
+    fontWeight: "700",
   },
 
   // Legend
@@ -711,12 +684,11 @@ const styles = StyleSheet.create({
   legendDot: {
     width: 8,
     height: 8,
+    borderRadius: 4,
   },
   legendText: {
     color: colors.textSecondary,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    fontSize: 12,
   },
 
   // Empty state
@@ -726,8 +698,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontSize: 13,
   },
 });

@@ -21,7 +21,7 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { impact, notification } from "../../src/lib/haptics";
-import { colors, spacing } from "../../src/theme";
+import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { useAuth } from "../../src/context/AuthContext";
 import { formatCurrency } from "../../src/utils";
@@ -35,19 +35,19 @@ function SettingRow({
   label,
   value,
   onPress,
-  accentColor,
+  destructive,
 }: {
   icon: React.ReactNode;
   label: string;
   value?: string;
   onPress?: () => void;
-  accentColor?: string;
+  destructive?: boolean;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.row, accentColor && { borderLeftWidth: 3, borderLeftColor: accentColor }]}>
+    <Pressable onPress={onPress} style={styles.row}>
       <View style={styles.rowLeft}>
         {icon}
-        <Text style={styles.rowLabel}>{label.toUpperCase()}</Text>
+        <Text style={[styles.rowLabel, destructive && { color: colors.red }]}>{label}</Text>
       </View>
       {value && <Text style={styles.rowValue}>{value}</Text>}
     </Pressable>
@@ -213,11 +213,11 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.header}>SETTINGS</Text>
+      <Text style={styles.header}>Settings</Text>
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.primary }]}>PROFILE</Text>
+          <Text style={styles.sectionTitle}>PROFILE</Text>
 
           {editingIncome ? (
             <View style={styles.editRow}>
@@ -236,10 +236,10 @@ export default function SettingsScreen() {
                   onPress={() => setEditingIncome(false)}
                   style={styles.cancelBtn}
                 >
-                  <Text style={styles.cancelBtnText}>CANCEL</Text>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
                 </Pressable>
                 <Pressable onPress={handleSaveIncome} style={styles.saveBtn}>
-                  <Text style={styles.saveBtnText}>SAVE</Text>
+                  <Text style={styles.saveBtnText}>Save</Text>
                 </Pressable>
               </View>
             </View>
@@ -249,7 +249,6 @@ export default function SettingsScreen() {
               label="Monthly Income"
               value={formatCurrency(profile?.monthlyIncome ?? 0)}
               onPress={() => setEditingIncome(true)}
-              accentColor={colors.primary}
             />
           )}
 
@@ -257,54 +256,50 @@ export default function SettingsScreen() {
             icon={<Globe size={20} color={colors.primary} />}
             label="Currency"
             value={profile?.currency ?? "USD"}
-            accentColor={colors.primary}
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.cyan }]}>ACCOUNT</Text>
+          <Text style={styles.sectionTitle}>ACCOUNT</Text>
           <SettingRow
-            icon={<Info size={20} color={colors.cyan} />}
+            icon={<Info size={20} color={colors.textSecondary} />}
             label="Email"
             value={user?.email ?? ""}
-            accentColor={colors.cyan}
           />
           <SettingRow
             icon={<LogOut size={20} color={colors.red} />}
             label="Sign Out"
             onPress={handleSignOut}
-            accentColor={colors.cyan}
+            destructive
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.red }]}>DATA</Text>
+          <Text style={styles.sectionTitle}>DATA</Text>
           <SettingRow
-            icon={<Upload size={20} color={colors.red} />}
+            icon={<Upload size={20} color={colors.textSecondary} />}
             label="Import Transactions"
             onPress={handleImportFile}
-            accentColor={colors.red}
           />
           <SettingRow
             icon={<RotateCcw size={20} color={colors.red} />}
             label="Reset All Data"
             onPress={handleReset}
-            accentColor={colors.red}
+            destructive
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.yellow }]}>ABOUT</Text>
+          <Text style={styles.sectionTitle}>ABOUT</Text>
           <SettingRow
-            icon={<Info size={20} color={colors.yellow} />}
+            icon={<Info size={20} color={colors.textSecondary} />}
             label="Stackd"
             value="v1.0.0"
-            accentColor={colors.yellow}
           />
         </View>
 
         <Text style={styles.footer}>
-          BUILT WITH FOCUS. NO BLOAT.{"\n"}YOUR BUDGET, SYNCED EVERYWHERE.
+          Built with focus. No bloat.{"\n"}Your budget, synced everywhere.
         </Text>
       </ScrollView>
 
@@ -325,57 +320,57 @@ const styles = StyleSheet.create({
   },
   header: {
     color: colors.white,
-    fontSize: 36,
-    fontWeight: "900",
+    fontSize: 32,
+    fontWeight: "800",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   content: {
     padding: spacing.md,
     gap: spacing.lg,
   },
   section: {
-    gap: spacing.xs,
+    gap: 2,
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontWeight: "600",
+    letterSpacing: 1.5,
+    color: colors.textSecondary,
     paddingHorizontal: spacing.sm,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.md,
     padding: spacing.md,
+    marginBottom: 2,
   },
   rowLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm + 4,
+    gap: 12,
   },
   rowLabel: {
     color: colors.white,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    fontSize: 15,
   },
   rowValue: {
     color: colors.textSecondary,
     fontSize: 14,
-    fontWeight: "600",
-    fontVariant: ["tabular-nums"],
   },
   editRow: {
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.md,
     padding: spacing.md,
     gap: spacing.md,
   },
@@ -383,22 +378,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: colors.bg,
-    borderWidth: 2,
-    borderColor: colors.dimmed,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.sm,
     padding: spacing.md,
   },
   editDollar: {
     color: colors.primary,
-    fontSize: 24,
-    fontWeight: "900",
+    fontSize: 22,
+    fontWeight: "700",
   },
   editInput: {
     flex: 1,
     color: colors.white,
-    fontSize: 24,
-    fontWeight: "900",
-    fontVariant: ["tabular-nums"],
+    fontSize: 22,
+    fontWeight: "700",
   },
   editBtns: {
     flexDirection: "row",
@@ -406,34 +401,32 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: 12,
     alignItems: "center",
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.sm,
   },
   cancelBtnText: {
     color: colors.textSecondary,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontWeight: "600",
   },
   saveBtn: {
     flex: 1,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: 12,
     alignItems: "center",
     backgroundColor: colors.primary,
+    borderRadius: radius.sm,
   },
   saveBtnText: {
     color: colors.bg,
-    fontWeight: "900",
-    letterSpacing: 1,
+    fontWeight: "700",
   },
   footer: {
     color: colors.dimmed,
-    fontSize: 11,
+    fontSize: 13,
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 20,
     marginTop: spacing.lg,
-    fontWeight: "700",
-    letterSpacing: 2,
   },
 });

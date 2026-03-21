@@ -11,7 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { notification, impact } from "../lib/haptics";
-import { colors, spacing } from "../theme";
+import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
 import type { Transaction } from "../types";
@@ -88,32 +88,32 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
               onPress={() => switchMode("expense")}
               style={[
                 styles.modeBtn,
-                mode === "expense" && styles.modeBtnActive,
+                mode === "expense" && styles.modeBtnActiveExpense,
               ]}
             >
               <Text
                 style={[
                   styles.modeBtnText,
-                  mode === "expense" && styles.modeBtnTextActive,
+                  mode === "expense" && styles.modeBtnTextActiveExpense,
                 ]}
               >
-                EXPENSE
+                Expense
               </Text>
             </Pressable>
             <Pressable
               onPress={() => switchMode("income")}
               style={[
                 styles.modeBtn,
-                mode === "income" && styles.modeBtnActiveGreen,
+                mode === "income" && styles.modeBtnActiveIncome,
               ]}
             >
               <Text
                 style={[
                   styles.modeBtnText,
-                  mode === "income" && styles.modeBtnTextActiveGreen,
+                  mode === "income" && styles.modeBtnTextActiveIncome,
                 ]}
               >
-                INCOME
+                Income
               </Text>
             </Pressable>
           </View>
@@ -152,7 +152,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
           {/* Note */}
           <TextInput
             style={styles.noteInput}
-            placeholder="WHAT WAS IT FOR? (OPTIONAL)"
+            placeholder="What was it for? (optional)"
             placeholderTextColor={colors.dimmed}
             value={note}
             onChangeText={setNote}
@@ -167,7 +167,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
               !amount && styles.saveBtnDisabled,
             ]}
           >
-            <Text style={styles.saveBtnText}>SAVE</Text>
+            <Text style={styles.saveBtnText}>Save</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -188,46 +188,48 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.card,
-    borderTopWidth: 2,
-    borderTopColor: colors.primary,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
     padding: spacing.lg,
     paddingBottom: spacing.xl + 16,
     gap: spacing.lg,
   },
   handle: {
     width: 40,
-    height: 3,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: colors.dimmed,
     alignSelf: "center",
   },
   modeToggle: {
     flexDirection: "row",
     backgroundColor: colors.bg,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.full,
     padding: 3,
   },
   modeBtn: {
     flex: 1,
-    paddingVertical: spacing.sm + 2,
+    paddingVertical: 10,
     alignItems: "center",
+    borderRadius: radius.full,
   },
-  modeBtnActive: {
+  modeBtnActiveExpense: {
     backgroundColor: colors.red,
   },
-  modeBtnActiveGreen: {
+  modeBtnActiveIncome: {
     backgroundColor: colors.primary,
   },
   modeBtnText: {
     color: colors.textSecondary,
-    fontWeight: "800",
+    fontWeight: "600",
     fontSize: 14,
-    letterSpacing: 1.5,
   },
-  modeBtnTextActive: {
+  modeBtnTextActiveExpense: {
     color: colors.white,
   },
-  modeBtnTextActiveGreen: {
+  modeBtnTextActiveIncome: {
     color: colors.bg,
   },
   amountRow: {
@@ -236,38 +238,37 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   dollar: {
-    fontSize: 48,
-    fontWeight: "900",
+    fontSize: 36,
+    fontWeight: "700",
     color: colors.primary,
   },
   amountInput: {
     flex: 1,
-    fontSize: 48,
-    fontWeight: "900",
+    fontSize: 36,
+    fontWeight: "700",
     color: colors.white,
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   catRow: {
     gap: spacing.sm,
   },
   noteInput: {
-    backgroundColor: colors.bg,
-    borderWidth: 2,
-    borderColor: colors.dimmed,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
     padding: spacing.md,
     color: colors.white,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    fontSize: 15,
   },
   saveBtn: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
+    paddingVertical: 16,
     alignItems: "center",
+    borderRadius: radius.md,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 12,
   },
   saveBtnDisabled: {
@@ -276,7 +277,6 @@ const styles = StyleSheet.create({
   saveBtnText: {
     color: colors.bg,
     fontSize: 17,
-    fontWeight: "900",
-    letterSpacing: 3,
+    fontWeight: "700",
   },
 });

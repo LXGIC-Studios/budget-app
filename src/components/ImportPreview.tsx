@@ -8,7 +8,7 @@ import {
   FlatList,
   ScrollView,
 } from "react-native";
-import { colors, spacing } from "../theme";
+import { colors, spacing, radius } from "../theme";
 import { EXPENSE_CATEGORIES } from "../types";
 import type { Transaction } from "../types";
 import { formatCurrency, formatShortDate } from "../utils";
@@ -20,19 +20,6 @@ interface Props {
   onImport: (txns: Transaction[]) => void;
   onClose: () => void;
 }
-
-const CATEGORY_COLORS: Record<string, string> = {
-  food: "#FF6B35",
-  shopping: colors.pink,
-  transport: colors.cyan,
-  bills: "#FF9800",
-  fun: colors.yellow,
-  health: colors.primary,
-  other: colors.textSecondary,
-  salary: colors.primary,
-  freelance: colors.cyan,
-  transfer: colors.yellow,
-};
 
 function getCategoryEmoji(id: string): string {
   const cat = EXPENSE_CATEGORIES.find((c) => c.id === id);
@@ -72,9 +59,9 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
       </Pressable>
       <View style={styles.centeredWrap}>
         <View style={styles.card}>
-          <Text style={styles.title}>IMPORT PREVIEW</Text>
+          <Text style={styles.title}>Import Preview</Text>
           <Text style={styles.subtitle}>
-            {items.length} TRANSACTION{items.length !== 1 ? "S" : ""} FOUND
+            {items.length} transaction{items.length !== 1 ? "s" : ""} found
           </Text>
 
           <View style={styles.list}>
@@ -103,21 +90,13 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
                     </Text>
                     <Pressable
                       onPress={() => setPickerIndex(pickerIndex === index ? null : index)}
-                      style={[
-                        styles.categoryPill,
-                        { backgroundColor: (CATEGORY_COLORS[item.category] || colors.dimmed) + "25" },
-                      ]}
+                      style={styles.categoryPill}
                     >
                       <Text style={styles.categoryPillEmoji}>
                         {getCategoryEmoji(item.category)}
                       </Text>
-                      <Text
-                        style={[
-                          styles.categoryPillText,
-                          { color: CATEGORY_COLORS[item.category] || colors.textSecondary },
-                        ]}
-                      >
-                        {getCategoryName(item.category).toUpperCase()}
+                      <Text style={styles.categoryPillText}>
+                        {getCategoryName(item.category)}
                       </Text>
                     </Pressable>
                   </View>
@@ -127,7 +106,7 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
             />
             {remaining > 0 && (
               <Text style={styles.moreText}>
-                +{remaining} MORE TRANSACTION{remaining !== 1 ? "S" : ""}
+                +{remaining} more transaction{remaining !== 1 ? "s" : ""}
               </Text>
             )}
           </View>
@@ -151,7 +130,7 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
                         items[pickerIndex]?.category === cat.id && styles.pickerLabelActive,
                       ]}
                     >
-                      {cat.name.toUpperCase()}
+                      {cat.name}
                     </Text>
                   </Pressable>
                 ))}
@@ -161,11 +140,11 @@ export function ImportPreview({ visible, transactions, onImport, onClose }: Prop
 
           <View style={styles.buttons}>
             <Pressable onPress={onClose} style={styles.cancelBtn}>
-              <Text style={styles.cancelBtnText}>CANCEL</Text>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
             </Pressable>
             <Pressable onPress={handleImport} style={styles.importBtn}>
               <Text style={styles.importBtnText}>
-                IMPORT {items.length}
+                Import {items.length}
               </Text>
             </Pressable>
           </View>
@@ -193,24 +172,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     padding: spacing.lg,
     maxHeight: "80%",
-    borderWidth: 2,
-    borderColor: colors.cyan,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
   },
   title: {
     color: colors.white,
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
-    letterSpacing: 2,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 13,
     textAlign: "center",
     marginTop: spacing.xs,
     marginBottom: spacing.md,
-    fontWeight: "700",
-    letterSpacing: 1,
   },
   list: {
     maxHeight: 340,
@@ -227,14 +204,11 @@ const styles = StyleSheet.create({
   },
   txnDate: {
     color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    fontSize: 12,
   },
   txnDesc: {
     color: colors.white,
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 14,
     marginTop: 2,
   },
   txnRight: {
@@ -243,24 +217,24 @@ const styles = StyleSheet.create({
   },
   txnAmount: {
     fontSize: 14,
-    fontWeight: "900",
-    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
   },
   categoryPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: 2,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryLight,
   },
   categoryPillEmoji: {
     fontSize: 11,
   },
   categoryPillText: {
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: "500",
   },
   separator: {
     height: 1,
@@ -268,16 +242,14 @@ const styles = StyleSheet.create({
   },
   moreText: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: "center",
     paddingTop: spacing.sm,
-    fontWeight: "700",
-    letterSpacing: 1,
   },
   pickerWrap: {
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
-    borderTopWidth: 2,
+    borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
   },
   pickerRow: {
@@ -287,15 +259,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.full,
     backgroundColor: colors.bg,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   pickerPillActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     borderColor: colors.primary,
   },
   pickerEmoji: {
@@ -303,12 +275,10 @@ const styles = StyleSheet.create({
   },
   pickerLabel: {
     color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 12,
   },
   pickerLabelActive: {
-    color: colors.bg,
+    color: colors.primary,
   },
   buttons: {
     flexDirection: "row",
@@ -317,27 +287,27 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: spacing.sm + 4,
+    paddingVertical: 14,
     alignItems: "center",
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.md,
   },
   cancelBtnText: {
     color: colors.textSecondary,
-    fontWeight: "800",
-    fontSize: 14,
-    letterSpacing: 1,
+    fontWeight: "600",
+    fontSize: 15,
   },
   importBtn: {
     flex: 2,
-    paddingVertical: spacing.sm + 4,
+    paddingVertical: 14,
     alignItems: "center",
     backgroundColor: colors.primary,
+    borderRadius: radius.md,
   },
   importBtnText: {
     color: colors.bg,
-    fontWeight: "900",
-    fontSize: 14,
-    letterSpacing: 1,
+    fontWeight: "700",
+    fontSize: 15,
   },
 });

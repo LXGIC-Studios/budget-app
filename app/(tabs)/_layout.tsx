@@ -10,25 +10,23 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: colors.bg,
-          borderTopColor: colors.primary,
-          borderTopWidth: 2,
+          backgroundColor: "#080808",
+          borderTopColor: colors.cardBorder,
+          borderTopWidth: 1,
           height: 72,
           paddingBottom: 20,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "800",
-          textTransform: "uppercase",
-          letterSpacing: 1.5,
+          fontSize: 11,
+          fontWeight: "500",
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "HOME",
+          title: "Home",
           tabBarIcon: ({ color, size }) => (
             <Home size={size} color={color} />
           ),
@@ -37,7 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="budget"
         options={{
-          title: "BUDGET",
+          title: "Budget",
           tabBarIcon: ({ color, size }) => (
             <BarChart3 size={size} color={color} />
           ),
@@ -46,7 +44,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="insights"
         options={{
-          title: "INSIGHTS",
+          title: "Insights",
           tabBarIcon: ({ color, size }) => (
             <TrendingUp size={size} color={color} />
           ),
@@ -55,7 +53,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: "HISTORY",
+          title: "History",
           tabBarIcon: ({ color, size }) => (
             <List size={size} color={color} />
           ),
@@ -64,7 +62,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "SETTINGS",
+          title: "Settings",
           tabBarIcon: ({ color, size }) => (
             <Settings size={size} color={color} />
           ),

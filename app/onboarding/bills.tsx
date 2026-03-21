@@ -10,7 +10,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { impact } from "../../src/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, spacing } from "../../src/theme";
+import { colors, spacing, radius } from "../../src/theme";
 import { BILL_PRESETS } from "../../src/types";
 import type { Bill } from "../../src/types";
 
@@ -66,11 +66,11 @@ export default function OnboardingBills() {
           <View style={styles.stepDotDone} />
           <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
           <View style={styles.stepDotInactive} />
-          <Text style={styles.step}>STEP 2 OF 3</Text>
+          <Text style={styles.step}>Step 2 of 3</Text>
         </View>
-        <Text style={styles.title}>WHAT ARE YOUR{"\n"}MONTHLY BILLS?</Text>
+        <Text style={styles.title}>What are your{"\n"}monthly bills?</Text>
         <Text style={styles.subtitle}>
-          TAP TO ADD, THEN ENTER THE AMOUNT.
+          Tap to add, then enter the amount.
         </Text>
 
         {/* Presets */}
@@ -83,7 +83,7 @@ export default function OnboardingBills() {
                 style={styles.presetChip}
               >
                 <Text style={styles.presetEmoji}>{preset.emoji}</Text>
-                <Text style={styles.presetText}>{preset.name.toUpperCase()}</Text>
+                <Text style={styles.presetText}>{preset.name}</Text>
                 <Text style={styles.presetPlus}>+</Text>
               </Pressable>
             ))}
@@ -95,7 +95,7 @@ export default function OnboardingBills() {
           <View key={bill.name} style={styles.billRow}>
             <View style={styles.billInfo}>
               <Text style={styles.billEmoji}>{bill.emoji}</Text>
-              <Text style={styles.billName}>{bill.name.toUpperCase()}</Text>
+              <Text style={styles.billName}>{bill.name}</Text>
             </View>
             <View style={styles.billAmountRow}>
               <Text style={styles.billDollar}>$</Text>
@@ -119,7 +119,7 @@ export default function OnboardingBills() {
       <View style={styles.bottom}>
         <Pressable onPress={handleNext} style={styles.btn}>
           <Text style={styles.btnText}>
-            {bills.length === 0 ? "SKIP" : "NEXT"}
+            {bills.length === 0 ? "Skip" : "Next"}
           </Text>
         </Pressable>
       </View>
@@ -147,38 +147,39 @@ const styles = StyleSheet.create({
   stepDot: {
     width: 8,
     height: 8,
+    borderRadius: 4,
   },
   stepDotDone: {
     width: 8,
     height: 8,
+    borderRadius: 4,
     backgroundColor: colors.primary,
     opacity: 0.4,
   },
   stepDotInactive: {
     width: 8,
     height: 8,
+    borderRadius: 4,
     backgroundColor: colors.dimmed,
   },
   step: {
     color: colors.primary,
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontSize: 13,
+    fontWeight: "600",
     marginLeft: spacing.sm,
   },
   title: {
     color: colors.white,
-    fontSize: 36,
-    fontWeight: "900",
-    lineHeight: 42,
-    letterSpacing: -1,
+    fontSize: 32,
+    fontWeight: "800",
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 15,
     marginBottom: spacing.sm,
+    lineHeight: 22,
   },
   presets: {
     flexDirection: "row",
@@ -188,12 +189,12 @@ const styles = StyleSheet.create({
   presetChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs + 2,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: 2,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: radius.full,
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   presetEmoji: {
@@ -201,22 +202,22 @@ const styles = StyleSheet.create({
   },
   presetText: {
     color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 13,
+    fontWeight: "500",
   },
   presetPlus: {
     color: colors.primary,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   billRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.md,
     padding: spacing.md,
   },
   billInfo: {
@@ -229,9 +230,8 @@ const styles = StyleSheet.create({
   },
   billName: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 15,
+    fontWeight: "600",
   },
   billAmountRow: {
     flexDirection: "row",
@@ -241,20 +241,20 @@ const styles = StyleSheet.create({
   billDollar: {
     color: colors.primary,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   billInput: {
     color: colors.white,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
     minWidth: 60,
     textAlign: "right",
-    fontVariant: ["tabular-nums"],
   },
   removeBtn: {
     marginLeft: spacing.sm,
     width: 28,
     height: 28,
+    borderRadius: 14,
     backgroundColor: colors.red,
     alignItems: "center",
     justifyContent: "center",
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   removeText: {
     color: colors.white,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 20,
   },
   bottom: {
@@ -270,13 +270,13 @@ const styles = StyleSheet.create({
   },
   btn: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: 16,
     alignItems: "center",
+    borderRadius: radius.md,
   },
   btnText: {
     color: colors.bg,
     fontSize: 17,
-    fontWeight: "900",
-    letterSpacing: 3,
+    fontWeight: "700",
   },
 });

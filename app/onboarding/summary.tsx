@@ -2,22 +2,11 @@ import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { notification } from "../../src/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, spacing } from "../../src/theme";
+import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { generateBudgetCategories } from "../../src/budget";
 import { formatCurrency, getMonthKey } from "../../src/utils";
 import type { Bill } from "../../src/types";
-
-const CAT_COLORS: Record<string, string> = {
-  food: "#FF9500",
-  shopping: colors.pink,
-  transport: colors.cyan,
-  bills: colors.red,
-  fun: colors.yellow,
-  health: colors.primary,
-  savings: colors.primary,
-  other: colors.textSecondary,
-};
 
 export default function OnboardingSummary() {
   const router = useRouter();
@@ -57,42 +46,38 @@ export default function OnboardingSummary() {
           <View style={styles.stepDotDone} />
           <View style={styles.stepDotDone} />
           <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
-          <Text style={styles.step}>STEP 3 OF 3</Text>
+          <Text style={styles.step}>Step 3 of 3</Text>
         </View>
-        <Text style={styles.title}>NICE.{"\n"}HERE'S YOUR BUDGET.</Text>
+        <Text style={styles.title}>Nice.{"\n"}Here's your budget.</Text>
         <Text style={styles.subtitle}>
-          {formatCurrency(income)}/MO INCOME {"\u2192"} {formatCurrency(totalBudget)}{" "}
-          BUDGETED
+          {formatCurrency(income)}/mo income {"\u2192"} {formatCurrency(totalBudget)}{" "}
+          budgeted
         </Text>
 
-        <View style={styles.accentLine} />
-
         <View style={styles.catList}>
-          {categories.map((cat) => {
-            const borderColor = CAT_COLORS[cat.name.toLowerCase()] || colors.cyan;
-            return (
-              <View key={cat.id} style={[styles.catRow, { borderLeftWidth: 3, borderLeftColor: borderColor }]}>
-                <View style={styles.catInfo}>
-                  <Text style={styles.catName}>{cat.name.toUpperCase()}</Text>
-                  {cat.type === "fixed" && (
-                    <View style={styles.fixedBadge}>
-                      <Text style={styles.fixedText}>FIXED</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.catAmount}>
-                  {formatCurrency(cat.allocated)}
-                </Text>
+          {categories.map((cat) => (
+            <View key={cat.id} style={styles.catRow}>
+              <View style={styles.catInfo}>
+                <Text style={styles.catEmoji}>{cat.emoji}</Text>
+                <Text style={styles.catName}>{cat.name}</Text>
+                {cat.type === "fixed" && (
+                  <View style={styles.fixedBadge}>
+                    <Text style={styles.fixedText}>FIXED</Text>
+                  </View>
+                )}
               </View>
-            );
-          })}
+              <Text style={styles.catAmount}>
+                {formatCurrency(cat.allocated)}
+              </Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
 
       <View style={styles.bottom}>
-        <Text style={styles.hint}>YOU CAN ADJUST THESE ANYTIME IN BUDGET</Text>
+        <Text style={styles.hint}>You can adjust these anytime in Budget</Text>
         <Pressable onPress={handleFinish} style={styles.btn}>
-          <Text style={styles.btnText}>LET'S GO</Text>
+          <Text style={styles.btnText}>Let's Go</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -119,48 +104,45 @@ const styles = StyleSheet.create({
   stepDot: {
     width: 8,
     height: 8,
+    borderRadius: 4,
   },
   stepDotDone: {
     width: 8,
     height: 8,
+    borderRadius: 4,
     backgroundColor: colors.primary,
     opacity: 0.4,
   },
   step: {
     color: colors.primary,
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontSize: 13,
+    fontWeight: "600",
     marginLeft: spacing.sm,
   },
   title: {
     color: colors.white,
-    fontSize: 36,
-    fontWeight: "900",
-    lineHeight: 42,
-    letterSpacing: -1,
+    fontSize: 32,
+    fontWeight: "800",
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 15,
     marginBottom: spacing.sm,
-  },
-  accentLine: {
-    height: 2,
-    backgroundColor: colors.cyan,
+    lineHeight: 22,
   },
   catList: {
-    gap: spacing.sm,
+    gap: 8,
   },
   catRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.md,
     padding: spacing.md,
   },
   catInfo: {
@@ -168,30 +150,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
+  catEmoji: {
+    fontSize: 18,
+  },
   catName: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontSize: 15,
+    fontWeight: "600",
   },
   fixedBadge: {
-    backgroundColor: colors.primary + "20",
+    backgroundColor: colors.primaryLight,
     borderWidth: 1,
     borderColor: colors.primary,
+    borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
   fixedText: {
     color: colors.primary,
     fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   catAmount: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: "900",
-    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
   },
   bottom: {
     padding: spacing.lg,
@@ -199,20 +183,18 @@ const styles = StyleSheet.create({
   },
   hint: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 13,
     textAlign: "center",
-    fontWeight: "700",
-    letterSpacing: 2,
   },
   btn: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: 16,
     alignItems: "center",
+    borderRadius: radius.md,
   },
   btnText: {
     color: colors.bg,
     fontSize: 17,
-    fontWeight: "900",
-    letterSpacing: 3,
+    fontWeight: "700",
   },
 });

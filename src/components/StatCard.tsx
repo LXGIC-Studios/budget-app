@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { colors, spacing } from "../theme";
+import { colors, spacing, radius } from "../theme";
 
 interface Props {
   label: string;
@@ -8,17 +8,10 @@ interface Props {
   color?: string;
 }
 
-const INDICATOR_COLORS: Record<string, string> = {
-  "\uD83D\uDCB0": colors.primary,
-  "\uD83D\uDCCA": colors.cyan,
-  "\uD83C\uDFAF": colors.yellow,
-};
-
 export function StatCard({ label, value, emoji, color = colors.white }: Props) {
-  const indicatorColor = INDICATOR_COLORS[emoji] || colors.pink;
   return (
     <View style={styles.card}>
-      <View style={[styles.indicator, { backgroundColor: indicatorColor }]} />
+      <Text style={styles.emoji}>{emoji}</Text>
       <Text style={[styles.value, { color }]} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
@@ -31,26 +24,25 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: colors.card,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
     padding: spacing.md,
     alignItems: "center",
     gap: spacing.xs,
   },
-  indicator: {
-    width: 8,
-    height: 8,
+  emoji: {
+    fontSize: 20,
   },
   value: {
-    fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: -1,
-    fontVariant: ["tabular-nums"],
+    fontSize: 24,
+    fontWeight: "700",
+    letterSpacing: -0.5,
   },
   label: {
     fontSize: 10,
     color: colors.textSecondary,
-    fontWeight: "700",
-    letterSpacing: 1.5,
+    fontWeight: "600",
+    letterSpacing: 1,
   },
 });
