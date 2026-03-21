@@ -7,6 +7,7 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -14,10 +15,12 @@ import {
   Globe,
   RotateCcw,
   Info,
+  LogOut,
 } from "lucide-react-native";
-import * as Haptics from "expo-haptics";
+import { impact, notification } from "../../src/lib/haptics";
 import { colors, radius, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
+import { useAuth } from "../../src/context/AuthContext";
 import { formatCurrency } from "../../src/utils";
 
 function SettingRow({
@@ -44,6 +47,7 @@ function SettingRow({
 
 export default function SettingsScreen() {
   const { profile, saveProfile, resetAll } = useApp();
+  const { user, signOut } = useAuth();
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeText, setIncomeText] = useState(
     profile?.monthlyIncome?.toString() ?? ""
@@ -52,29 +56,50 @@ export default function SettingsScreen() {
   const handleSaveIncome = () => {
     const parsed = parseFloat(incomeText);
     if (!parsed || !profile) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    impact("Medium");
     saveProfile({ ...profile, monthlyIncome: parsed });
     setEditingIncome(false);
   };
 
   const handleReset = () => {
-    Alert.alert(
-      "Reset Everything",
-      "This will delete all your data including transactions, budgets, and settings. This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Reset",
-          style: "destructive",
-          onPress: () => {
-            Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Warning
-            );
-            resetAll();
+    const doReset = () => {
+      notification("Warning");
+      resetAll();
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm("This will delete all your data including transactions, budgets, and settings. This cannot be undone.")) {
+        doReset();
+      }
+    } else {
+      Alert.alert(
+        "Reset Everything",
+        "This will delete all your data including transactions, budgets, and settings. This cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Reset",
+            style: "destructive",
+            onPress: doReset,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
+  };
+
+  const handleSignOut = () => {
+    const doSignOut = () => signOut();
+
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to sign out?")) {
+        doSignOut();
+      }
+    } else {
+      Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Sign Out", style: "destructive", onPress: doSignOut },
+      ]);
+    }
   };
 
   return (
@@ -128,6 +153,20 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <SettingRow
+            icon={<Info size={20} color={colors.textSecondary} />}
+            label="Email"
+            value={user?.email ?? ""}
+          />
+          <SettingRow
+            icon={<LogOut size={20} color={colors.red} />}
+            label="Sign Out"
+            onPress={handleSignOut}
+          />
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data</Text>
           <SettingRow
             icon={<RotateCcw size={20} color={colors.red} />}
@@ -146,7 +185,7 @@ export default function SettingsScreen() {
         </View>
 
         <Text style={styles.footer}>
-          Built with focus. No bloat.{"\n"}Your data stays on your device.
+          Built with focus. No bloat.{"\n"}Your budget, synced everywhere.
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import * as Haptics from "expo-haptics";
+import { notification, impact } from "../lib/haptics";
 import { colors, radius, spacing } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
@@ -36,7 +36,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0) return;
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    notification("Success");
 
     const txn: Transaction = {
       id: generateId(),
@@ -64,7 +64,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
   const switchMode = (m: "expense" | "income") => {
     setMode(m);
     setCategory(m === "expense" ? "food" : "salary");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact("Light");
   };
 
   return (

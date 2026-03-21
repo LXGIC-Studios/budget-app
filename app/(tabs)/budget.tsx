@@ -9,13 +9,13 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Haptics from "expo-haptics";
+import { impact } from "../../src/lib/haptics";
 import { colors, radius, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { FAB } from "../../src/components/FAB";
 import { QuickAddSheet } from "../../src/components/QuickAddSheet";
 import { formatCurrency } from "../../src/utils";
-import type { BudgetCategory, Transaction } from "../../src/types";
+import type { BudgetCategory } from "../../src/types";
 
 function CategoryRow({
   cat,
@@ -94,7 +94,7 @@ export default function BudgetScreen() {
   const handleEditSave = () => {
     if (!editCat || !currentBudget) return;
     const newAmount = parseFloat(editAmount) || 0;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    impact("Medium");
     const updated = {
       ...currentBudget,
       categories: currentBudget.categories.map((c) =>

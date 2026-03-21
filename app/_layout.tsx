@@ -1,29 +1,37 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { AppProvider, useApp } from "../src/context/AppContext";
 import { colors } from "../src/theme";
 import { useRouter, useSegments } from "expo-router";
 
 function RootGuard() {
-  const { profile, loading } = useApp();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: appLoading } = useApp();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
-    if (loading) return;
+    if (authLoading || appLoading) return;
 
+    const inLogin = segments[0] === "login";
     const inOnboarding = segments[0] === "onboarding";
+
+    if (!user) {
+      if (!inLogin) router.replace("/login");
+      return;
+    }
 
     if (!profile?.onboardingComplete && !inOnboarding) {
       router.replace("/onboarding");
-    } else if (profile?.onboardingComplete && inOnboarding) {
+    } else if (profile?.onboardingComplete && (inOnboarding || inLogin)) {
       router.replace("/");
     }
-  }, [profile, loading, segments]);
+  }, [user, profile, authLoading, appLoading, segments]);
 
-  if (loading) {
+  if (authLoading || appLoading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -45,11 +53,25 @@ function RootGuard() {
   );
 }
 
-export default function RootLayout() {
+function AuthenticatedApp() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <RootGuard />;
+  }
+
   return (
     <AppProvider>
       <RootGuard />
     </AppProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <AuthenticatedApp />
+    </AuthProvider>
   );
 }
 

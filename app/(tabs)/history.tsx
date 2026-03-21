@@ -7,10 +7,11 @@ import {
   StyleSheet,
   SectionList,
   Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Search } from "lucide-react-native";
-import * as Haptics from "expo-haptics";
+import { notification, impact } from "../../src/lib/haptics";
 import { colors, radius, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { TransactionItem } from "../../src/components/TransactionItem";
@@ -55,19 +56,28 @@ export default function HistoryScreen() {
 
   const handleDelete = useCallback(
     (txn: Transaction) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      Alert.alert(
-        "Delete Transaction",
-        `Remove ${txn.note || txn.category} for $${txn.amount.toFixed(2)}?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () => deleteTransaction(txn.id),
-          },
-        ]
-      );
+      notification("Warning");
+
+      const doDelete = () => deleteTransaction(txn.id);
+
+      if (Platform.OS === "web") {
+        if (window.confirm(`Remove ${txn.note || txn.category} for $${txn.amount.toFixed(2)}?`)) {
+          doDelete();
+        }
+      } else {
+        Alert.alert(
+          "Delete Transaction",
+          `Remove ${txn.note || txn.category} for $${txn.amount.toFixed(2)}?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: doDelete,
+            },
+          ]
+        );
+      }
     },
     [deleteTransaction]
   );
@@ -100,7 +110,7 @@ export default function HistoryScreen() {
           <Pressable
             key={f.value}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              impact("Light");
               setFilter(f.value);
             }}
             style={[

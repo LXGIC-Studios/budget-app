@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import * as Haptics from "expo-haptics";
+import { impact } from "../../src/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radius, spacing } from "../../src/theme";
 import { BILL_PRESETS } from "../../src/types";
@@ -22,7 +22,7 @@ export default function OnboardingBills() {
 
   const addPreset = (preset: Bill) => {
     if (bills.find((b) => b.name === preset.name)) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact("Light");
     const newBills = [...bills, { ...preset, amount: 0 }];
     setBills(newBills);
     setEditingIdx(newBills.length - 1);
@@ -35,13 +35,13 @@ export default function OnboardingBills() {
   };
 
   const removeBill = (idx: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact("Light");
     setBills(bills.filter((_, i) => i !== idx));
     setEditingIdx(null);
   };
 
   const handleNext = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    impact("Medium");
     const validBills = bills.filter((b) => b.amount > 0);
     router.push({
       pathname: "/onboarding/summary",
@@ -104,7 +104,7 @@ export default function OnboardingBills() {
                 autoFocus={editingIdx === idx}
               />
               <Pressable onPress={() => removeBill(idx)} style={styles.removeBtn}>
-                <Text style={styles.removeText}>×</Text>
+                <Text style={styles.removeText}>{"\u00D7"}</Text>
               </Pressable>
             </View>
           </View>

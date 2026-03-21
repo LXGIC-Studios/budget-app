@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
+import { impact } from "../../src/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radius, spacing } from "../../src/theme";
 
@@ -20,7 +20,7 @@ export default function OnboardingIncome() {
   const handleNext = () => {
     const parsed = parseFloat(income);
     if (!parsed || parsed <= 0) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    impact("Medium");
     router.push({
       pathname: "/onboarding/bills",
       params: { income: parsed.toString() },

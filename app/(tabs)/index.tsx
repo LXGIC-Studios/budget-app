@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
-import * as Haptics from "expo-haptics";
+import { impact, notification } from "../../src/lib/haptics";
 import { colors, radius, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { StatCard } from "../../src/components/StatCard";
@@ -59,12 +59,12 @@ export default function Dashboard() {
   const recentTxns = monthTxns.slice(0, 15);
 
   const navigateMonth = (delta: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact("Light");
     setCurrentMonth(shiftMonth(currentMonth, delta));
   };
 
   const handleDeleteTxn = (id: string) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    notification("Warning");
     deleteTransaction(id);
   };
 

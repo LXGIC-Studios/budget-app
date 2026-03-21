@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet } from "react-native";
 import { Plus } from "lucide-react-native";
-import * as Haptics from "expo-haptics";
+import { impact } from "../lib/haptics";
 import { colors, radius, spacing } from "../theme";
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
 
 export function FAB({ onPress }: Props) {
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    impact("Medium");
     onPress();
   };
 

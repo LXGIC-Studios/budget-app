@@ -1,6 +1,6 @@
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import * as Haptics from "expo-haptics";
+import { notification } from "../../src/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radius, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
@@ -19,7 +19,7 @@ export default function OnboardingSummary() {
   const totalBudget = categories.reduce((s, c) => s + c.allocated, 0);
 
   const handleFinish = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    notification("Success");
 
     await saveProfile({
       monthlyIncome: income,
@@ -45,7 +45,7 @@ export default function OnboardingSummary() {
         <Text style={styles.step}>Step 3 of 3</Text>
         <Text style={styles.title}>Nice.{"\n"}Here's your budget.</Text>
         <Text style={styles.subtitle}>
-          {formatCurrency(income)}/mo income → {formatCurrency(totalBudget)}{" "}
+          {formatCurrency(income)}/mo income {"\u2192"} {formatCurrency(totalBudget)}{" "}
           budgeted
         </Text>
 
