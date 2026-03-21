@@ -63,8 +63,10 @@ function CategoryRow({
 }
 
 export default function BudgetScreen() {
-  const { currentBudget, transactions, currentMonth, saveBudget, addTransaction } =
+  const { profile, currentBudget, transactions, currentMonth, saveBudget, addTransaction } =
     useApp();
+
+  const monthlyIncome = profile?.monthlyIncome ?? 0;
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editCat, setEditCat] = useState<BudgetCategory | null>(null);
   const [editAmount, setEditAmount] = useState("");
@@ -118,17 +120,17 @@ export default function BudgetScreen() {
       <View style={styles.summaryRow}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>INCOME</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(totalBudget)}</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(monthlyIncome)}</Text>
         </View>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>ALLOCATED</Text>
+          <Text style={styles.summaryLabel}>BUDGETED</Text>
           <Text
             style={[
               styles.summaryValue,
-              totalSpent > totalBudget && { color: colors.red },
+              totalBudget > monthlyIncome && { color: colors.red },
             ]}
           >
-            {formatCurrency(totalSpent)}
+            {formatCurrency(totalBudget)}
           </Text>
         </View>
         <View style={styles.summaryItem}>
@@ -138,11 +140,11 @@ export default function BudgetScreen() {
               styles.summaryValue,
               {
                 color:
-                  totalBudget - totalSpent >= 0 ? colors.primary : colors.red,
+                  monthlyIncome - totalBudget >= 0 ? colors.primary : colors.red,
               },
             ]}
           >
-            {formatCurrency(totalBudget - totalSpent)}
+            {formatCurrency(monthlyIncome - totalBudget)}
           </Text>
         </View>
       </View>

@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, BarChart3, TrendingUp, List, Settings } from "lucide-react-native";
+import { Home, BarChart3, CreditCard, TrendingUp, List, Settings } from "lucide-react-native";
 import { colors } from "../../src/theme";
 
 export default function TabLayout() {
@@ -38,6 +38,15 @@ export default function TabLayout() {
           title: "Budget",
           tabBarIcon: ({ color, size }) => (
             <BarChart3 size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="debt"
+        options={{
+          title: "Debt",
+          tabBarIcon: ({ color, size }) => (
+            <CreditCard size={size} color={color} />
           ),
         }}
       />

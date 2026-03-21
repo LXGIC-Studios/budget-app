@@ -44,7 +44,7 @@ export default function OnboardingBills() {
     impact("Medium");
     const validBills = bills.filter((b) => b.amount > 0);
     router.push({
-      pathname: "/onboarding/summary",
+      pathname: "/onboarding/debts",
       params: {
         income,
         bills: JSON.stringify(validBills),
@@ -66,7 +66,8 @@ export default function OnboardingBills() {
           <View style={styles.stepDotDone} />
           <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
           <View style={styles.stepDotInactive} />
-          <Text style={styles.step}>Step 2 of 3</Text>
+          <View style={styles.stepDotInactive} />
+          <Text style={styles.step}>Step 2 of 4</Text>
         </View>
         <Text style={styles.title}>What are your{"\n"}monthly bills?</Text>
         <Text style={styles.subtitle}>

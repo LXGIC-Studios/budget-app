@@ -38,7 +38,8 @@ export default function OnboardingIncome() {
             <View style={[styles.stepDot, { backgroundColor: colors.primary }]} />
             <View style={styles.stepDotInactive} />
             <View style={styles.stepDotInactive} />
-            <Text style={styles.step}>Step 1 of 3</Text>
+            <View style={styles.stepDotInactive} />
+            <Text style={styles.step}>Step 1 of 4</Text>
           </View>
           <Text style={styles.title}>How much do you{"\n"}make per month?</Text>
           <Text style={styles.subtitle}>

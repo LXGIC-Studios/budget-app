@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import type { Transaction, UserProfile, MonthlyBudget } from "../types";
+import type { Transaction, UserProfile, MonthlyBudget, Debt } from "../types";
 import * as storage from "../storage";
 import { getMonthKey } from "../utils";
 
@@ -14,6 +14,7 @@ interface AppState {
   transactions: Transaction[];
   currentBudget: MonthlyBudget | null;
   currentMonth: string;
+  debts: Debt[];
   loading: boolean;
 }
 
@@ -25,6 +26,10 @@ interface AppContextValue extends AppState {
   addTransactions: (txns: Transaction[]) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   saveBudget: (budget: MonthlyBudget) => Promise<void>;
+  addDebt: (debt: Debt) => Promise<void>;
+  updateDebt: (id: string, updates: Partial<Omit<Debt, "id" | "createdAt">>) => Promise<void>;
+  deleteDebt: (id: string) => Promise<void>;
+  updateEmergencyFund: (amount: number) => Promise<void>;
   resetAll: () => Promise<void>;
 }
 
@@ -36,15 +41,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     transactions: [],
     currentBudget: null,
     currentMonth: getMonthKey(),
+    debts: [],
     loading: true,
   });
 
   const loadData = useCallback(async (month?: string) => {
     const targetMonth = month ?? getMonthKey();
-    const [profile, transactions, budget] = await Promise.all([
+    const [profile, transactions, budget, debts] = await Promise.all([
       storage.getProfile(),
       storage.getTransactions(),
       storage.getBudgetForMonth(targetMonth),
+      storage.getDebts(),
     ]);
     setState((prev) => ({
       ...prev,
@@ -52,6 +59,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       transactions,
       currentBudget: budget,
       currentMonth: targetMonth,
+      debts,
       loading: false,
     }));
   }, []);
@@ -113,6 +121,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const addDebt = useCallback(
+    async (debt: Debt) => {
+      await storage.addDebt(debt);
+      await reload();
+    },
+    [reload]
+  );
+
+  const updateDebt = useCallback(
+    async (id: string, updates: Partial<Omit<Debt, "id" | "createdAt">>) => {
+      await storage.updateDebt(id, updates);
+      await reload();
+    },
+    [reload]
+  );
+
+  const deleteDebt = useCallback(
+    async (id: string) => {
+      await storage.deleteDebt(id);
+      await reload();
+    },
+    [reload]
+  );
+
+  const updateEmergencyFund = useCallback(
+    async (amount: number) => {
+      if (!state.profile) return;
+      const updated = { ...state.profile, emergencyFundCurrent: amount };
+      // Auto-advance baby step if $1000 reached
+      if (amount >= 1000 && state.profile.babyStep === 1) {
+        updated.babyStep = 2;
+      }
+      // Auto-advance to step 3 if no debts and on step 2
+      if (updated.babyStep === 2 && state.debts.length === 0) {
+        updated.babyStep = 3;
+      }
+      await storage.saveProfile(updated);
+      setState((prev) => ({ ...prev, profile: updated }));
+    },
+    [state.profile, state.debts]
+  );
+
   const resetAll = useCallback(async () => {
     await storage.resetAllData();
     setState({
@@ -120,6 +170,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       transactions: [],
       currentBudget: null,
       currentMonth: getMonthKey(),
+      debts: [],
       loading: false,
     });
   }, []);
@@ -135,6 +186,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addTransactions,
         deleteTransaction,
         saveBudget,
+        addDebt,
+        updateDebt,
+        deleteDebt,
+        updateEmergencyFund,
         resetAll,
       }}
     >
@@ -152,6 +207,7 @@ export function useApp(): AppContextValue {
       transactions: [],
       currentBudget: null,
       currentMonth: getMonthKey(),
+      debts: [],
       loading: true,
       setCurrentMonth: () => {},
       reload: async () => {},
@@ -160,6 +216,10 @@ export function useApp(): AppContextValue {
       addTransactions: async () => {},
       deleteTransaction: async () => {},
       saveBudget: async () => {},
+      addDebt: async () => {},
+      updateDebt: async () => {},
+      deleteDebt: async () => {},
+      updateEmergencyFund: async () => {},
       resetAll: async () => {},
     } as AppContextValue;
   }

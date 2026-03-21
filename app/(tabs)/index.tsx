@@ -23,14 +23,16 @@ import {
 
 export default function Dashboard() {
   const {
+    profile,
     transactions,
-    currentBudget,
     currentMonth,
     setCurrentMonth,
     addTransaction,
     deleteTransaction,
   } = useApp();
   const [sheetVisible, setSheetVisible] = useState(false);
+
+  const monthlyIncome = profile?.monthlyIncome ?? 0;
 
   // Filter transactions for current month
   const monthTxns = useMemo(
@@ -47,13 +49,7 @@ export default function Dashboard() {
     [monthTxns]
   );
 
-  const totalBudget = useMemo(
-    () =>
-      currentBudget?.categories.reduce((s, c) => s + c.allocated, 0) ?? 0,
-    [currentBudget]
-  );
-
-  const leftToSpend = totalBudget - totalSpent;
+  const leftToSpend = monthlyIncome - totalSpent;
   const isOver = leftToSpend < 0;
 
   const recentTxns = monthTxns.slice(0, 15);
@@ -95,9 +91,9 @@ export default function Dashboard() {
           value={formatCurrency(totalSpent)}
         />
         <StatCard
-          emoji={"\uD83C\uDFAF"}
-          label="Budget"
-          value={formatCurrency(totalBudget)}
+          emoji={"\uD83D\uDCB5"}
+          label="Income"
+          value={formatCurrency(monthlyIncome)}
         />
       </View>
 

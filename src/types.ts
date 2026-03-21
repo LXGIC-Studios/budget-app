@@ -20,7 +20,23 @@ export interface UserProfile {
   monthlyIncome: number;
   currency: string;
   onboardingComplete: boolean;
+  emergencyFundGoal: number;
+  emergencyFundCurrent: number;
+  babyStep: number;
   createdAt: string;
+}
+
+export type DebtType = 'credit_card' | 'student_loan' | 'car_loan' | 'mortgage' | 'medical' | 'personal' | 'other';
+
+export interface Debt {
+  id: string;
+  name: string;
+  balance: number;
+  minimumPayment: number;
+  interestRate: number;
+  type: DebtType;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface MonthlyBudget {
