@@ -50,3 +50,34 @@ export function formatShortDate(dateStr: string): string {
     day: "numeric",
   });
 }
+
+export function getMonthlyAmount(allocated: number, frequency: string): number {
+  switch (frequency) {
+    case "weekly":
+      return allocated * 4.33;
+    case "biweekly":
+      return allocated * 2.167;
+    case "monthly":
+      return allocated;
+    case "bimonthly":
+      return allocated / 2;
+    case "quarterly":
+      return allocated / 3;
+    case "yearly":
+      return allocated / 12;
+    default:
+      return allocated;
+  }
+}
+
+export function formatDueDay(day: number): string {
+  const suffix =
+    day === 1 || day === 21 || day === 31
+      ? "st"
+      : day === 2 || day === 22
+        ? "nd"
+        : day === 3 || day === 23
+          ? "rd"
+          : "th";
+  return `Due ${day}${suffix}`;
+}

@@ -14,8 +14,21 @@ import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { FAB } from "../../src/components/FAB";
 import { QuickAddSheet } from "../../src/components/QuickAddSheet";
-import { formatCurrency } from "../../src/utils";
-import type { BudgetCategory } from "../../src/types";
+import { formatCurrency, getMonthlyAmount, formatDueDay } from "../../src/utils";
+import type { BudgetCategory, BillFrequency } from "../../src/types";
+
+const FREQUENCY_OPTIONS: { value: BillFrequency; label: string }[] = [
+  { value: "weekly", label: "Weekly" },
+  { value: "biweekly", label: "Biweekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "bimonthly", label: "Bimonthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "yearly", label: "Yearly" },
+];
+
+function FrequencyLabel(freq: BillFrequency): string {
+  return freq.toUpperCase();
+}
 
 function CategoryRow({
   cat,
@@ -29,17 +42,29 @@ function CategoryRow({
   const pct = cat.allocated > 0 ? Math.min(spent / cat.allocated, 1.5) : 0;
   const isOver = spent > cat.allocated;
   const barColor = isOver ? colors.red : colors.primary;
+  const freq = cat.frequency || "monthly";
+  const showFreqBadge = freq !== "monthly";
 
   return (
     <Pressable onPress={onPress} style={styles.catCard}>
       <View style={styles.catHeader}>
-        <View style={styles.catInfo}>
-          <Text style={styles.catEmoji}>{cat.emoji}</Text>
-          <Text style={styles.catName}>{cat.name}</Text>
-          {cat.type === "fixed" && (
-            <View style={styles.fixedBadge}>
-              <Text style={styles.fixedText}>FIXED</Text>
-            </View>
+        <View style={{ flex: 1 }}>
+          <View style={styles.catInfo}>
+            <Text style={styles.catEmoji}>{cat.emoji}</Text>
+            <Text style={styles.catName}>{cat.name}</Text>
+            {cat.type === "fixed" && (
+              <View style={styles.fixedBadge}>
+                <Text style={styles.fixedText}>FIXED</Text>
+              </View>
+            )}
+            {showFreqBadge && (
+              <View style={styles.fixedBadge}>
+                <Text style={styles.fixedText}>{FrequencyLabel(freq)}</Text>
+              </View>
+            )}
+          </View>
+          {cat.dueDay != null && (
+            <Text style={styles.dueDayText}>{formatDueDay(cat.dueDay)}</Text>
           )}
         </View>
         <Text style={[styles.catSpent, isOver && { color: colors.red }]}>
@@ -70,6 +95,8 @@ export default function BudgetScreen() {
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editCat, setEditCat] = useState<BudgetCategory | null>(null);
   const [editAmount, setEditAmount] = useState("");
+  const [editFrequency, setEditFrequency] = useState<BillFrequency>("monthly");
+  const [editDueDay, setEditDueDay] = useState("");
 
   const monthTxns = useMemo(
     () =>
@@ -90,17 +117,26 @@ export default function BudgetScreen() {
 
   const categories = currentBudget?.categories ?? [];
 
-  const totalBudget = categories.reduce((s, c) => s + c.allocated, 0);
-  const totalSpent = monthTxns.reduce((s, t) => s + t.amount, 0);
+  const totalBudget = useMemo(
+    () =>
+      categories.reduce(
+        (s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"),
+        0
+      ),
+    [categories]
+  );
 
   const handleEditSave = () => {
     if (!editCat || !currentBudget) return;
     const newAmount = parseFloat(editAmount) || 0;
+    const newDueDay = parseInt(editDueDay) || undefined;
     impact("Medium");
     const updated = {
       ...currentBudget,
       categories: currentBudget.categories.map((c) =>
-        c.id === editCat.id ? { ...c, allocated: newAmount } : c
+        c.id === editCat.id
+          ? { ...c, allocated: newAmount, frequency: editFrequency, dueDay: newDueDay }
+          : c
       ),
     };
     saveBudget(updated);
@@ -110,6 +146,8 @@ export default function BudgetScreen() {
   const openEdit = (cat: BudgetCategory) => {
     setEditCat(cat);
     setEditAmount(cat.allocated.toString());
+    setEditFrequency(cat.frequency || "monthly");
+    setEditDueDay(cat.dueDay?.toString() || "");
   };
 
   return (
@@ -173,10 +211,12 @@ export default function BudgetScreen() {
       {/* Edit modal */}
       <Modal visible={!!editCat} transparent animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={() => setEditCat(null)}>
-          <View style={styles.modalCard}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>
               {editCat?.name} Budget
             </Text>
+
+            {/* Amount */}
             <View style={styles.modalInputRow}>
               <Text style={styles.modalDollar}>$</Text>
               <TextInput
@@ -187,10 +227,53 @@ export default function BudgetScreen() {
                 autoFocus
               />
             </View>
+
+            {/* Frequency picker */}
+            <View>
+              <Text style={styles.modalFieldLabel}>Frequency</Text>
+              <View style={styles.freqRow}>
+                {FREQUENCY_OPTIONS.map((opt) => (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setEditFrequency(opt.value)}
+                    style={[
+                      styles.freqPill,
+                      editFrequency === opt.value && styles.freqPillActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.freqPillText,
+                        editFrequency === opt.value && styles.freqPillTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Due day */}
+            <View>
+              <Text style={styles.modalFieldLabel}>Due Day (optional)</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={[styles.modalInput, { fontSize: 18 }]}
+                  keyboardType="number-pad"
+                  value={editDueDay}
+                  onChangeText={setEditDueDay}
+                  placeholder="e.g. 15"
+                  placeholderTextColor={colors.dimmed}
+                  maxLength={2}
+                />
+              </View>
+            </View>
+
             <Pressable onPress={handleEditSave} style={styles.modalBtn}>
               <Text style={styles.modalBtnText}>Save</Text>
             </Pressable>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </SafeAreaView>
@@ -261,6 +344,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    flexWrap: "wrap",
   },
   catEmoji: {
     fontSize: 18,
@@ -283,6 +367,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "600",
     letterSpacing: 0.5,
+  },
+  dueDayText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    marginTop: 2,
+    marginLeft: 26,
   },
   catSpent: {
     color: colors.white,
@@ -327,6 +417,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
   },
+  modalFieldLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+  },
   modalInputRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -347,6 +444,31 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 24,
     fontWeight: "700",
+  },
+  freqRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  freqPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.inputBg,
+  },
+  freqPillActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  freqPillText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  freqPillTextActive: {
+    color: colors.primary,
   },
   modalBtn: {
     backgroundColor: colors.primary,

@@ -144,6 +144,8 @@ export async function getBudgetForMonth(
     emoji: row.emoji || "",
     allocated: Number(row.allocated),
     type: row.type as "fixed" | "flexible",
+    frequency: row.frequency || "monthly",
+    dueDay: row.due_day ? Number(row.due_day) : undefined,
   }));
 
   return { month, categories };
@@ -171,6 +173,8 @@ export async function saveBudgetForMonth(
     allocated: cat.allocated,
     type: cat.type,
     month: budget.month,
+    frequency: cat.frequency || "monthly",
+    due_day: cat.dueDay || null,
   }));
 
   if (rows.length > 0) {

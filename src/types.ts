@@ -8,12 +8,16 @@ export interface Transaction {
   createdAt: string;
 }
 
+export type BillFrequency = 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'quarterly' | 'yearly';
+
 export interface BudgetCategory {
   id: string;
   name: string;
   emoji: string;
   allocated: number;
   type: "fixed" | "flexible";
+  frequency?: BillFrequency;
+  dueDay?: number;
 }
 
 export interface UserProfile {
@@ -48,6 +52,7 @@ export interface Bill {
   name: string;
   amount: number;
   emoji: string;
+  frequency?: BillFrequency;
 }
 
 export const EXPENSE_CATEGORIES = [

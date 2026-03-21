@@ -12,7 +12,16 @@ import { impact } from "../../src/lib/haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, radius } from "../../src/theme";
 import { BILL_PRESETS } from "../../src/types";
-import type { Bill } from "../../src/types";
+import type { Bill, BillFrequency } from "../../src/types";
+
+const FREQUENCY_OPTIONS: { value: BillFrequency; label: string }[] = [
+  { value: "weekly", label: "Wk" },
+  { value: "biweekly", label: "Bi-Wk" },
+  { value: "monthly", label: "Mo" },
+  { value: "bimonthly", label: "Bi-Mo" },
+  { value: "quarterly", label: "Qtr" },
+  { value: "yearly", label: "Yr" },
+];
 
 export default function OnboardingBills() {
   const router = useRouter();
@@ -23,7 +32,7 @@ export default function OnboardingBills() {
   const addPreset = (preset: Bill) => {
     if (bills.find((b) => b.name === preset.name)) return;
     impact("Light");
-    const newBills = [...bills, { ...preset, amount: 0 }];
+    const newBills = [...bills, { ...preset, amount: 0, frequency: "monthly" as BillFrequency }];
     setBills(newBills);
     setEditingIdx(newBills.length - 1);
   };
@@ -31,6 +40,12 @@ export default function OnboardingBills() {
   const updateAmount = (idx: number, val: string) => {
     const updated = [...bills];
     updated[idx] = { ...updated[idx], amount: parseFloat(val) || 0 };
+    setBills(updated);
+  };
+
+  const updateFrequency = (idx: number, freq: BillFrequency) => {
+    const updated = [...bills];
+    updated[idx] = { ...updated[idx], frequency: freq };
     setBills(updated);
   };
 
@@ -93,25 +108,49 @@ export default function OnboardingBills() {
 
         {/* Added bills */}
         {bills.map((bill, idx) => (
-          <View key={bill.name} style={styles.billRow}>
-            <View style={styles.billInfo}>
-              <Text style={styles.billEmoji}>{bill.emoji}</Text>
-              <Text style={styles.billName}>{bill.name}</Text>
+          <View key={bill.name} style={styles.billCard}>
+            <View style={styles.billRow}>
+              <View style={styles.billInfo}>
+                <Text style={styles.billEmoji}>{bill.emoji}</Text>
+                <Text style={styles.billName}>{bill.name}</Text>
+              </View>
+              <View style={styles.billAmountRow}>
+                <Text style={styles.billDollar}>$</Text>
+                <TextInput
+                  style={styles.billInput}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={colors.dimmed}
+                  value={bill.amount ? bill.amount.toString() : ""}
+                  onChangeText={(v) => updateAmount(idx, v)}
+                  autoFocus={editingIdx === idx}
+                />
+                <Pressable onPress={() => removeBill(idx)} style={styles.removeBtn}>
+                  <Text style={styles.removeText}>{"\u00D7"}</Text>
+                </Pressable>
+              </View>
             </View>
-            <View style={styles.billAmountRow}>
-              <Text style={styles.billDollar}>$</Text>
-              <TextInput
-                style={styles.billInput}
-                keyboardType="decimal-pad"
-                placeholder="0"
-                placeholderTextColor={colors.dimmed}
-                value={bill.amount ? bill.amount.toString() : ""}
-                onChangeText={(v) => updateAmount(idx, v)}
-                autoFocus={editingIdx === idx}
-              />
-              <Pressable onPress={() => removeBill(idx)} style={styles.removeBtn}>
-                <Text style={styles.removeText}>{"\u00D7"}</Text>
-              </Pressable>
+            {/* Frequency selector */}
+            <View style={styles.freqRow}>
+              {FREQUENCY_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt.value}
+                  onPress={() => updateFrequency(idx, opt.value)}
+                  style={[
+                    styles.freqPill,
+                    (bill.frequency || "monthly") === opt.value && styles.freqPillActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.freqPillText,
+                      (bill.frequency || "monthly") === opt.value && styles.freqPillTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </View>
         ))}
@@ -211,15 +250,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  billRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  billCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: radius.md,
     padding: spacing.md,
+    gap: spacing.sm,
+  },
+  billRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   billInfo: {
     flexDirection: "row",
@@ -265,6 +307,31 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     lineHeight: 20,
+  },
+  freqRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  freqPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.inputBg,
+  },
+  freqPillActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  freqPillText: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  freqPillTextActive: {
+    color: colors.primary,
   },
   bottom: {
     padding: spacing.lg,

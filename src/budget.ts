@@ -1,5 +1,5 @@
 import type { BudgetCategory, Bill } from "./types";
-import { generateId } from "./utils";
+import { generateId, getMonthlyAmount } from "./utils";
 
 /**
  * Auto-budget using adapted 50/30/20 rule.
@@ -10,7 +10,10 @@ export function generateBudgetCategories(
   monthlyIncome: number,
   bills: Bill[]
 ): BudgetCategory[] {
-  const totalBills = bills.reduce((sum, b) => sum + b.amount, 0);
+  const totalBills = bills.reduce(
+    (sum, b) => sum + getMonthlyAmount(b.amount, b.frequency || "monthly"),
+    0
+  );
   const savings = Math.round(monthlyIncome * 0.2 * 100) / 100;
   const remaining = monthlyIncome - totalBills - savings;
 
