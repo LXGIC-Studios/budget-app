@@ -145,6 +145,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export function useApp(): AppContextValue {
   const ctx = useContext(AppContext);
-  if (!ctx) throw new Error("useApp must be used within AppProvider");
+  if (!ctx) {
+    // Return a safe default when outside AppProvider (e.g. login screen on web)
+    return {
+      profile: null,
+      transactions: [],
+      currentBudget: null,
+      currentMonth: getMonthKey(),
+      loading: true,
+      setCurrentMonth: () => {},
+      reload: async () => {},
+      saveProfile: async () => {},
+      addTransaction: async () => {},
+      addTransactions: async () => {},
+      deleteTransaction: async () => {},
+      saveBudget: async () => {},
+      resetAll: async () => {},
+    } as AppContextValue;
+  }
   return ctx;
 }
