@@ -24,9 +24,42 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {error:
   }
 }
 
-function RootGuard() {
-  const { user, loading: authLoading } = useAuth();
+function UnauthGuard() {
+  const { loading: authLoading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (authLoading) return;
+    const inLogin = segments[0] === "login";
+    if (!inLogin) router.replace("/login");
+  }, [authLoading, segments]);
+
+  if (authLoading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <StatusBar style="light" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+          animation: "slide_from_right",
+        }}
+      />
+    </>
+  );
+}
+
+function AuthGuard() {
   const { profile, loading: appLoading } = useApp();
+  const { loading: authLoading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
@@ -36,19 +69,14 @@ function RootGuard() {
     const inLogin = segments[0] === "login";
     const inOnboarding = segments[0] === "onboarding";
 
-    if (!user) {
-      if (!inLogin) router.replace("/login");
-      return;
-    }
-
     if (!profile?.onboardingComplete && !inOnboarding) {
       router.replace("/onboarding");
     } else if (profile?.onboardingComplete && (inOnboarding || inLogin)) {
       router.replace("/");
     }
-  }, [user, profile, authLoading, appLoading, segments]);
+  }, [profile, authLoading, appLoading, segments]);
 
-  if (authLoading || appLoading) {
+  if (appLoading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -71,15 +99,23 @@ function RootGuard() {
 }
 
 function AuthenticatedApp() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!user) {
-    return <RootGuard />;
+    return <UnauthGuard />;
   }
 
   return (
     <AppProvider>
-      <RootGuard />
+      <AuthGuard />
     </AppProvider>
   );
 }
