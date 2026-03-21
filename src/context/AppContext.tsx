@@ -22,6 +22,7 @@ interface AppContextValue extends AppState {
   reload: () => Promise<void>;
   saveProfile: (profile: UserProfile) => Promise<void>;
   addTransaction: (txn: Transaction) => Promise<void>;
+  addTransactions: (txns: Transaction[]) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   saveBudget: (budget: MonthlyBudget) => Promise<void>;
   resetAll: () => Promise<void>;
@@ -84,6 +85,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [reload]
   );
 
+  const addTransactions = useCallback(
+    async (txns: Transaction[]) => {
+      await storage.addTransactions(txns);
+      await reload();
+    },
+    [reload]
+  );
+
   const deleteTransaction = useCallback(
     async (id: string) => {
       await storage.deleteTransaction(id);
@@ -123,6 +132,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         reload,
         saveProfile,
         addTransaction,
+        addTransactions,
         deleteTransaction,
         saveBudget,
         resetAll,

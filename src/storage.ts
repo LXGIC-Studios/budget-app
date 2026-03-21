@@ -89,6 +89,26 @@ export async function addTransaction(txn: Transaction): Promise<void> {
   });
 }
 
+export async function addTransactions(txns: Transaction[]): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || txns.length === 0) return;
+
+  const rows = txns.map((txn) => ({
+    id: txn.id,
+    user_id: user.id,
+    type: txn.type,
+    amount: txn.amount,
+    category: txn.category,
+    note: txn.note || null,
+    date: txn.date,
+    created_at: txn.createdAt,
+  }));
+
+  await supabase.from("transactions").insert(rows);
+}
+
 export async function deleteTransaction(id: string): Promise<void> {
   await supabase.from("transactions").delete().eq("id", id);
 }

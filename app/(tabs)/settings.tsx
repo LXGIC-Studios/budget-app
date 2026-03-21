@@ -16,12 +16,19 @@ import {
   RotateCcw,
   Info,
   LogOut,
+  Upload,
 } from "lucide-react-native";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 import { impact, notification } from "../../src/lib/haptics";
 import { colors, radius, spacing } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { useAuth } from "../../src/context/AuthContext";
 import { formatCurrency } from "../../src/utils";
+import { parseCSV } from "../../src/lib/csv-parser";
+import { parseOFX } from "../../src/lib/ofx-parser";
+import { ImportPreview } from "../../src/components/ImportPreview";
+import type { Transaction } from "../../src/types";
 
 function SettingRow({
   icon,
@@ -45,13 +52,39 @@ function SettingRow({
   );
 }
 
+async function readFileContent(uri: string): Promise<string> {
+  if (Platform.OS === "web") {
+    const response = await fetch(uri);
+    return response.text();
+  }
+  return FileSystem.readAsStringAsync(uri);
+}
+
+function filterDuplicates(
+  newTxns: Transaction[],
+  existing: Transaction[]
+): Transaction[] {
+  return newTxns.filter(
+    (t) =>
+      !existing.some(
+        (e) =>
+          e.date === t.date &&
+          e.amount === t.amount &&
+          e.category === t.category
+      )
+  );
+}
+
 export default function SettingsScreen() {
-  const { profile, saveProfile, resetAll } = useApp();
+  const { profile, saveProfile, resetAll, addTransactions, transactions } =
+    useApp();
   const { user, signOut } = useAuth();
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeText, setIncomeText] = useState(
     profile?.monthlyIncome?.toString() ?? ""
   );
+  const [previewTxns, setPreviewTxns] = useState<Transaction[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleSaveIncome = () => {
     const parsed = parseFloat(incomeText);
@@ -59,6 +92,80 @@ export default function SettingsScreen() {
     impact("Medium");
     saveProfile({ ...profile, monthlyIncome: parsed });
     setEditingIncome(false);
+  };
+
+  const handleImportFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          "text/csv",
+          "application/csv",
+          "text/comma-separated-values",
+          "application/x-ofx",
+          "application/ofx",
+          "text/plain",
+          "application/octet-stream",
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const file = result.assets[0];
+      const content = await readFileContent(file.uri);
+
+      const isOFX =
+        file.name?.toLowerCase().endsWith(".ofx") ||
+        file.name?.toLowerCase().endsWith(".qfx") ||
+        content.trimStart().startsWith("OFXHEADER") ||
+        content.includes("<OFX>");
+
+      const parsed = isOFX ? parseOFX(content) : parseCSV(content);
+
+      if (parsed.length === 0) {
+        const msg = "No transactions found in this file. Make sure it's a valid bank statement export.";
+        if (Platform.OS === "web") {
+          window.alert(msg);
+        } else {
+          Alert.alert("No Transactions", msg);
+        }
+        return;
+      }
+
+      const unique = filterDuplicates(parsed, transactions);
+
+      if (unique.length === 0) {
+        const msg = "All transactions in this file have already been imported.";
+        if (Platform.OS === "web") {
+          window.alert(msg);
+        } else {
+          Alert.alert("Already Imported", msg);
+        }
+        return;
+      }
+
+      setPreviewTxns(unique);
+      setShowPreview(true);
+    } catch {
+      const msg = "Failed to read the file. Please try again.";
+      if (Platform.OS === "web") {
+        window.alert(msg);
+      } else {
+        Alert.alert("Import Error", msg);
+      }
+    }
+  };
+
+  const handleConfirmImport = async (txns: Transaction[]) => {
+    setShowPreview(false);
+    await addTransactions(txns);
+    notification("Success");
+    const msg = `Successfully imported ${txns.length} transaction${txns.length !== 1 ? "s" : ""}.`;
+    if (Platform.OS === "web") {
+      window.alert(msg);
+    } else {
+      Alert.alert("Import Complete", msg);
+    }
   };
 
   const handleReset = () => {
@@ -169,6 +276,11 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data</Text>
           <SettingRow
+            icon={<Upload size={20} color={colors.textSecondary} />}
+            label="Import Transactions"
+            onPress={handleImportFile}
+          />
+          <SettingRow
             icon={<RotateCcw size={20} color={colors.red} />}
             label="Reset All Data"
             onPress={handleReset}
@@ -188,6 +300,13 @@ export default function SettingsScreen() {
           Built with focus. No bloat.{"\n"}Your budget, synced everywhere.
         </Text>
       </ScrollView>
+
+      <ImportPreview
+        visible={showPreview}
+        transactions={previewTxns}
+        onImport={handleConfirmImport}
+        onClose={() => setShowPreview(false)}
+      />
     </SafeAreaView>
   );
 }
