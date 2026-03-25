@@ -9,12 +9,23 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { impact } from "../../src/lib/haptics";
 import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { FAB } from "../../src/components/FAB";
 import { QuickAddSheet } from "../../src/components/QuickAddSheet";
-import { formatCurrency, getMonthlyAmount, formatDueDay } from "../../src/utils";
+import {
+  formatCurrency,
+  getMonthlyAmount,
+  formatDueDay,
+  formatMonthLabel,
+  shiftMonth,
+  getWeekKey,
+  getWeekRange,
+  formatWeekLabel,
+  shiftWeek,
+} from "../../src/utils";
 import type { BudgetCategory, BillFrequency } from "../../src/types";
 
 const FREQUENCY_OPTIONS: { value: BillFrequency; label: string }[] = [
@@ -30,17 +41,39 @@ function FrequencyLabel(freq: BillFrequency): string {
   return freq.toUpperCase();
 }
 
+/** Convert a category's allocated amount to its weekly equivalent */
+function getWeeklyAmount(allocated: number, frequency: BillFrequency): number {
+  switch (frequency) {
+    case "weekly":
+      return allocated;
+    case "biweekly":
+      return allocated / 2.17;
+    case "monthly":
+      return allocated / 4.33;
+    case "bimonthly":
+      return allocated / (4.33 * 2);
+    case "quarterly":
+      return allocated / 13;
+    case "yearly":
+      return allocated / 52;
+    default:
+      return allocated / 4.33;
+  }
+}
+
 function CategoryRow({
   cat,
   spent,
+  displayAllocated,
   onPress,
 }: {
   cat: BudgetCategory;
   spent: number;
+  displayAllocated: number;
   onPress: () => void;
 }) {
-  const pct = cat.allocated > 0 ? Math.min(spent / cat.allocated, 1.5) : 0;
-  const isOver = spent > cat.allocated;
+  const pct = displayAllocated > 0 ? Math.min(spent / displayAllocated, 1.5) : 0;
+  const isOver = spent > displayAllocated;
   const barColor = isOver ? colors.red : colors.primary;
   const freq = cat.frequency || "monthly";
   const showFreqBadge = freq !== "monthly";
@@ -69,7 +102,7 @@ function CategoryRow({
         </View>
         <Text style={[styles.catSpent, isOver && { color: colors.red }]}>
           {formatCurrency(spent)}{" "}
-          <Text style={styles.catOf}>/ {formatCurrency(cat.allocated)}</Text>
+          <Text style={styles.catOf}>/ {formatCurrency(displayAllocated)}</Text>
         </Text>
       </View>
       <View style={styles.barBg}>
@@ -88,7 +121,7 @@ function CategoryRow({
 }
 
 export default function BudgetScreen() {
-  const { profile, currentBudget, transactions, currentMonth, saveBudget, addTransaction } =
+  const { profile, currentBudget, transactions, currentMonth, setCurrentMonth, saveBudget, addTransaction } =
     useApp();
 
   const monthlyIncome = profile?.monthlyIncome ?? 0;
@@ -97,7 +130,12 @@ export default function BudgetScreen() {
   const [editAmount, setEditAmount] = useState("");
   const [editFrequency, setEditFrequency] = useState<BillFrequency>("monthly");
   const [editDueDay, setEditDueDay] = useState("");
+  const [viewMode, setViewMode] = useState<"monthly" | "weekly">("monthly");
+  const [currentWeek, setCurrentWeek] = useState(getWeekKey());
 
+  const categories = currentBudget?.categories ?? [];
+
+  // Monthly transactions
   const monthTxns = useMemo(
     () =>
       transactions.filter(
@@ -106,18 +144,31 @@ export default function BudgetScreen() {
     [transactions, currentMonth]
   );
 
+  // Weekly transactions
+  const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
+  const weekTxns = useMemo(
+    () =>
+      transactions.filter((t) => {
+        if (t.type !== "expense") return false;
+        const d = new Date(t.date);
+        return d >= weekRange.start && d <= weekRange.end;
+      }),
+    [transactions, weekRange]
+  );
+
+  const activeTxns = viewMode === "weekly" ? weekTxns : monthTxns;
+
   const spentByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    monthTxns.forEach((t) => {
+    activeTxns.forEach((t) => {
       const key = t.category.toLowerCase();
       map[key] = (map[key] || 0) + t.amount;
     });
     return map;
-  }, [monthTxns]);
+  }, [activeTxns]);
 
-  const categories = currentBudget?.categories ?? [];
-
-  const totalBudget = useMemo(
+  // Monthly totals
+  const totalBudgetMonthly = useMemo(
     () =>
       categories.reduce(
         (s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"),
@@ -125,6 +176,36 @@ export default function BudgetScreen() {
       ),
     [categories]
   );
+
+  // Weekly totals
+  const weeklyIncome = monthlyIncome / 4.33;
+
+  const totalBudgetWeekly = useMemo(
+    () =>
+      categories.reduce(
+        (s, c) => s + getWeeklyAmount(c.allocated, c.frequency || "monthly"),
+        0
+      ),
+    [categories]
+  );
+
+  const weeklyLeftForSpending = weeklyIncome - totalBudgetWeekly;
+
+  // Navigation
+  const navigateMonth = (delta: number) => {
+    impact("Light");
+    setCurrentMonth(shiftMonth(currentMonth, delta));
+  };
+
+  const navigateWeek = (delta: number) => {
+    impact("Light");
+    setCurrentWeek(shiftWeek(currentWeek, delta));
+  };
+
+  const switchViewMode = (mode: "monthly" | "weekly") => {
+    setViewMode(mode);
+    impact("Light");
+  };
 
   const handleEditSave = () => {
     if (!editCat || !currentBudget) return;
@@ -154,47 +235,128 @@ export default function BudgetScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Text style={styles.header}>Budget</Text>
 
-      {/* Summary */}
-      <View style={styles.summaryRow}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>INCOME</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(monthlyIncome)}</Text>
+      {/* Period navigation */}
+      {viewMode === "monthly" ? (
+        <View style={styles.periodRow}>
+          <Pressable onPress={() => navigateMonth(-1)} hitSlop={12}>
+            <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.periodLabel}>{formatMonthLabel(currentMonth)}</Text>
+          <Pressable onPress={() => navigateMonth(1)} hitSlop={12}>
+            <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
+          </Pressable>
         </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>BUDGETED</Text>
-          <Text
-            style={[
-              styles.summaryValue,
-              totalBudget > monthlyIncome && { color: colors.red },
-            ]}
-          >
-            {formatCurrency(totalBudget)}
+      ) : (
+        <View style={styles.periodRow}>
+          <Pressable onPress={() => navigateWeek(-1)} hitSlop={12}>
+            <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.periodLabel}>{formatWeekLabel(currentWeek)}</Text>
+          <Pressable onPress={() => navigateWeek(1)} hitSlop={12}>
+            <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
+          </Pressable>
+        </View>
+      )}
+
+      {/* View mode toggle */}
+      <View style={styles.viewToggleRow}>
+        <Pressable
+          onPress={() => switchViewMode("monthly")}
+          style={[styles.viewToggleBtn, viewMode === "monthly" && styles.viewToggleBtnActive]}
+        >
+          <Text style={[styles.viewToggleText, viewMode === "monthly" && styles.viewToggleTextActive]}>
+            Monthly
           </Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>REMAINING</Text>
-          <Text
-            style={[
-              styles.summaryValue,
-              {
-                color:
-                  monthlyIncome - totalBudget >= 0 ? colors.primary : colors.red,
-              },
-            ]}
-          >
-            {formatCurrency(monthlyIncome - totalBudget)}
+        </Pressable>
+        <Pressable
+          onPress={() => switchViewMode("weekly")}
+          style={[styles.viewToggleBtn, viewMode === "weekly" && styles.viewToggleBtnActive]}
+        >
+          <Text style={[styles.viewToggleText, viewMode === "weekly" && styles.viewToggleTextActive]}>
+            Weekly
           </Text>
-        </View>
+        </Pressable>
       </View>
+
+      {/* Summary */}
+      {viewMode === "monthly" ? (
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>INCOME</Text>
+            <Text style={styles.summaryValue}>{formatCurrency(monthlyIncome)}</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>BUDGETED</Text>
+            <Text
+              style={[
+                styles.summaryValue,
+                totalBudgetMonthly > monthlyIncome && { color: colors.red },
+              ]}
+            >
+              {formatCurrency(totalBudgetMonthly)}
+            </Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>REMAINING</Text>
+            <Text
+              style={[
+                styles.summaryValue,
+                {
+                  color:
+                    monthlyIncome - totalBudgetMonthly >= 0 ? colors.primary : colors.red,
+                },
+              ]}
+            >
+              {formatCurrency(monthlyIncome - totalBudgetMonthly)}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        /* Weekly Savings Breakdown Card */
+        <View style={styles.weeklyCard}>
+          <Text style={styles.weeklyCardTitle}>Weekly Breakdown</Text>
+          <View style={styles.weeklyCardRows}>
+            <View style={styles.weeklyCardRow}>
+              <Text style={styles.weeklyCardLabel}>Weekly Paycheck</Text>
+              <Text style={styles.weeklyCardValue}>{formatCurrency(weeklyIncome)}</Text>
+            </View>
+            <View style={styles.weeklyCardDivider} />
+            <View style={styles.weeklyCardRow}>
+              <Text style={styles.weeklyCardLabel}>Bills Set-Aside</Text>
+              <Text style={[styles.weeklyCardValue, { color: colors.red }]}>
+                {formatCurrency(totalBudgetWeekly)}
+              </Text>
+            </View>
+            <View style={styles.weeklyCardDivider} />
+            <View style={styles.weeklyCardRow}>
+              <Text style={styles.weeklyCardLabel}>Left for Spending</Text>
+              <Text
+                style={[
+                  styles.weeklyCardValue,
+                  { color: weeklyLeftForSpending >= 0 ? colors.primary : colors.red },
+                ]}
+              >
+                {formatCurrency(weeklyLeftForSpending)}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={styles.catList}>
         {categories.map((cat) => {
           const catKey = cat.name.toLowerCase();
+          const freq = cat.frequency || "monthly";
+          const displayAllocated =
+            viewMode === "weekly"
+              ? getWeeklyAmount(cat.allocated, freq)
+              : cat.allocated;
           return (
             <CategoryRow
               key={cat.id}
               cat={cat}
               spent={spentByCategory[catKey] || 0}
+              displayAllocated={displayAllocated}
               onPress={() => openEdit(cat)}
             />
           );
@@ -294,6 +456,49 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     letterSpacing: -0.5,
   },
+  // Period navigation
+  periodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  periodLabel: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: "600",
+    minWidth: 160,
+    textAlign: "center",
+  },
+  // View mode toggle (matches dashboard)
+  viewToggleRow: {
+    flexDirection: "row",
+    alignSelf: "center",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.full,
+    padding: 3,
+    marginBottom: spacing.md,
+  },
+  viewToggleBtn: {
+    paddingVertical: 7,
+    paddingHorizontal: 20,
+    borderRadius: radius.full,
+  },
+  viewToggleBtnActive: {
+    backgroundColor: colors.primary,
+  },
+  viewToggleText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  viewToggleTextActive: {
+    color: colors.bg,
+  },
+  // Monthly summary
   summaryRow: {
     flexDirection: "row",
     gap: 10,
@@ -322,6 +527,47 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700",
   },
+  // Weekly savings breakdown card
+  weeklyCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+  },
+  weeklyCardTitle: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: spacing.sm,
+    letterSpacing: 0.3,
+  },
+  weeklyCardRows: {
+    gap: 0,
+  },
+  weeklyCardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  weeklyCardLabel: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  weeklyCardValue: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  weeklyCardDivider: {
+    height: 1,
+    backgroundColor: colors.cardBorder,
+  },
+  // Category list
   catList: {
     padding: spacing.md,
     gap: 10,
