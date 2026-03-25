@@ -27,6 +27,7 @@ import { useAuth } from "../../src/context/AuthContext";
 import { formatCurrency } from "../../src/utils";
 import { parseCSV } from "../../src/lib/csv-parser";
 import { parseOFX } from "../../src/lib/ofx-parser";
+import { parsePDF } from "../../src/lib/pdf-parser";
 import { ImportPreview } from "../../src/components/ImportPreview";
 import type { Transaction } from "../../src/types";
 
@@ -105,6 +106,7 @@ export default function SettingsScreen() {
           "text/comma-separated-values",
           "application/x-ofx",
           "application/ofx",
+          "application/pdf",
           "text/plain",
           "application/octet-stream",
         ],
@@ -114,15 +116,30 @@ export default function SettingsScreen() {
       if (result.canceled || !result.assets?.[0]) return;
 
       const file = result.assets[0];
-      const content = await readFileContent(file.uri);
+      const isPDF = file.name?.toLowerCase().endsWith(".pdf");
 
-      const isOFX =
-        file.name?.toLowerCase().endsWith(".ofx") ||
-        file.name?.toLowerCase().endsWith(".qfx") ||
-        content.trimStart().startsWith("OFXHEADER") ||
-        content.includes("<OFX>");
+      let parsed: Transaction[];
 
-      const parsed = isOFX ? parseOFX(content) : parseCSV(content);
+      if (isPDF) {
+        if (Platform.OS !== "web") {
+          Alert.alert(
+            "PDF Not Supported",
+            "PDF import is available on web. For mobile, please export as CSV from your bank."
+          );
+          return;
+        }
+        parsed = await parsePDF(file.uri);
+      } else {
+        const content = await readFileContent(file.uri);
+
+        const isOFX =
+          file.name?.toLowerCase().endsWith(".ofx") ||
+          file.name?.toLowerCase().endsWith(".qfx") ||
+          content.trimStart().startsWith("OFXHEADER") ||
+          content.includes("<OFX>");
+
+        parsed = isOFX ? parseOFX(content) : parseCSV(content);
+      }
 
       if (parsed.length === 0) {
         const msg = "No transactions found in this file. Make sure it's a valid bank statement export.";
