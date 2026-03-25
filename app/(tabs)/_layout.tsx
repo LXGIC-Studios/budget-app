@@ -5,7 +5,7 @@ import { colors } from "../../src/theme";
 
 export default function TabLayout() {
   return (
-    <View style={{ flex: 1, paddingBottom: Platform.OS === "web" ? 20 : 0 }}>
+    <View style={{ flex: 1, paddingBottom: Platform.OS === "web" ? 44 : 0 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -15,8 +15,8 @@ export default function TabLayout() {
           backgroundColor: "#080808",
           borderTopColor: colors.cardBorder,
           borderTopWidth: 1,
-          height: 84,
-          paddingBottom: 28,
+          height: 96,
+          paddingBottom: 40,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
