@@ -46,7 +46,7 @@ function Navigator() {
       return;
     }
 
-    if (!profile?.onboardingComplete && !inOnboarding) {
+    if (profile && !profile.onboardingComplete && !inOnboarding) {
       router.replace("/onboarding");
     } else if (profile?.onboardingComplete && (inOnboarding || inLogin)) {
       router.replace("/");
