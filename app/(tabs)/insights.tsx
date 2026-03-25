@@ -23,31 +23,33 @@ import {
   shiftMonth,
   formatMonthLabel,
 } from "../../src/utils";
-import { EXPENSE_CATEGORIES } from "../../src/types";
 
 const CHART_PADDING = spacing.md * 2;
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const CHART_WIDTH = SCREEN_WIDTH - CHART_PADDING * 2;
 
-const CATEGORY_COLORS: Record<string, string> = {
-  food: "#FF9500",
-  shopping: "#FF00FF",
-  transport: "#00FFFF",
-  bills: "#FF003C",
-  fun: "#CCFF00",
-  health: "#00FFCC",
-  other: "#707070",
-};
-
-function getCategoryColor(categoryId: string): string {
-  return CATEGORY_COLORS[categoryId] || colors.primary;
-}
-
-function getCategoryMeta(name: string) {
-  const lower = name.toLowerCase();
-  const found = EXPENSE_CATEGORIES.find((c) => c.id === lower || c.name.toLowerCase() === lower);
-  return found || { id: lower, name, emoji: "\uD83D\uDCE6" };
-}
+const PALETTE = [
+  "#00FFCC", // mint
+  "#FF003C", // red
+  "#FF00FF", // pink
+  "#00FFFF", // cyan
+  "#CCFF00", // yellow
+  "#FF9500", // orange
+  "#8B5CF6", // purple
+  "#3B82F6", // blue
+  "#10B981", // emerald
+  "#F43F5E", // rose
+  "#F59E0B", // amber
+  "#6366F1", // indigo
+  "#EC4899", // hot pink
+  "#14B8A6", // teal
+  "#EF4444", // red2
+  "#A855F7", // violet
+  "#22D3EE", // sky
+  "#84CC16", // lime
+  "#F97316", // orange2
+  "#06B6D4", // cyan2
+];
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -90,7 +92,7 @@ function TopStats({
       <View style={styles.statCard}>
         <Text style={styles.statLabel}>TOP CATEGORY</Text>
         <Text style={styles.statValue} numberOfLines={1}>
-          {topCategory ? topCategory.name : "\u2014"}
+          {topCategory ? `${topCategory.emoji} ${topCategory.name}` : "\u2014"}
         </Text>
         {topCategory && (
           <Text style={styles.statSub}>{formatCurrency(topCategory.amount)}</Text>
@@ -104,61 +106,205 @@ function TopStats({
   );
 }
 
-// --- Spending by Category (Horizontal Bar) ---
+// --- Spending by Category (Horizontal Bar Chart) ---
 
 function SpendingByCategoryChart({
   data,
 }: {
-  data: { id: string; name: string; emoji: string; amount: number }[];
+  data: { name: string; emoji: string; amount: number; percent: number; color: string }[];
 }) {
   if (data.length === 0) return <EmptyState message="No expenses yet this month" />;
 
-  const maxAmount = Math.max(...data.map((d) => d.amount));
-  const barHeight = 28;
-  const rowGap = 10;
-  const leftLabelWidth = 100;
-  const rightLabelWidth = 70;
-  const barAreaWidth = CHART_WIDTH - leftLabelWidth - rightLabelWidth;
-  const chartHeight = data.length * (barHeight + rowGap) - rowGap + 10;
+  return (
+    <View style={{ gap: 8 }}>
+      {data.map((item, i) => (
+        <View key={`${item.name}-${i}`}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
+              {item.emoji} {item.name}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+              {formatCurrency(item.amount)} ({item.percent.toFixed(1)}%)
+            </Text>
+          </View>
+          <View style={{ height: 20, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+            <View
+              style={{
+                height: "100%",
+                width: `${Math.max(item.percent, 1)}%`,
+                backgroundColor: item.color,
+                borderRadius: 4,
+              }}
+            />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// --- Monthly Spending Trend (Vertical Bar Chart) ---
+
+function MonthlySpendingTrend({
+  data,
+}: {
+  data: { label: string; total: number; isCurrent: boolean }[];
+}) {
+  if (data.length === 0 || data.every((d) => d.total === 0))
+    return <EmptyState message="No spending history yet" />;
+
+  const maxVal = Math.max(...data.map((d) => d.total), 1);
 
   return (
-    <Svg width={CHART_WIDTH} height={chartHeight}>
-      {data.map((item, i) => {
-        const y = i * (barHeight + rowGap);
-        const barW = maxAmount > 0 ? (item.amount / maxAmount) * barAreaWidth : 0;
-        return (
-          <G key={item.id}>
-            <SvgText
-              x={0}
-              y={y + barHeight / 2 + 5}
-              fill={colors.white}
-              fontSize={12}
-              fontWeight="600"
-            >
-              {item.name}
-            </SvgText>
-            <Rect
-              x={leftLabelWidth}
-              y={y + 2}
-              width={Math.max(barW, 2)}
-              height={barHeight - 4}
-              rx={4}
-              fill={getCategoryColor(item.id)}
+    <View style={{ gap: 8 }}>
+      {data.map((item, i) => (
+        <View key={`${item.label}-${i}`}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+            <Text style={{ color: item.isCurrent ? colors.primary : colors.white, fontSize: 13, fontWeight: item.isCurrent ? "700" : "500" }}>
+              {item.label}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+              {formatCurrency(item.total)}
+            </Text>
+          </View>
+          <View style={{ height: 24, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
+            <View
+              style={{
+                height: "100%",
+                width: `${(item.total / maxVal) * 100}%`,
+                backgroundColor: item.isCurrent ? colors.primary : colors.primaryDark,
+                borderRadius: 6,
+                opacity: item.isCurrent ? 1 : 0.6,
+              }}
             />
-            <SvgText
-              x={CHART_WIDTH}
-              y={y + barHeight / 2 + 5}
-              fill={colors.textSecondary}
-              fontSize={12}
-              fontWeight="600"
-              textAnchor="end"
-            >
-              {formatCurrency(item.amount)}
-            </SvgText>
-          </G>
-        );
-      })}
-    </Svg>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// --- Top Merchants ---
+
+function TopMerchants({
+  data,
+}: {
+  data: { name: string; amount: number; count: number }[];
+}) {
+  if (data.length === 0) return <EmptyState message="No merchant data available" />;
+
+  const maxAmount = Math.max(...data.map((d) => d.amount), 1);
+
+  return (
+    <View style={{ gap: 6 }}>
+      {data.map((item, i) => (
+        <View key={`${item.name}-${i}`} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, width: 20, textAlign: "right" }}>
+            {i + 1}.
+          </Text>
+          <View style={{ flex: 1, gap: 3 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                {formatCurrency(item.amount)} ({item.count}x)
+              </Text>
+            </View>
+            <View style={{ height: 6, backgroundColor: colors.dimmed, borderRadius: 3, overflow: "hidden" }}>
+              <View
+                style={{
+                  height: "100%",
+                  width: `${(item.amount / maxAmount) * 100}%`,
+                  backgroundColor: PALETTE[i % PALETTE.length],
+                  borderRadius: 3,
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// --- Income vs Expenses ---
+
+function IncomeVsExpenses({
+  income,
+  expenses,
+}: {
+  income: number;
+  expenses: number;
+}) {
+  const maxVal = Math.max(income, expenses, 1);
+  const net = income - expenses;
+  const isPositive = net >= 0;
+
+  return (
+    <View style={{ gap: 12 }}>
+      {/* Income bar */}
+      <View>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
+            💰 Income
+          </Text>
+          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
+            {formatCurrency(income)}
+          </Text>
+        </View>
+        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
+          <View
+            style={{
+              height: "100%",
+              width: `${(income / maxVal) * 100}%`,
+              backgroundColor: colors.primary,
+              borderRadius: 6,
+              opacity: 0.8,
+            }}
+          />
+        </View>
+      </View>
+
+      {/* Expenses bar */}
+      <View>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700" }}>
+            💸 Expenses
+          </Text>
+          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700" }}>
+            {formatCurrency(expenses)}
+          </Text>
+        </View>
+        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
+          <View
+            style={{
+              height: "100%",
+              width: `${(expenses / maxVal) * 100}%`,
+              backgroundColor: colors.red,
+              borderRadius: 6,
+              opacity: 0.8,
+            }}
+          />
+        </View>
+      </View>
+
+      {/* Net */}
+      <View style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: colors.cardBorder,
+      }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600" }}>
+          Net {isPositive ? "Surplus" : "Deficit"}
+        </Text>
+        <Text style={{ color: isPositive ? colors.primary : colors.red, fontSize: 16, fontWeight: "800" }}>
+          {isPositive ? "+" : ""}{formatCurrency(net)}
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -196,7 +342,6 @@ function DailySpendingChart({
 
   return (
     <Svg width={CHART_WIDTH} height={chartH}>
-      {/* Grid lines */}
       {Array.from({ length: gridLines + 1 }).map((_, i) => {
         const y = padTop + (i / gridLines) * plotH;
         const val = maxVal - (i / gridLines) * maxVal;
@@ -223,7 +368,6 @@ function DailySpendingChart({
         );
       })}
 
-      {/* X-axis labels */}
       {[1, Math.ceil(daysInMonth / 4), Math.ceil(daysInMonth / 2), Math.ceil((daysInMonth * 3) / 4), daysInMonth].map(
         (day) => {
           const idx = day - 1;
@@ -244,10 +388,8 @@ function DailySpendingChart({
         }
       )}
 
-      {/* Line */}
       <Path d={linePath} stroke={colors.primary} strokeWidth={2} fill="none" />
 
-      {/* Dots on non-zero days */}
       {points.map(
         (p, i) =>
           dailyData[i] > 0 && (
@@ -273,168 +415,40 @@ function BudgetVsActualChart({
 }) {
   if (data.length === 0) return <EmptyState message="No budget categories set up" />;
 
-  const chartH = 200;
-  const padTop = 20;
-  const padBottom = 40;
-  const padLeft = 10;
-  const padRight = 10;
-  const plotW = CHART_WIDTH - padLeft - padRight;
-  const plotH = chartH - padTop - padBottom;
-
-  const maxVal = Math.max(...data.flatMap((d) => [d.allocated, d.spent]), 1);
-  const groupWidth = plotW / data.length;
-  const barWidth = Math.min(groupWidth * 0.3, 24);
-  const barGap = 4;
-
-  const gridLines = 4;
-
   return (
-    <Svg width={CHART_WIDTH} height={chartH}>
-      {/* Grid lines */}
-      {Array.from({ length: gridLines + 1 }).map((_, i) => {
-        const y = padTop + (i / gridLines) * plotH;
-        return (
-          <Line
-            key={`grid-${i}`}
-            x1={padLeft}
-            y1={y}
-            x2={CHART_WIDTH - padRight}
-            y2={y}
-            stroke={colors.cardBorder}
-            strokeWidth={1}
-          />
-        );
-      })}
-
-      {data.map((item, i) => {
-        const centerX = padLeft + groupWidth * i + groupWidth / 2;
-        const allocH = (item.allocated / maxVal) * plotH;
-        const spentH = (item.spent / maxVal) * plotH;
+    <View style={{ gap: 8 }}>
+      {data.slice(0, 10).map((item, i) => {
+        const pctSpent = item.allocated > 0 ? (item.spent / item.allocated) * 100 : 0;
         const isOver = item.spent > item.allocated;
-
+        const barPct = Math.min(pctSpent, 100);
         return (
-          <G key={`group-${i}`}>
-            {/* Allocated bar */}
-            <Rect
-              x={centerX - barWidth - barGap / 2}
-              y={padTop + plotH - allocH}
-              width={barWidth}
-              height={allocH}
-              rx={4}
-              fill={colors.textSecondary}
-              opacity={0.4}
-            />
-            {/* Spent bar */}
-            <Rect
-              x={centerX + barGap / 2}
-              y={padTop + plotH - spentH}
-              width={barWidth}
-              height={spentH}
-              rx={4}
-              fill={isOver ? colors.red : colors.primary}
-            />
-            {/* Label */}
-            <SvgText
-              x={centerX}
-              y={chartH - 8}
-              fill={colors.textSecondary}
-              fontSize={10}
-              textAnchor="middle"
-            >
-              {item.emoji}
-            </SvgText>
-          </G>
+          <View key={`${item.name}-${i}`}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+              <Text style={{ color: colors.white, fontSize: 12, fontWeight: "600" }}>
+                {item.emoji} {item.name}
+              </Text>
+              <Text style={{ color: isOver ? colors.red : colors.textSecondary, fontSize: 12 }}>
+                {formatCurrency(item.spent)} / {formatCurrency(item.allocated)}
+              </Text>
+            </View>
+            <View style={{ height: 12, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+              <View
+                style={{
+                  height: "100%",
+                  width: `${Math.max(barPct, 1)}%`,
+                  backgroundColor: isOver ? colors.red : colors.primary,
+                  borderRadius: 4,
+                }}
+              />
+            </View>
+          </View>
         );
       })}
-    </Svg>
+    </View>
   );
 }
 
-// --- Monthly Comparison ---
-
-function MonthlyComparisonChart({
-  data,
-}: {
-  data: { label: string; total: number }[];
-}) {
-  if (data.length === 0 || data.every((d) => d.total === 0))
-    return <EmptyState message="No spending history yet" />;
-
-  const chartH = 180;
-  const padTop = 20;
-  const padBottom = 40;
-  const padLeft = 50;
-  const padRight = 10;
-  const plotW = CHART_WIDTH - padLeft - padRight;
-  const plotH = chartH - padTop - padBottom;
-
-  const maxVal = Math.max(...data.map((d) => d.total), 1);
-  const barWidth = Math.min(plotW / data.length * 0.5, 48);
-  const gridLines = 4;
-
-  return (
-    <Svg width={CHART_WIDTH} height={chartH}>
-      {/* Grid lines */}
-      {Array.from({ length: gridLines + 1 }).map((_, i) => {
-        const y = padTop + (i / gridLines) * plotH;
-        const val = maxVal - (i / gridLines) * maxVal;
-        return (
-          <G key={`grid-${i}`}>
-            <Line
-              x1={padLeft}
-              y1={y}
-              x2={CHART_WIDTH - padRight}
-              y2={y}
-              stroke={colors.cardBorder}
-              strokeWidth={1}
-            />
-            <SvgText
-              x={padLeft - 6}
-              y={y + 4}
-              fill={colors.textSecondary}
-              fontSize={10}
-              textAnchor="end"
-            >
-              ${Math.round(val)}
-            </SvgText>
-          </G>
-        );
-      })}
-
-      {data.map((item, i) => {
-        const groupW = plotW / data.length;
-        const centerX = padLeft + groupW * i + groupW / 2;
-        const barH = (item.total / maxVal) * plotH;
-
-        return (
-          <G key={`month-${i}`}>
-            <Rect
-              x={centerX - barWidth / 2}
-              y={padTop + plotH - barH}
-              width={barWidth}
-              height={barH}
-              rx={6}
-              fill={colors.primary}
-              opacity={0.4 + (i / data.length) * 0.6}
-            />
-            <SvgText
-              x={centerX}
-              y={chartH - 10}
-              fill={colors.textSecondary}
-              fontSize={10}
-              textAnchor="middle"
-              fontWeight="600"
-            >
-              {item.label}
-            </SvgText>
-          </G>
-        );
-      })}
-    </Svg>
-  );
-}
-
-// --- Legend ---
+// --- ChartLegend ---
 
 function ChartLegend({
   items,
@@ -466,13 +480,21 @@ export default function InsightsScreen() {
     [transactions, currentMonth]
   );
 
+  const monthIncome = useMemo(
+    () =>
+      transactions.filter(
+        (t) => t.date.startsWith(currentMonth) && t.type === "income"
+      ),
+    [transactions, currentMonth]
+  );
+
   // Top Stats
   const topStatsData = useMemo(() => {
     const now = new Date();
     const [y, m] = currentMonth.split("-").map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
     const today = now.getFullYear() === y && now.getMonth() + 1 === m ? now.getDate() : daysInMonth;
-    const daysLeft = daysInMonth - today;
+    const daysLeft = Math.max(daysInMonth - today, 0);
     const totalSpent = monthExpenses.reduce((s, t) => s + t.amount, 0);
     const avgDaily = today > 0 ? totalSpent / today : 0;
 
@@ -481,34 +503,56 @@ export default function InsightsScreen() {
         ? monthExpenses.reduce((max, t) => (t.amount > max.amount ? t : max), monthExpenses[0])
         : null;
 
-    // Top category
-    const catMap: Record<string, number> = {};
+    const catMap: Record<string, { amount: number; name: string; emoji: string }> = {};
     monthExpenses.forEach((t) => {
-      const key = t.category.toLowerCase();
-      catMap[key] = (catMap[key] || 0) + t.amount;
+      const key = t.category;
+      if (!catMap[key]) {
+        catMap[key] = { amount: 0, name: key, emoji: "📦" };
+      }
+      catMap[key].amount += t.amount;
     });
-    const topCatEntry = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0];
-    const topCategory = topCatEntry
-      ? { ...getCategoryMeta(topCatEntry[0]), amount: topCatEntry[1] }
-      : null;
+    // Try to match budget category for emoji
+    if (currentBudget) {
+      currentBudget.categories.forEach((bc) => {
+        const key = bc.name;
+        if (catMap[key]) {
+          catMap[key].emoji = bc.emoji;
+          catMap[key].name = bc.name;
+        }
+      });
+    }
+    const topCatEntry = Object.values(catMap).sort((a, b) => b.amount - a.amount)[0];
 
-    return { avgDaily, biggest, topCategory, daysLeft };
-  }, [monthExpenses, currentMonth]);
+    return { avgDaily, biggest, topCategory: topCatEntry || null, daysLeft };
+  }, [monthExpenses, currentMonth, currentBudget]);
 
   // Spending by Category
   const categorySpending = useMemo(() => {
-    const map: Record<string, number> = {};
+    const map: Record<string, { amount: number; name: string; emoji: string }> = {};
     monthExpenses.forEach((t) => {
-      const key = t.category.toLowerCase();
-      map[key] = (map[key] || 0) + t.amount;
+      const key = t.category;
+      if (!map[key]) {
+        map[key] = { amount: 0, name: key, emoji: "📦" };
+      }
+      map[key].amount += t.amount;
     });
-    return Object.entries(map)
-      .map(([key, amount]) => {
-        const meta = getCategoryMeta(key);
-        return { id: meta.id, name: meta.name, emoji: meta.emoji, amount };
-      })
+    // Match budget category emojis
+    if (currentBudget) {
+      currentBudget.categories.forEach((bc) => {
+        if (map[bc.name]) {
+          map[bc.name].emoji = bc.emoji;
+        }
+      });
+    }
+    const total = Object.values(map).reduce((s, v) => s + v.amount, 0);
+    return Object.values(map)
+      .map((item, i) => ({
+        ...item,
+        percent: total > 0 ? (item.amount / total) * 100 : 0,
+        color: PALETTE[i % PALETTE.length],
+      }))
       .sort((a, b) => b.amount - a.amount);
-  }, [monthExpenses]);
+  }, [monthExpenses, currentBudget]);
 
   // Daily Spending
   const { dailyData, daysInMonth } = useMemo(() => {
@@ -522,25 +566,10 @@ export default function InsightsScreen() {
     return { dailyData: daily, daysInMonth: dim };
   }, [monthExpenses, currentMonth]);
 
-  // Budget vs Actual
-  const budgetVsActual = useMemo(() => {
-    if (!currentBudget) return [];
-    const spentMap: Record<string, number> = {};
-    monthExpenses.forEach((t) => {
-      const key = t.category.toLowerCase();
-      spentMap[key] = (spentMap[key] || 0) + t.amount;
-    });
-    return currentBudget.categories.map((cat) => ({
-      name: cat.name,
-      emoji: cat.emoji,
-      allocated: cat.allocated,
-      spent: spentMap[cat.name.toLowerCase()] || 0,
-    }));
-  }, [currentBudget, monthExpenses]);
-
-  // Monthly Comparison (last 3 months)
-  const monthlyComparison = useMemo(() => {
+  // Monthly Spending Trend (Dec, Jan, Feb, Mar or relative to current)
+  const monthlyTrend = useMemo(() => {
     const months = [
+      shiftMonth(currentMonth, -3),
       shiftMonth(currentMonth, -2),
       shiftMonth(currentMonth, -1),
       currentMonth,
@@ -549,10 +578,54 @@ export default function InsightsScreen() {
       const total = transactions
         .filter((t) => t.date.startsWith(mk) && t.type === "expense")
         .reduce((s, t) => s + t.amount, 0);
-      const label = formatMonthLabel(mk).split(" ")[0]; // just the month name
-      return { label, total };
+      const label = formatMonthLabel(mk).split(" ")[0];
+      return { label, total, isCurrent: mk === currentMonth };
     });
   }, [transactions, currentMonth]);
+
+  // Top Merchants (parse from note field)
+  const topMerchants = useMemo(() => {
+    const merchantMap: Record<string, { amount: number; count: number }> = {};
+    monthExpenses.forEach((t) => {
+      const name = (t.note || t.category || "Unknown").trim();
+      if (!name) return;
+      if (!merchantMap[name]) {
+        merchantMap[name] = { amount: 0, count: 0 };
+      }
+      merchantMap[name].amount += t.amount;
+      merchantMap[name].count += 1;
+    });
+    return Object.entries(merchantMap)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10);
+  }, [monthExpenses]);
+
+  // Income vs Expenses
+  const incomeTotal = useMemo(
+    () => monthIncome.reduce((s, t) => s + t.amount, 0),
+    [monthIncome]
+  );
+  const expenseTotal = useMemo(
+    () => monthExpenses.reduce((s, t) => s + t.amount, 0),
+    [monthExpenses]
+  );
+
+  // Budget vs Actual
+  const budgetVsActual = useMemo(() => {
+    if (!currentBudget) return [];
+    const spentMap: Record<string, number> = {};
+    monthExpenses.forEach((t) => {
+      const key = t.category;
+      spentMap[key] = (spentMap[key] || 0) + t.amount;
+    });
+    return currentBudget.categories.map((cat) => ({
+      name: cat.name,
+      emoji: cat.emoji,
+      allocated: cat.allocated,
+      spent: spentMap[cat.name] || 0,
+    }));
+  }, [currentBudget, monthExpenses]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -567,13 +640,31 @@ export default function InsightsScreen() {
           daysLeft={topStatsData.daysLeft}
         />
 
+        {/* Income vs Expenses */}
+        <View style={styles.chartCard}>
+          <Text style={styles.chartTitle}>Income vs Expenses</Text>
+          <IncomeVsExpenses income={incomeTotal} expenses={expenseTotal} />
+        </View>
+
         {/* Spending by Category */}
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>Spending by Category</Text>
           <SpendingByCategoryChart data={categorySpending} />
         </View>
 
-        {/* Daily Spending Trend */}
+        {/* Monthly Spending Trend */}
+        <View style={styles.chartCard}>
+          <Text style={styles.chartTitle}>Monthly Spending Trend</Text>
+          <MonthlySpendingTrend data={monthlyTrend} />
+        </View>
+
+        {/* Top Merchants */}
+        <View style={styles.chartCard}>
+          <Text style={styles.chartTitle}>Top Merchants</Text>
+          <TopMerchants data={topMerchants} />
+        </View>
+
+        {/* Daily Spending */}
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>Daily Spending</Text>
           <DailySpendingChart dailyData={dailyData} daysInMonth={daysInMonth} />
@@ -584,18 +675,11 @@ export default function InsightsScreen() {
           <Text style={styles.chartTitle}>Budget vs Actual</Text>
           <ChartLegend
             items={[
-              { color: colors.textSecondary, label: "Budget" },
-              { color: colors.primary, label: "Spent" },
-              { color: colors.red, label: "Over" },
+              { color: colors.primary, label: "On Track" },
+              { color: colors.red, label: "Over Budget" },
             ]}
           />
           <BudgetVsActualChart data={budgetVsActual} />
-        </View>
-
-        {/* Monthly Comparison */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Monthly Comparison</Text>
-          <MonthlyComparisonChart data={monthlyComparison} />
         </View>
       </ScrollView>
     </SafeAreaView>
