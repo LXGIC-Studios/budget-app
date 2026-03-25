@@ -6,6 +6,7 @@ export interface Transaction {
   note?: string;
   date: string;
   createdAt: string;
+  userName?: string;
 }
 
 export type BillFrequency = 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'quarterly' | 'yearly';
@@ -28,6 +29,7 @@ export interface UserProfile {
   emergencyFundCurrent: number;
   babyStep: number;
   createdAt: string;
+  householdId?: string | null;
 }
 
 export type DebtType = 'credit_card' | 'student_loan' | 'car_loan' | 'mortgage' | 'medical' | 'personal' | 'other';
@@ -46,6 +48,26 @@ export interface Debt {
 export interface MonthlyBudget {
   month: string;
   categories: BudgetCategory[];
+}
+
+export interface Household {
+  id: string;
+  name: string;
+  inviteCode: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export type HouseholdRole = 'owner' | 'member';
+
+export interface HouseholdMember {
+  id: string;
+  householdId: string;
+  userId: string;
+  role: HouseholdRole;
+  joinedAt: string;
+  email?: string;
+  fullName?: string;
 }
 
 export interface Bill {

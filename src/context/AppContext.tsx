@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import type { Transaction, UserProfile, MonthlyBudget, Debt } from "../types";
+import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember } from "../types";
 import * as storage from "../storage";
 import { getMonthKey } from "../utils";
 
@@ -16,6 +16,8 @@ interface AppState {
   currentMonth: string;
   debts: Debt[];
   loading: boolean;
+  household: Household | null;
+  householdMembers: HouseholdMember[];
 }
 
 interface AppContextValue extends AppState {
@@ -31,6 +33,9 @@ interface AppContextValue extends AppState {
   deleteDebt: (id: string) => Promise<void>;
   updateEmergencyFund: (amount: number) => Promise<void>;
   resetAll: () => Promise<void>;
+  createHousehold: (name: string) => Promise<boolean>;
+  joinHousehold: (code: string) => Promise<boolean>;
+  leaveHousehold: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -43,15 +48,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     currentMonth: getMonthKey(),
     debts: [],
     loading: true,
+    household: null,
+    householdMembers: [],
   });
 
   const loadData = useCallback(async (month?: string) => {
     const targetMonth = month ?? getMonthKey();
-    const [profile, transactions, budget, debts] = await Promise.all([
+    const [profile, transactions, budget, debts, household, householdMembers] = await Promise.all([
       storage.getProfile(),
       storage.getTransactions(),
       storage.getBudgetForMonth(targetMonth),
       storage.getDebts(),
+      storage.getHousehold(),
+      storage.getHouseholdMembers(),
     ]);
     setState((prev) => ({
       ...prev,
@@ -60,6 +69,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       currentBudget: budget,
       currentMonth: targetMonth,
       debts,
+      household,
+      householdMembers,
       loading: false,
     }));
   }, []);
@@ -163,6 +174,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [state.profile, state.debts]
   );
 
+  const createHouseholdAction = useCallback(
+    async (name: string): Promise<boolean> => {
+      const result = await storage.createHousehold(name);
+      if (result) {
+        await reload();
+        return true;
+      }
+      return false;
+    },
+    [reload]
+  );
+
+  const joinHouseholdAction = useCallback(
+    async (code: string): Promise<boolean> => {
+      const result = await storage.joinHousehold(code);
+      if (result) {
+        await reload();
+        return true;
+      }
+      return false;
+    },
+    [reload]
+  );
+
+  const leaveHouseholdAction = useCallback(
+    async () => {
+      await storage.leaveHousehold();
+      await reload();
+    },
+    [reload]
+  );
+
   const resetAll = useCallback(async () => {
     await storage.resetAllData();
     setState({
@@ -172,6 +215,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       currentMonth: getMonthKey(),
       debts: [],
       loading: false,
+      household: null,
+      householdMembers: [],
     });
   }, []);
 
@@ -191,6 +236,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteDebt,
         updateEmergencyFund,
         resetAll,
+        createHousehold: createHouseholdAction,
+        joinHousehold: joinHouseholdAction,
+        leaveHousehold: leaveHouseholdAction,
       }}
     >
       {children}
@@ -209,6 +257,8 @@ export function useApp(): AppContextValue {
       currentMonth: getMonthKey(),
       debts: [],
       loading: true,
+      household: null,
+      householdMembers: [],
       setCurrentMonth: () => {},
       reload: async () => {},
       saveProfile: async () => {},
@@ -221,6 +271,9 @@ export function useApp(): AppContextValue {
       deleteDebt: async () => {},
       updateEmergencyFund: async () => {},
       resetAll: async () => {},
+      createHousehold: async () => false,
+      joinHousehold: async () => false,
+      leaveHousehold: async () => {},
     } as AppContextValue;
   }
   return ctx;

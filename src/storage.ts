@@ -5,6 +5,8 @@ import type {
   MonthlyBudget,
   BudgetCategory,
   Debt,
+  Household,
+  HouseholdMember,
 } from "./types";
 
 // Profile
@@ -30,6 +32,7 @@ export async function getProfile(): Promise<UserProfile | null> {
     emergencyFundCurrent: Number(data.emergency_fund_current) || 0,
     babyStep: Number(data.baby_step) || 1,
     createdAt: data.created_at,
+    householdId: data.household_id || null,
   };
 }
 
@@ -59,6 +62,56 @@ export async function getTransactions(): Promise<Transaction[]> {
   } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // Check if user is in a household
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("household_id")
+    .eq("id", user.id)
+    .single();
+
+  const householdId = profile?.household_id;
+
+  if (householdId) {
+    // Fetch household member IDs
+    const { data: members } = await supabase
+      .from("household_members")
+      .select("user_id")
+      .eq("household_id", householdId);
+
+    const memberIds = members?.map((m) => m.user_id) ?? [user.id];
+
+    // Fetch all profiles for name lookup
+    const { data: memberProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", memberIds);
+
+    const nameMap = new Map<string, string>();
+    memberProfiles?.forEach((p) => {
+      nameMap.set(p.id, p.full_name || p.email?.split("@")[0] || "Unknown");
+    });
+
+    const { data } = await supabase
+      .from("transactions")
+      .select("*")
+      .in("user_id", memberIds)
+      .order("date", { ascending: false });
+
+    if (!data) return [];
+
+    return data.map((row) => ({
+      id: row.id,
+      type: row.type as "expense" | "income",
+      amount: Number(row.amount),
+      category: row.category,
+      note: row.note || undefined,
+      date: row.date,
+      createdAt: row.created_at,
+      userName: nameMap.get(row.user_id),
+    }));
+  }
+
+  // Solo user - original behavior
   const { data } = await supabase
     .from("transactions")
     .select("*")
@@ -129,12 +182,34 @@ export async function getBudgetForMonth(
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase
+  // Check if user is in a household
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("household_id")
+    .eq("id", user.id)
+    .single();
+
+  const householdId = profile?.household_id;
+
+  let query = supabase
     .from("budget_categories")
     .select("*")
-    .eq("user_id", user.id)
     .eq("month", month)
     .order("created_at", { ascending: true });
+
+  if (householdId) {
+    // Fetch household member IDs
+    const { data: members } = await supabase
+      .from("household_members")
+      .select("user_id")
+      .eq("household_id", householdId);
+    const memberIds = members?.map((m) => m.user_id) ?? [user.id];
+    query = query.in("user_id", memberIds);
+  } else {
+    query = query.eq("user_id", user.id);
+  }
+
+  const { data } = await query;
 
   if (!data || data.length === 0) return null;
 
@@ -189,11 +264,32 @@ export async function getDebts(): Promise<Debt[]> {
   } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data } = await supabase
+  // Check if user is in a household
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("household_id")
+    .eq("id", user.id)
+    .single();
+
+  const householdId = profile?.household_id;
+
+  let query = supabase
     .from("debts")
     .select("*")
-    .eq("user_id", user.id)
     .order("balance", { ascending: true });
+
+  if (householdId) {
+    const { data: members } = await supabase
+      .from("household_members")
+      .select("user_id")
+      .eq("household_id", householdId);
+    const memberIds = members?.map((m) => m.user_id) ?? [user.id];
+    query = query.in("user_id", memberIds);
+  } else {
+    query = query.eq("user_id", user.id);
+  }
+
+  const { data } = await query;
 
   if (!data) return [];
 
@@ -248,6 +344,103 @@ export async function updateDebt(
 
 export async function deleteDebt(id: string): Promise<void> {
   await supabase.from("debts").delete().eq("id", id);
+}
+
+// Households
+export async function createHousehold(name: string): Promise<Household | null> {
+  const { data, error } = await supabase.rpc("create_household", {
+    household_name: name,
+  });
+  if (error || !data) return null;
+  return {
+    id: data.id,
+    name: data.name,
+    inviteCode: data.invite_code,
+    createdBy: "",
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export async function joinHousehold(code: string): Promise<Household | null> {
+  const { data, error } = await supabase.rpc("join_household", {
+    code: code.toUpperCase(),
+  });
+  if (error || !data) return null;
+  return {
+    id: data.id,
+    name: data.name,
+    inviteCode: data.invite_code,
+    createdBy: "",
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export async function leaveHousehold(): Promise<void> {
+  await supabase.rpc("leave_household");
+}
+
+export async function getHousehold(): Promise<Household | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("household_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.household_id) return null;
+
+  const { data } = await supabase
+    .from("households")
+    .select("*")
+    .eq("id", profile.household_id)
+    .single();
+
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    inviteCode: data.invite_code,
+    createdBy: data.created_by,
+    createdAt: data.created_at,
+  };
+}
+
+export async function getHouseholdMembers(): Promise<HouseholdMember[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("household_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.household_id) return [];
+
+  const { data } = await supabase
+    .from("household_members")
+    .select("*, profiles(email, full_name)")
+    .eq("household_id", profile.household_id)
+    .order("joined_at", { ascending: true });
+
+  if (!data) return [];
+
+  return data.map((row: any) => ({
+    id: row.id,
+    householdId: row.household_id,
+    userId: row.user_id,
+    role: row.role,
+    joinedAt: row.joined_at,
+    email: row.profiles?.email,
+    fullName: row.profiles?.full_name,
+  }));
 }
 
 // Reset all data

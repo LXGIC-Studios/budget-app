@@ -31,6 +31,7 @@ export function TransactionItem({ transaction, onLongPress }: Props) {
         </Text>
         <Text style={styles.category}>
           {transaction.category} · {formatShortDate(transaction.date)}
+          {transaction.userName ? ` · ${transaction.userName}` : ""}
         </Text>
       </View>
       <Text
