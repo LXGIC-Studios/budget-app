@@ -1,9 +1,11 @@
 import { Tabs } from "expo-router";
+import { Platform, View } from "react-native";
 import { Home, BarChart3, CreditCard, TrendingUp, List, Users, Settings } from "lucide-react-native";
 import { colors } from "../../src/theme";
 
 export default function TabLayout() {
   return (
+    <View style={{ flex: 1, paddingBottom: Platform.OS === "web" ? 20 : 0 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -90,5 +92,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }

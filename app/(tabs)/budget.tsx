@@ -432,9 +432,14 @@ export default function BudgetScreen() {
               </View>
             </View>
 
-            <Pressable onPress={handleEditSave} style={styles.modalBtn}>
-              <Text style={styles.modalBtnText}>Save</Text>
-            </Pressable>
+            <View style={styles.modalBtnRow}>
+              <Pressable onPress={() => setEditCat(null)} style={styles.modalCancelBtn}>
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={handleEditSave} style={styles.modalBtn}>
+                <Text style={styles.modalBtnText}>Save</Text>
+              </Pressable>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -716,7 +721,25 @@ const styles = StyleSheet.create({
   freqPillTextActive: {
     color: colors.primary,
   },
+  modalBtnRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+  },
+  modalCancelBtnText: {
+    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: "600",
+  },
   modalBtn: {
+    flex: 1,
     backgroundColor: colors.primary,
     paddingVertical: 14,
     alignItems: "center",
