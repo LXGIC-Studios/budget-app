@@ -81,3 +81,51 @@ export function formatDueDay(day: number): string {
           : "th";
   return `Due ${day}${suffix}`;
 }
+
+export function getWeekKey(date: Date = new Date()): string {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  // ISO week: week starts Monday. Jan 4 is always in week 1.
+  const dayNum = d.getDay() || 7; // Convert Sunday=0 to 7
+  d.setDate(d.getDate() + 4 - dayNum); // Set to nearest Thursday
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNo = Math.ceil(
+    ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  );
+  return `${d.getFullYear()}-W${weekNo.toString().padStart(2, "0")}`;
+}
+
+export function getWeekRange(weekKey: string): { start: Date; end: Date } {
+  const [yearStr, weekStr] = weekKey.split("-W");
+  const year = parseInt(yearStr, 10);
+  const week = parseInt(weekStr, 10);
+  // Jan 4 is always in ISO week 1
+  const jan4 = new Date(year, 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  // Monday of week 1
+  const week1Monday = new Date(jan4);
+  week1Monday.setDate(jan4.getDate() - (jan4Day - 1));
+  // Monday of target week
+  const start = new Date(week1Monday);
+  start.setDate(week1Monday.getDate() + (week - 1) * 7);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+export function formatWeekLabel(weekKey: string): string {
+  const { start, end } = getWeekRange(weekKey);
+  const startMonth = start.toLocaleDateString("en-US", { month: "short" });
+  const endMonth = end.toLocaleDateString("en-US", { month: "short" });
+  const year = end.getFullYear();
+  if (startMonth === endMonth) {
+    return `${startMonth} ${start.getDate()} - ${end.getDate()}, ${year}`;
+  }
+  return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}, ${year}`;
+}
+
+export function shiftWeek(weekKey: string, delta: number): string {
+  const { start } = getWeekRange(weekKey);
+  start.setDate(start.getDate() + delta * 7);
+  return getWeekKey(start);
+}

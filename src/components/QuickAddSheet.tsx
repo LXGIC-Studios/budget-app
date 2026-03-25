@@ -15,7 +15,7 @@ import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
 import type { Transaction } from "../types";
-import { generateId } from "../utils";
+import { generateId, formatShortDate } from "../utils";
 
 interface Props {
   visible: boolean;
@@ -28,6 +28,8 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
   const [note, setNote] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [dateInput, setDateInput] = useState("");
 
   const categories =
     mode === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -44,7 +46,7 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
       amount: Math.round(parsed * 100) / 100,
       category,
       note: note.trim() || undefined,
-      date: new Date().toISOString(),
+      date: selectedDate.toISOString(),
       createdAt: new Date().toISOString(),
     };
 
@@ -52,14 +54,73 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
     setAmount("");
     setCategory(mode === "expense" ? "food" : "salary");
     setNote("");
+    setSelectedDate(new Date());
+    setDateInput("");
     onClose();
   };
 
   const handleClose = () => {
     setAmount("");
     setNote("");
+    setSelectedDate(new Date());
+    setDateInput("");
     onClose();
   };
+
+  const setToday = () => {
+    setSelectedDate(new Date());
+    setDateInput("");
+    impact("Light");
+  };
+
+  const setYesterday = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(d);
+    setDateInput("");
+    impact("Light");
+  };
+
+  const handleDateInput = (text: string) => {
+    // Auto-format: add slashes as user types
+    const digits = text.replace(/\D/g, "");
+    let formatted = digits;
+    if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
+    if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4, 8);
+    setDateInput(formatted);
+
+    // Parse when complete: MM/DD/YYYY
+    if (digits.length === 8) {
+      const month = parseInt(digits.slice(0, 2), 10);
+      const day = parseInt(digits.slice(2, 4), 10);
+      const year = parseInt(digits.slice(4, 8), 10);
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 2000) {
+        const parsed = new Date(year, month - 1, day);
+        if (!isNaN(parsed.getTime())) {
+          setSelectedDate(parsed);
+        }
+      }
+    }
+  };
+
+  const isToday = (() => {
+    const now = new Date();
+    return (
+      selectedDate.getFullYear() === now.getFullYear() &&
+      selectedDate.getMonth() === now.getMonth() &&
+      selectedDate.getDate() === now.getDate()
+    );
+  })();
+
+  const isYesterday = (() => {
+    const yest = new Date();
+    yest.setDate(yest.getDate() - 1);
+    return (
+      selectedDate.getFullYear() === yest.getFullYear() &&
+      selectedDate.getMonth() === yest.getMonth() &&
+      selectedDate.getDate() === yest.getDate()
+    );
+  })();
 
   const switchMode = (m: "expense" | "income") => {
     setMode(m);
@@ -158,6 +219,40 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
             onChangeText={setNote}
             returnKeyType="done"
           />
+
+          {/* Date */}
+          <View style={styles.dateRow}>
+            <Pressable
+              onPress={setToday}
+              style={[styles.dateQuickBtn, isToday && styles.dateQuickBtnActive]}
+            >
+              <Text style={[styles.dateQuickBtnText, isToday && styles.dateQuickBtnTextActive]}>
+                Today
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={setYesterday}
+              style={[styles.dateQuickBtn, isYesterday && styles.dateQuickBtnActive]}
+            >
+              <Text style={[styles.dateQuickBtnText, isYesterday && styles.dateQuickBtnTextActive]}>
+                Yesterday
+              </Text>
+            </Pressable>
+            <TextInput
+              style={styles.dateInput}
+              placeholder="MM/DD/YYYY"
+              placeholderTextColor={colors.dimmed}
+              value={dateInput}
+              onChangeText={handleDateInput}
+              keyboardType="number-pad"
+              maxLength={10}
+            />
+            {!isToday && !isYesterday && !dateInput && (
+              <Text style={styles.dateLabel}>
+                {formatShortDate(selectedDate.toISOString())}
+              </Text>
+            )}
+          </View>
 
           {/* Save */}
           <Pressable
@@ -260,6 +355,48 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     color: colors.white,
     fontSize: 15,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  dateQuickBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.full,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  dateQuickBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  dateQuickBtnText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  dateQuickBtnTextActive: {
+    color: colors.bg,
+  },
+  dateInput: {
+    flex: 1,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.sm,
+    color: colors.white,
+    fontSize: 14,
+    textAlign: "center",
+  },
+  dateLabel: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: "600",
   },
   saveBtn: {
     backgroundColor: colors.primary,

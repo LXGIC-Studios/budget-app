@@ -19,6 +19,10 @@ import {
   formatCurrency,
   formatMonthLabel,
   shiftMonth,
+  getWeekKey,
+  getWeekRange,
+  formatWeekLabel,
+  shiftWeek,
 } from "../../src/utils";
 
 export default function Dashboard() {
@@ -31,6 +35,8 @@ export default function Dashboard() {
     deleteTransaction,
   } = useApp();
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<"monthly" | "weekly">("monthly");
+  const [currentWeek, setCurrentWeek] = useState(getWeekKey());
 
   const monthlyIncome = profile?.monthlyIncome ?? 0;
 
@@ -41,22 +47,46 @@ export default function Dashboard() {
     [transactions, currentMonth]
   );
 
-  const totalSpent = useMemo(
+  // Filter transactions for current week
+  const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
+  const weekTxns = useMemo(
     () =>
-      monthTxns
-        .filter((t) => t.type === "expense")
-        .reduce((s, t) => s + t.amount, 0),
-    [monthTxns]
+      transactions.filter((t) => {
+        const d = new Date(t.date);
+        return d >= weekRange.start && d <= weekRange.end;
+      }),
+    [transactions, weekRange]
   );
 
-  const leftToSpend = monthlyIncome - totalSpent;
+  const activeTxns = viewMode === "weekly" ? weekTxns : monthTxns;
+
+  const totalSpent = useMemo(
+    () =>
+      activeTxns
+        .filter((t) => t.type === "expense")
+        .reduce((s, t) => s + t.amount, 0),
+    [activeTxns]
+  );
+
+  const displayIncome = viewMode === "weekly" ? monthlyIncome / 4.33 : monthlyIncome;
+  const leftToSpend = displayIncome - totalSpent;
   const isOver = leftToSpend < 0;
 
-  const recentTxns = monthTxns.slice(0, 15);
+  const recentTxns = activeTxns.slice(0, 15);
 
   const navigateMonth = (delta: number) => {
     impact("Light");
     setCurrentMonth(shiftMonth(currentMonth, delta));
+  };
+
+  const navigateWeek = (delta: number) => {
+    impact("Light");
+    setCurrentWeek(shiftWeek(currentWeek, delta));
+  };
+
+  const switchViewMode = (mode: "monthly" | "weekly") => {
+    setViewMode(mode);
+    impact("Light");
   };
 
   const handleDeleteTxn = (id: string) => {
@@ -66,14 +96,46 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Month selector */}
-      <View style={styles.monthRow}>
-        <Pressable onPress={() => navigateMonth(-1)} hitSlop={12}>
-          <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
+      {/* Period selector */}
+      {viewMode === "monthly" ? (
+        <View style={styles.monthRow}>
+          <Pressable onPress={() => navigateMonth(-1)} hitSlop={12}>
+            <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth)}</Text>
+          <Pressable onPress={() => navigateMonth(1)} hitSlop={12}>
+            <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.monthRow}>
+          <Pressable onPress={() => navigateWeek(-1)} hitSlop={12}>
+            <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.monthLabel}>{formatWeekLabel(currentWeek)}</Text>
+          <Pressable onPress={() => navigateWeek(1)} hitSlop={12}>
+            <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
+          </Pressable>
+        </View>
+      )}
+
+      {/* View mode toggle */}
+      <View style={styles.viewToggleRow}>
+        <Pressable
+          onPress={() => switchViewMode("monthly")}
+          style={[styles.viewToggleBtn, viewMode === "monthly" && styles.viewToggleBtnActive]}
+        >
+          <Text style={[styles.viewToggleText, viewMode === "monthly" && styles.viewToggleTextActive]}>
+            Monthly
+          </Text>
         </Pressable>
-        <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth)}</Text>
-        <Pressable onPress={() => navigateMonth(1)} hitSlop={12}>
-          <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
+        <Pressable
+          onPress={() => switchViewMode("weekly")}
+          style={[styles.viewToggleBtn, viewMode === "weekly" && styles.viewToggleBtnActive]}
+        >
+          <Text style={[styles.viewToggleText, viewMode === "weekly" && styles.viewToggleTextActive]}>
+            Weekly
+          </Text>
         </Pressable>
       </View>
 
@@ -92,15 +154,17 @@ export default function Dashboard() {
         />
         <StatCard
           emoji={"\uD83D\uDCB5"}
-          label="Income"
-          value={formatCurrency(monthlyIncome)}
+          label={viewMode === "weekly" ? "Wk Income" : "Income"}
+          value={formatCurrency(displayIncome)}
         />
       </View>
 
       {/* Recent transactions */}
       <View style={styles.recentHeader}>
         <Text style={styles.recentTitle}>Recent Transactions</Text>
-        <Text style={styles.recentCount}>{monthTxns.length} this month</Text>
+        <Text style={styles.recentCount}>
+          {activeTxns.length} this {viewMode === "weekly" ? "week" : "month"}
+        </Text>
       </View>
 
       <FlatList
@@ -154,6 +218,32 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     minWidth: 160,
     textAlign: "center",
+  },
+  viewToggleRow: {
+    flexDirection: "row",
+    alignSelf: "center",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.full,
+    padding: 3,
+    marginBottom: spacing.md,
+  },
+  viewToggleBtn: {
+    paddingVertical: 7,
+    paddingHorizontal: 20,
+    borderRadius: radius.full,
+  },
+  viewToggleBtnActive: {
+    backgroundColor: colors.primary,
+  },
+  viewToggleText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  viewToggleTextActive: {
+    color: colors.bg,
   },
   statsRow: {
     flexDirection: "row",
