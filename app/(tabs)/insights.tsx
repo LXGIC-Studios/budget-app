@@ -1,14 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Dimensions,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, {
-  Rect,
   Line,
   Circle,
   Path,
@@ -29,33 +29,128 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 const CHART_WIDTH = SCREEN_WIDTH - CHART_PADDING * 2;
 
 const PALETTE = [
-  "#00FFCC", // mint
-  "#FF003C", // red
-  "#FF00FF", // pink
-  "#00FFFF", // cyan
-  "#CCFF00", // yellow
-  "#FF9500", // orange
-  "#8B5CF6", // purple
-  "#3B82F6", // blue
-  "#10B981", // emerald
-  "#F43F5E", // rose
-  "#F59E0B", // amber
-  "#6366F1", // indigo
-  "#EC4899", // hot pink
-  "#14B8A6", // teal
-  "#EF4444", // red2
-  "#A855F7", // violet
-  "#22D3EE", // sky
-  "#84CC16", // lime
-  "#F97316", // orange2
-  "#06B6D4", // cyan2
+  "#00FFCC", "#FF003C", "#FF00FF", "#00FFFF", "#CCFF00",
+  "#FF9500", "#8B5CF6", "#3B82F6", "#10B981", "#F43F5E",
+  "#F59E0B", "#6366F1", "#EC4899", "#14B8A6", "#EF4444",
+  "#A855F7", "#22D3EE", "#84CC16", "#F97316", "#06B6D4",
 ];
+
+// --- Merchant name cleaning ---
+
+function cleanMerchantName(note: string): string {
+  let n = (note || "").trim();
+  // Strip "Card Purchase" prefix
+  n = n.replace(/^Card Purchase\s+/i, "");
+  // Strip "With Pin" prefix
+  n = n.replace(/^With Pin\s+/i, "");
+  // Strip trailing city/state like "Hendersonvill TN" or "Nashville TN" or "Amzn.Com/Bill WA"
+  // Match: 2+ letter word followed by 2-letter state code at end
+  n = n.replace(/\s+[A-Z][a-zA-Z.*\/]+\s+[A-Z]{2}$/, "");
+  // Strip trailing lone state code
+  n = n.replace(/\s+[A-Z]{2}$/, "");
+  return n.trim() || note;
+}
+
+// --- Food subcategory classification ---
+
+const GROCERY_KEYWORDS = [
+  "kroger", "walmart", "publix", "aldi", "costco", "sam's club", "target",
+  "whole foods", "trader joe", "piggly", "food lion", "safeway", "heb",
+  "meijer", "winco", "sprouts", "grocery", "instacart", "cash saver",
+  "bread box",
+];
+
+const DELIVERY_KEYWORDS = [
+  "doordash", "dd *doordash", "dd *door", "ubereats", "uber eat",
+  "grubhub", "postmates", "dashpass", "doordash*",
+];
+
+const COFFEE_KEYWORDS = [
+  "dutch bros", "dutchbros", "starbucks", "dunkin", "7 brew",
+  "kaveexpress", "peet's", "spo*kaveexpress",
+];
+
+type FoodSubcategory = "groceries" | "delivery" | "coffee" | "restaurants";
+
+function classifyFood(note: string): FoodSubcategory {
+  const lower = (note || "").toLowerCase();
+  if (DELIVERY_KEYWORDS.some((kw) => lower.includes(kw))) return "delivery";
+  if (GROCERY_KEYWORDS.some((kw) => lower.includes(kw))) return "groceries";
+  if (COFFEE_KEYWORDS.some((kw) => lower.includes(kw))) return "coffee";
+  return "restaurants";
+}
+
+/** Check if a shopping transaction is actually groceries */
+function isGroceryMerchant(note: string): boolean {
+  const lower = (note || "").toLowerCase();
+  return GROCERY_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+const FOOD_SUB_CONFIG: Record<FoodSubcategory, { label: string; emoji: string; color: string }> = {
+  groceries:   { label: "Groceries",   emoji: "\u{1F6D2}", color: "#10B981" },
+  delivery:    { label: "Delivery",    emoji: "\u{1F4F1}", color: "#FF9500" },
+  coffee:      { label: "Coffee",      emoji: "\u{2615}",  color: "#8B5CF6" },
+  restaurants: { label: "Restaurants",  emoji: "\u{1F37D}\u{FE0F}",  color: "#F43F5E" },
+};
+
+// --- Category config with colors & emojis ---
+
+const CATEGORY_CONFIG: Record<string, { label: string; emoji: string; color: string }> = {
+  food:      { label: "Food",      emoji: "\u{1F354}", color: "#FF9500" },
+  shopping:  { label: "Shopping",  emoji: "\u{1F6D2}", color: "#FF00FF" },
+  bills:     { label: "Bills",     emoji: "\u{1F3E0}", color: "#3B82F6" },
+  transport: { label: "Transport", emoji: "\u{1F697}", color: "#CCFF00" },
+  transfer:  { label: "Transfer",  emoji: "\u{1F3E6}", color: "#00FFFF" },
+  other:     { label: "Other",     emoji: "\u{1F4E6}", color: "#707070" },
+  fun:       { label: "Fun",       emoji: "\u{1F3AE}", color: "#EC4899" },
+  health:    { label: "Health",    emoji: "\u{1F48A}", color: "#14B8A6" },
+};
+
+function getCatConfig(cat: string) {
+  return CATEGORY_CONFIG[cat] || { label: cat, emoji: "\u{1F4E6}", color: "#707070" };
+}
+
+// --- Helpers ---
+
+function normalizeDate(date: string): string {
+  return date.replace(/\//, "-");
+}
+
+function pctChange(current: number, previous: number): number | null {
+  if (previous === 0) return current > 0 ? 100 : null;
+  return ((current - previous) / previous) * 100;
+}
+
+// --- Components ---
 
 function EmptyState({ message }: { message: string }) {
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyText}>{message}</Text>
     </View>
+  );
+}
+
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <View style={{ gap: 2 }}>
+      <Text style={styles.chartTitle}>{title}</Text>
+      {subtitle && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{subtitle}</Text>}
+    </View>
+  );
+}
+
+// --- Delta Badge ---
+
+function DeltaBadge({ value }: { value: number | null }) {
+  if (value === null) return null;
+  const isUp = value > 0;
+  const arrow = isUp ? "\u2191" : "\u2193";
+  const color = isUp ? colors.red : colors.primary;
+  return (
+    <Text style={{ color, fontSize: 10, fontWeight: "700" }}>
+      {arrow}{Math.abs(value).toFixed(0)}%
+    </Text>
   );
 }
 
@@ -66,12 +161,17 @@ function TopStats({
   biggestExpense,
   topCategory,
   daysLeft,
+  projectedTotal,
+  lastMonthTotal,
 }: {
   avgDaily: number;
   biggestExpense: { amount: number; note?: string; category: string } | null;
   topCategory: { name: string; emoji: string; amount: number } | null;
   daysLeft: number;
+  projectedTotal: number;
+  lastMonthTotal: number;
 }) {
+  const delta = pctChange(projectedTotal, lastMonthTotal);
   return (
     <View style={styles.statsGrid}>
       <View style={styles.statCard}>
@@ -85,7 +185,7 @@ function TopStats({
         </Text>
         {biggestExpense && (
           <Text style={styles.statSub} numberOfLines={1}>
-            {biggestExpense.note || biggestExpense.category}
+            {cleanMerchantName(biggestExpense.note || biggestExpense.category)}
           </Text>
         )}
       </View>
@@ -99,9 +199,361 @@ function TopStats({
         )}
       </View>
       <View style={styles.statCard}>
-        <Text style={styles.statLabel}>DAYS LEFT</Text>
-        <Text style={styles.statValue}>{daysLeft}</Text>
+        <Text style={styles.statLabel}>PROJECTED TOTAL</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text style={styles.statValue}>{formatCurrency(projectedTotal)}</Text>
+          <DeltaBadge value={delta} />
+        </View>
+        <Text style={styles.statSub}>{daysLeft} days left</Text>
       </View>
+    </View>
+  );
+}
+
+// --- Income vs Expenses ---
+
+function IncomeVsExpenses({
+  income,
+  expenses,
+}: {
+  income: number;
+  expenses: number;
+}) {
+  const maxVal = Math.max(income, expenses, 1);
+  const net = income - expenses;
+  const isPositive = net >= 0;
+
+  return (
+    <View style={{ gap: 12 }}>
+      <View>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
+            Income
+          </Text>
+          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
+            {formatCurrency(income)}
+          </Text>
+        </View>
+        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
+          <View
+            style={{
+              height: "100%",
+              width: `${(income / maxVal) * 100}%`,
+              backgroundColor: colors.primary,
+              borderRadius: 6,
+              opacity: 0.8,
+            }}
+          />
+        </View>
+      </View>
+
+      <View>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700" }}>
+            Expenses
+          </Text>
+          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700" }}>
+            {formatCurrency(expenses)}
+          </Text>
+        </View>
+        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
+          <View
+            style={{
+              height: "100%",
+              width: `${(expenses / maxVal) * 100}%`,
+              backgroundColor: colors.red,
+              borderRadius: 6,
+              opacity: 0.8,
+            }}
+          />
+        </View>
+      </View>
+
+      <View style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: colors.cardBorder,
+      }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600" }}>
+          Net {isPositive ? "Surplus" : "Deficit"}
+        </Text>
+        <Text style={{ color: isPositive ? colors.primary : colors.red, fontSize: 16, fontWeight: "800" }}>
+          {isPositive ? "+" : ""}{formatCurrency(net)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// --- Monthly Income vs Expenses Comparison ---
+
+function MonthlyIncomeExpenseChart({
+  data,
+}: {
+  data: { label: string; income: number; expenses: number; isCurrent: boolean }[];
+}) {
+  if (data.length === 0) return <EmptyState message="No data yet" />;
+
+  const maxVal = Math.max(...data.flatMap((d) => [d.income, d.expenses]), 1);
+
+  return (
+    <View style={{ gap: 14 }}>
+      {data.map((item, i) => {
+        const net = item.income - item.expenses;
+        const isPositive = net >= 0;
+        return (
+          <View key={`${item.label}-${i}`} style={{ gap: 4 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{
+                color: item.isCurrent ? colors.primary : colors.white,
+                fontSize: 13,
+                fontWeight: item.isCurrent ? "700" : "500",
+              }}>
+                {item.label}
+              </Text>
+              <Text style={{
+                color: isPositive ? colors.primary : colors.red,
+                fontSize: 12,
+                fontWeight: "600",
+              }}>
+                {isPositive ? "+" : ""}{formatCurrency(net)}
+              </Text>
+            </View>
+            {/* Income bar */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 12 }}>IN</Text>
+              <View style={{ flex: 1, height: 14, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+                <View style={{
+                  height: "100%",
+                  width: `${(item.income / maxVal) * 100}%`,
+                  backgroundColor: colors.primary,
+                  borderRadius: 4,
+                  opacity: item.isCurrent ? 0.9 : 0.5,
+                }} />
+              </View>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 62, textAlign: "right" }}>
+                {formatCurrency(item.income)}
+              </Text>
+            </View>
+            {/* Expense bar */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 12 }}>EX</Text>
+              <View style={{ flex: 1, height: 14, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+                <View style={{
+                  height: "100%",
+                  width: `${(item.expenses / maxVal) * 100}%`,
+                  backgroundColor: colors.red,
+                  borderRadius: 4,
+                  opacity: item.isCurrent ? 0.9 : 0.5,
+                }} />
+              </View>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 62, textAlign: "right" }}>
+                {formatCurrency(item.expenses)}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+// --- Food Breakdown Chart ---
+
+function FoodBreakdownChart({
+  data,
+  total,
+}: {
+  data: { subcategory: FoodSubcategory; amount: number; count: number; topMerchant: string }[];
+  total: number;
+}) {
+  if (data.length === 0 || total === 0) return <EmptyState message="No food spending this month" />;
+
+  return (
+    <View style={{ gap: 10 }}>
+      {/* Donut-style summary row */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
+        <View style={{
+          width: 68,
+          height: 68,
+          borderRadius: 34,
+          borderWidth: 3,
+          borderColor: colors.primary,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.surface,
+        }}>
+          <Text style={{ color: colors.white, fontSize: 15, fontWeight: "800" }}>
+            {formatCurrency(total).replace(".00", "")}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 9 }}>TOTAL</Text>
+        </View>
+        <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {data.map((item) => {
+            const cfg = FOOD_SUB_CONFIG[item.subcategory];
+            const pct = ((item.amount / total) * 100).toFixed(0);
+            return (
+              <View key={item.subcategory} style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                backgroundColor: colors.surface,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: radius.full,
+                borderWidth: 1,
+                borderColor: cfg.color + "40",
+              }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: cfg.color }} />
+                <Text style={{ color: colors.white, fontSize: 11, fontWeight: "600" }}>
+                  {cfg.label} {pct}%
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Detailed bars */}
+      {data.map((item) => {
+        const cfg = FOOD_SUB_CONFIG[item.subcategory];
+        const pct = (item.amount / total) * 100;
+        return (
+          <View key={item.subcategory}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+              <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
+                {cfg.emoji} {cfg.label}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                {formatCurrency(item.amount)} ({item.count}x)
+              </Text>
+            </View>
+            <View style={{ height: 20, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+              <View style={{
+                height: "100%",
+                width: `${Math.max(pct, 2)}%`,
+                backgroundColor: cfg.color,
+                borderRadius: 4,
+              }} />
+            </View>
+            {item.topMerchant && (
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                Top: {cleanMerchantName(item.topMerchant)}
+              </Text>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+// --- Shopping Breakdown ---
+
+function ShoppingBreakdownChart({
+  groceryAmount,
+  groceryCount,
+  retailAmount,
+  retailCount,
+  topGrocery,
+  topRetail,
+}: {
+  groceryAmount: number;
+  groceryCount: number;
+  retailAmount: number;
+  retailCount: number;
+  topGrocery: string;
+  topRetail: string;
+}) {
+  const total = groceryAmount + retailAmount;
+  if (total === 0) return <EmptyState message="No shopping this month" />;
+
+  const groceryPct = (groceryAmount / total) * 100;
+  const retailPct = (retailAmount / total) * 100;
+
+  return (
+    <View style={{ gap: 10 }}>
+      {/* Stacked bar */}
+      <View style={{ height: 28, borderRadius: 6, overflow: "hidden", flexDirection: "row" }}>
+        {groceryAmount > 0 && (
+          <View style={{ width: `${groceryPct}%`, height: "100%", backgroundColor: "#10B981" }} />
+        )}
+        {retailAmount > 0 && (
+          <View style={{ width: `${retailPct}%`, height: "100%", backgroundColor: "#FF00FF" }} />
+        )}
+      </View>
+
+      {/* Legend pills */}
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#10B981" }} />
+          <Text style={{ color: colors.white, fontSize: 11, fontWeight: "600" }}>
+            Groceries {groceryPct.toFixed(0)}%
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF00FF" }} />
+          <Text style={{ color: colors.white, fontSize: 11, fontWeight: "600" }}>
+            Retail {retailPct.toFixed(0)}%
+          </Text>
+        </View>
+      </View>
+
+      {/* Grocery row */}
+      {groceryAmount > 0 && (
+        <View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
+              {"\u{1F6D2}"} Groceries
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+              {formatCurrency(groceryAmount)} ({groceryCount}x)
+            </Text>
+          </View>
+          <View style={{ height: 16, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+            <View style={{
+              height: "100%",
+              width: `${Math.max(groceryPct, 2)}%`,
+              backgroundColor: "#10B981",
+              borderRadius: 4,
+            }} />
+          </View>
+          {topGrocery && (
+            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+              Top: {cleanMerchantName(topGrocery)}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Retail row */}
+      {retailAmount > 0 && (
+        <View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
+            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
+              {"\u{1F6CD}\u{FE0F}"} Retail
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+              {formatCurrency(retailAmount)} ({retailCount}x)
+            </Text>
+          </View>
+          <View style={{ height: 16, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+            <View style={{
+              height: "100%",
+              width: `${Math.max(retailPct, 2)}%`,
+              backgroundColor: "#FF00FF",
+              borderRadius: 4,
+            }} />
+          </View>
+          {topRetail && (
+            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+              Top: {cleanMerchantName(topRetail)}
+            </Text>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -224,86 +676,6 @@ function TopMerchants({
           </View>
         </View>
       ))}
-    </View>
-  );
-}
-
-// --- Income vs Expenses ---
-
-function IncomeVsExpenses({
-  income,
-  expenses,
-}: {
-  income: number;
-  expenses: number;
-}) {
-  const maxVal = Math.max(income, expenses, 1);
-  const net = income - expenses;
-  const isPositive = net >= 0;
-
-  return (
-    <View style={{ gap: 12 }}>
-      {/* Income bar */}
-      <View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
-            💰 Income
-          </Text>
-          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
-            {formatCurrency(income)}
-          </Text>
-        </View>
-        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
-          <View
-            style={{
-              height: "100%",
-              width: `${(income / maxVal) * 100}%`,
-              backgroundColor: colors.primary,
-              borderRadius: 6,
-              opacity: 0.8,
-            }}
-          />
-        </View>
-      </View>
-
-      {/* Expenses bar */}
-      <View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700" }}>
-            💸 Expenses
-          </Text>
-          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700" }}>
-            {formatCurrency(expenses)}
-          </Text>
-        </View>
-        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
-          <View
-            style={{
-              height: "100%",
-              width: `${(expenses / maxVal) * 100}%`,
-              backgroundColor: colors.red,
-              borderRadius: 6,
-              opacity: 0.8,
-            }}
-          />
-        </View>
-      </View>
-
-      {/* Net */}
-      <View style={{
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingTop: 8,
-        borderTopWidth: 1,
-        borderTopColor: colors.cardBorder,
-      }}>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600" }}>
-          Net {isPositive ? "Surplus" : "Deficit"}
-        </Text>
-        <Text style={{ color: isPositive ? colors.primary : colors.red, fontSize: 16, fontWeight: "800" }}>
-          {isPositive ? "+" : ""}{formatCurrency(net)}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -467,36 +839,110 @@ function ChartLegend({
   );
 }
 
+// --- Month Pill Selector ---
+
+function MonthSelector({
+  months,
+  selected,
+  onSelect,
+}: {
+  months: string[];
+  selected: string;
+  onSelect: (m: string) => void;
+}) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.sm }}>
+      <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: spacing.sm }}>
+        {months.map((mk) => {
+          const active = mk === selected;
+          const label = formatMonthLabel(mk).split(" ")[0];
+          return (
+            <Pressable
+              key={mk}
+              onPress={() => onSelect(mk)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: radius.full,
+                backgroundColor: active ? colors.primary : colors.surface,
+                borderWidth: 1,
+                borderColor: active ? colors.primary : colors.cardBorder,
+              }}
+            >
+              <Text style={{
+                color: active ? colors.bg : colors.white,
+                fontSize: 13,
+                fontWeight: active ? "700" : "500",
+              }}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
 // --- Main Screen ---
 
 export default function InsightsScreen() {
   const { transactions, currentBudget, currentMonth } = useApp();
 
+  // Available months from transaction data
+  const availableMonths = useMemo(() => {
+    const monthSet = new Set<string>();
+    transactions.forEach((t) => {
+      const normalized = normalizeDate(t.date);
+      const mk = normalized.substring(0, 7);
+      if (mk.match(/^\d{4}-\d{2}$/)) monthSet.add(mk);
+    });
+    return Array.from(monthSet).sort();
+  }, [transactions]);
+
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+
+  // Ensure selectedMonth is valid
+  const activeMonth = availableMonths.includes(selectedMonth) ? selectedMonth : currentMonth;
+
   const monthExpenses = useMemo(
     () =>
-      transactions.filter(
-        (t) => t.date.startsWith(currentMonth) && t.type === "expense"
-      ),
-    [transactions, currentMonth]
+      transactions.filter((t) => {
+        const normalized = normalizeDate(t.date);
+        return normalized.startsWith(activeMonth) && t.type === "expense";
+      }),
+    [transactions, activeMonth]
   );
 
   const monthIncome = useMemo(
     () =>
-      transactions.filter(
-        (t) => t.date.startsWith(currentMonth) && t.type === "income"
-      ),
-    [transactions, currentMonth]
+      transactions.filter((t) => {
+        const normalized = normalizeDate(t.date);
+        return normalized.startsWith(activeMonth) && t.type === "income";
+      }),
+    [transactions, activeMonth]
+  );
+
+  // Previous month expenses for comparison
+  const prevMonth = shiftMonth(activeMonth, -1);
+  const prevMonthExpenseTotal = useMemo(
+    () =>
+      transactions
+        .filter((t) => normalizeDate(t.date).startsWith(prevMonth) && t.type === "expense")
+        .reduce((s, t) => s + t.amount, 0),
+    [transactions, prevMonth]
   );
 
   // Top Stats
   const topStatsData = useMemo(() => {
     const now = new Date();
-    const [y, m] = currentMonth.split("-").map(Number);
+    const [y, m] = activeMonth.split("-").map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
     const today = now.getFullYear() === y && now.getMonth() + 1 === m ? now.getDate() : daysInMonth;
     const daysLeft = Math.max(daysInMonth - today, 0);
     const totalSpent = monthExpenses.reduce((s, t) => s + t.amount, 0);
     const avgDaily = today > 0 ? totalSpent / today : 0;
+    const projectedTotal = avgDaily * daysInMonth;
 
     const biggest =
       monthExpenses.length > 0
@@ -506,12 +952,12 @@ export default function InsightsScreen() {
     const catMap: Record<string, { amount: number; name: string; emoji: string }> = {};
     monthExpenses.forEach((t) => {
       const key = t.category;
+      const cfg = getCatConfig(key);
       if (!catMap[key]) {
-        catMap[key] = { amount: 0, name: key, emoji: "📦" };
+        catMap[key] = { amount: 0, name: cfg.label, emoji: cfg.emoji };
       }
       catMap[key].amount += t.amount;
     });
-    // Try to match budget category for emoji
     if (currentBudget) {
       currentBudget.categories.forEach((bc) => {
         const key = bc.name;
@@ -523,71 +969,200 @@ export default function InsightsScreen() {
     }
     const topCatEntry = Object.values(catMap).sort((a, b) => b.amount - a.amount)[0];
 
-    return { avgDaily, biggest, topCategory: topCatEntry || null, daysLeft };
-  }, [monthExpenses, currentMonth, currentBudget]);
+    return { avgDaily, biggest, topCategory: topCatEntry || null, daysLeft, projectedTotal };
+  }, [monthExpenses, activeMonth, currentBudget]);
 
-  // Spending by Category
-  const categorySpending = useMemo(() => {
-    const map: Record<string, { amount: number; name: string; emoji: string }> = {};
-    monthExpenses.forEach((t) => {
-      const key = t.category;
-      if (!map[key]) {
-        map[key] = { amount: 0, name: key, emoji: "📦" };
-      }
-      map[key].amount += t.amount;
+  // Food breakdown - includes grocery purchases from shopping category
+  const foodBreakdown = useMemo(() => {
+    const foodTxns = monthExpenses.filter((t) => t.category === "food");
+    // Also pull in grocery-type transactions from shopping category
+    const shoppingGroceries = monthExpenses.filter(
+      (t) => t.category === "shopping" && isGroceryMerchant(t.note || "")
+    );
+
+    const subMap: Record<FoodSubcategory, { amount: number; count: number; merchants: Record<string, number> }> = {
+      groceries: { amount: 0, count: 0, merchants: {} },
+      delivery: { amount: 0, count: 0, merchants: {} },
+      coffee: { amount: 0, count: 0, merchants: {} },
+      restaurants: { amount: 0, count: 0, merchants: {} },
+    };
+
+    foodTxns.forEach((t) => {
+      const sub = classifyFood(t.note || "");
+      subMap[sub].amount += t.amount;
+      subMap[sub].count += 1;
+      const merchant = cleanMerchantName(t.note || "Unknown");
+      subMap[sub].merchants[merchant] = (subMap[sub].merchants[merchant] || 0) + t.amount;
     });
-    // Match budget category emojis
-    if (currentBudget) {
-      currentBudget.categories.forEach((bc) => {
-        if (map[bc.name]) {
-          map[bc.name].emoji = bc.emoji;
+
+    // Add shopping groceries to the groceries subcategory
+    shoppingGroceries.forEach((t) => {
+      subMap.groceries.amount += t.amount;
+      subMap.groceries.count += 1;
+      const merchant = cleanMerchantName(t.note || "Unknown");
+      subMap.groceries.merchants[merchant] = (subMap.groceries.merchants[merchant] || 0) + t.amount;
+    });
+
+    const total = Object.values(subMap).reduce((s, v) => s + v.amount, 0);
+    const result = (Object.keys(subMap) as FoodSubcategory[])
+      .map((sub) => {
+        const d = subMap[sub];
+        const topMerchant = Object.entries(d.merchants).sort((a, b) => b[1] - a[1])[0];
+        return {
+          subcategory: sub,
+          amount: d.amount,
+          count: d.count,
+          topMerchant: topMerchant ? topMerchant[0] : "",
+        };
+      })
+      .filter((d) => d.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+
+    return { data: result, total };
+  }, [monthExpenses]);
+
+  // Shopping breakdown - groceries vs retail
+  const shoppingBreakdown = useMemo(() => {
+    const shoppingTxns = monthExpenses.filter((t) => t.category === "shopping");
+    let groceryAmount = 0, groceryCount = 0, retailAmount = 0, retailCount = 0;
+    const groceryMerchants: Record<string, number> = {};
+    const retailMerchants: Record<string, number> = {};
+
+    shoppingTxns.forEach((t) => {
+      const merchant = cleanMerchantName(t.note || "Unknown");
+      if (isGroceryMerchant(t.note || "")) {
+        groceryAmount += t.amount;
+        groceryCount += 1;
+        groceryMerchants[merchant] = (groceryMerchants[merchant] || 0) + t.amount;
+      } else {
+        retailAmount += t.amount;
+        retailCount += 1;
+        retailMerchants[merchant] = (retailMerchants[merchant] || 0) + t.amount;
+      }
+    });
+
+    const topGrocery = Object.entries(groceryMerchants).sort((a, b) => b[1] - a[1])[0];
+    const topRetail = Object.entries(retailMerchants).sort((a, b) => b[1] - a[1])[0];
+
+    return {
+      groceryAmount,
+      groceryCount,
+      retailAmount,
+      retailCount,
+      topGrocery: topGrocery ? topGrocery[0] : "",
+      topRetail: topRetail ? topRetail[0] : "",
+    };
+  }, [monthExpenses]);
+
+  // Spending by Category (with food subcategories expanded)
+  const categorySpending = useMemo(() => {
+    const map: Record<string, { amount: number; name: string; emoji: string; color: string }> = {};
+    monthExpenses.forEach((t) => {
+      if (t.category === "food") {
+        const sub = classifyFood(t.note || "");
+        const cfg = FOOD_SUB_CONFIG[sub];
+        const key = `food_${sub}`;
+        if (!map[key]) {
+          map[key] = { amount: 0, name: cfg.label, emoji: cfg.emoji, color: cfg.color };
         }
-      });
-    }
+        map[key].amount += t.amount;
+      } else if (t.category === "shopping") {
+        // Split shopping into groceries vs retail
+        if (isGroceryMerchant(t.note || "")) {
+          const key = "shopping_grocery";
+          if (!map[key]) {
+            map[key] = { amount: 0, name: "Groceries", emoji: "\u{1F6D2}", color: "#10B981" };
+          }
+          map[key].amount += t.amount;
+        } else {
+          const key = "shopping_retail";
+          if (!map[key]) {
+            map[key] = { amount: 0, name: "Retail", emoji: "\u{1F6CD}\u{FE0F}", color: "#FF00FF" };
+          }
+          map[key].amount += t.amount;
+        }
+      } else {
+        const key = t.category;
+        const cfg = getCatConfig(key);
+        if (!map[key]) {
+          map[key] = { amount: 0, name: cfg.label, emoji: cfg.emoji, color: cfg.color };
+        }
+        map[key].amount += t.amount;
+      }
+    });
     const total = Object.values(map).reduce((s, v) => s + v.amount, 0);
     return Object.values(map)
-      .map((item, i) => ({
+      .map((item) => ({
         ...item,
         percent: total > 0 ? (item.amount / total) * 100 : 0,
-        color: PALETTE[i % PALETTE.length],
       }))
       .sort((a, b) => b.amount - a.amount);
-  }, [monthExpenses, currentBudget]);
+  }, [monthExpenses]);
 
   // Daily Spending
   const { dailyData, daysInMonth } = useMemo(() => {
-    const [y, m] = currentMonth.split("-").map(Number);
+    const [y, m] = activeMonth.split("-").map(Number);
     const dim = new Date(y, m, 0).getDate();
     const daily = new Array(dim).fill(0);
     monthExpenses.forEach((t) => {
-      const day = parseInt(t.date.split("-")[2], 10);
+      const normalized = normalizeDate(t.date);
+      const day = parseInt(normalized.split("-")[2], 10);
       if (day >= 1 && day <= dim) daily[day - 1] += t.amount;
     });
     return { dailyData: daily, daysInMonth: dim };
-  }, [monthExpenses, currentMonth]);
+  }, [monthExpenses, activeMonth]);
 
-  // Monthly Spending Trend (Dec, Jan, Feb, Mar or relative to current)
+  // Monthly Spending Trend
   const monthlyTrend = useMemo(() => {
     const months = [
-      shiftMonth(currentMonth, -3),
-      shiftMonth(currentMonth, -2),
-      shiftMonth(currentMonth, -1),
-      currentMonth,
+      shiftMonth(activeMonth, -3),
+      shiftMonth(activeMonth, -2),
+      shiftMonth(activeMonth, -1),
+      activeMonth,
     ];
     return months.map((mk) => {
       const total = transactions
-        .filter((t) => t.date.startsWith(mk) && t.type === "expense")
+        .filter((t) => {
+          const normalized = normalizeDate(t.date);
+          return normalized.startsWith(mk) && t.type === "expense";
+        })
         .reduce((s, t) => s + t.amount, 0);
       const label = formatMonthLabel(mk).split(" ")[0];
-      return { label, total, isCurrent: mk === currentMonth };
+      return { label, total, isCurrent: mk === activeMonth };
     });
-  }, [transactions, currentMonth]);
+  }, [transactions, activeMonth]);
 
-  // Top Merchants (parse from note field)
+  // Monthly Income vs Expenses (all available months)
+  const monthlyIncomeExpense = useMemo(() => {
+    const months = [
+      shiftMonth(activeMonth, -3),
+      shiftMonth(activeMonth, -2),
+      shiftMonth(activeMonth, -1),
+      activeMonth,
+    ];
+    return months.map((mk) => {
+      const income = transactions
+        .filter((t) => {
+          const n = normalizeDate(t.date);
+          return n.startsWith(mk) && t.type === "income";
+        })
+        .reduce((s, t) => s + t.amount, 0);
+      const expenses = transactions
+        .filter((t) => {
+          const n = normalizeDate(t.date);
+          return n.startsWith(mk) && t.type === "expense";
+        })
+        .reduce((s, t) => s + t.amount, 0);
+      const label = formatMonthLabel(mk).split(" ")[0];
+      return { label, income, expenses, isCurrent: mk === activeMonth };
+    });
+  }, [transactions, activeMonth]);
+
+  // Top Merchants (with cleaned names)
   const topMerchants = useMemo(() => {
     const merchantMap: Record<string, { amount: number; count: number }> = {};
     monthExpenses.forEach((t) => {
-      const name = (t.note || t.category || "Unknown").trim();
+      const name = cleanMerchantName(t.note || t.category || "Unknown");
       if (!name) return;
       if (!merchantMap[name]) {
         merchantMap[name] = { amount: 0, count: 0 };
@@ -632,47 +1207,92 @@ export default function InsightsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.header}>Insights</Text>
 
+        {/* Month Selector */}
+        {availableMonths.length > 1 && (
+          <MonthSelector
+            months={availableMonths}
+            selected={activeMonth}
+            onSelect={setSelectedMonth}
+          />
+        )}
+
         {/* Top Stats */}
         <TopStats
           avgDaily={topStatsData.avgDaily}
           biggestExpense={topStatsData.biggest}
           topCategory={topStatsData.topCategory}
           daysLeft={topStatsData.daysLeft}
+          projectedTotal={topStatsData.projectedTotal}
+          lastMonthTotal={prevMonthExpenseTotal}
         />
 
         {/* Income vs Expenses */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Income vs Expenses</Text>
+          <SectionHeader title="Income vs Expenses" subtitle={formatMonthLabel(activeMonth)} />
           <IncomeVsExpenses income={incomeTotal} expenses={expenseTotal} />
         </View>
 
-        {/* Spending by Category */}
+        {/* Food Breakdown - includes groceries from shopping */}
+        {foodBreakdown.total > 0 && (
+          <View style={[styles.chartCard, { borderColor: "#FF950040" }]}>
+            <SectionHeader
+              title="Food & Grocery Breakdown"
+              subtitle="Groceries, delivery, coffee & dining out"
+            />
+            <FoodBreakdownChart data={foodBreakdown.data} total={foodBreakdown.total} />
+          </View>
+        )}
+
+        {/* Shopping Breakdown */}
+        {(shoppingBreakdown.groceryAmount > 0 || shoppingBreakdown.retailAmount > 0) && (
+          <View style={[styles.chartCard, { borderColor: "#FF00FF40" }]}>
+            <SectionHeader
+              title="Shopping Breakdown"
+              subtitle="Groceries vs retail purchases"
+            />
+            <ShoppingBreakdownChart {...shoppingBreakdown} />
+          </View>
+        )}
+
+        {/* Spending by Category (with food + shopping splits) */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Spending by Category</Text>
+          <SectionHeader title="Spending by Category" subtitle="Food & shopping split into subcategories" />
           <SpendingByCategoryChart data={categorySpending} />
+        </View>
+
+        {/* Monthly Income vs Expenses */}
+        <View style={styles.chartCard}>
+          <SectionHeader title="Monthly Income vs Expenses" subtitle="4-month comparison" />
+          <ChartLegend
+            items={[
+              { color: colors.primary, label: "Income" },
+              { color: colors.red, label: "Expenses" },
+            ]}
+          />
+          <MonthlyIncomeExpenseChart data={monthlyIncomeExpense} />
         </View>
 
         {/* Monthly Spending Trend */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Monthly Spending Trend</Text>
+          <SectionHeader title="Monthly Spending Trend" />
           <MonthlySpendingTrend data={monthlyTrend} />
         </View>
 
         {/* Top Merchants */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Top Merchants</Text>
+          <SectionHeader title="Top Merchants" />
           <TopMerchants data={topMerchants} />
         </View>
 
         {/* Daily Spending */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Daily Spending</Text>
+          <SectionHeader title="Daily Spending" />
           <DailySpendingChart dailyData={dailyData} daysInMonth={daysInMonth} />
         </View>
 
         {/* Budget vs Actual */}
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Budget vs Actual</Text>
+          <SectionHeader title="Budget vs Actual" />
           <ChartLegend
             items={[
               { color: colors.primary, label: "On Track" },
