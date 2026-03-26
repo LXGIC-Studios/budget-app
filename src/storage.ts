@@ -91,10 +91,16 @@ export async function getTransactions(): Promise<Transaction[]> {
       nameMap.set(p.id, p.full_name || p.email?.split("@")[0] || "Unknown");
     });
 
+    // Only fetch last 4 months of transactions for performance
+    const fourMonthsAgo = new Date();
+    fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
+    const startDate = fourMonthsAgo.toISOString().slice(0, 10);
+
     const { data } = await supabase
       .from("transactions")
       .select("*")
       .in("user_id", memberIds)
+      .gte("date", startDate)
       .order("date", { ascending: false });
 
     if (!data) return [];
@@ -112,10 +118,15 @@ export async function getTransactions(): Promise<Transaction[]> {
   }
 
   // Solo user - original behavior
+  const fourMonthsAgoSolo = new Date();
+  fourMonthsAgoSolo.setMonth(fourMonthsAgoSolo.getMonth() - 4);
+  const startDateSolo = fourMonthsAgoSolo.toISOString().slice(0, 10);
+
   const { data } = await supabase
     .from("transactions")
     .select("*")
     .eq("user_id", user.id)
+    .gte("date", startDateSolo)
     .order("date", { ascending: false });
 
   if (!data) return [];
