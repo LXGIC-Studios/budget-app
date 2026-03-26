@@ -887,7 +887,7 @@ function MonthSelector({
 // --- Main Screen ---
 
 export default function InsightsScreen() {
-  const { transactions, currentBudget, currentMonth } = useApp();
+  const { transactions, currentBudget, currentMonth, profile } = useApp();
 
   // Available months from transaction data
   const availableMonths = useMemo(() => {
@@ -1202,6 +1202,128 @@ export default function InsightsScreen() {
     }));
   }, [currentBudget, monthExpenses]);
 
+  // Weekly Income breakdown
+  const weeklyStats = useMemo(() => {
+    const monthlyIncome = profile?.monthlyIncome ?? 0;
+    const weeklyIncome = monthlyIncome / 4.33;
+
+    // Current week spending (Mon–Sun containing today)
+    const now = new Date();
+    const [y, m] = activeMonth.split("-").map(Number);
+    const isCurrentMonth = now.getFullYear() === y && now.getMonth() + 1 === m;
+
+    let weekSpending = 0;
+    if (isCurrentMonth) {
+      const today = now.getDate();
+      const dayOfWeek = now.getDay(); // 0=Sun
+      const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const weekStart = today - mondayOffset;
+      const weekEnd = weekStart + 6;
+
+      monthExpenses.forEach((t) => {
+        const day = parseInt(normalizeDate(t.date).split("-")[2], 10);
+        if (day >= weekStart && day <= weekEnd) weekSpending += t.amount;
+      });
+    } else {
+      // For past months, show average weekly
+      const [py, pm] = activeMonth.split("-").map(Number);
+      const daysInM = new Date(py, pm, 0).getDate();
+      const totalSpent = monthExpenses.reduce((s, t) => s + t.amount, 0);
+      weekSpending = (totalSpent / daysInM) * 7;
+    }
+
+    const weeklySavings = weeklyIncome - weekSpending;
+    return { weeklyIncome, weekSpending, weeklySavings };
+  }, [profile, monthExpenses, activeMonth]);
+
+  // Waste Alerts
+  const wasteAlerts = useMemo(() => {
+    const alerts: { emoji: string; description: string; amount: number; color: string }[] = [];
+
+    // 1. Groceries over budget
+    if (currentBudget) {
+      // Total grocery spending = food groceries + shopping groceries
+      const grocerySpent = foodBreakdown.data.find((d) => d.subcategory === "groceries")?.amount ?? 0;
+      const groceryBudget = currentBudget.categories.find(
+        (c) => c.name.toLowerCase() === "groceries" || c.name.toLowerCase() === "food"
+      );
+      if (groceryBudget && grocerySpent > groceryBudget.allocated) {
+        const over = grocerySpent - groceryBudget.allocated;
+        alerts.push({
+          emoji: "\u{1F6D2}",
+          description: `Groceries $${Math.round(over)} over budget`,
+          amount: grocerySpent,
+          color: colors.red,
+        });
+      }
+    }
+
+    // 2. Restaurant spending vs last month
+    const currentRestaurants = monthExpenses
+      .filter((t) => t.category === "food" && classifyFood(t.note || "") === "restaurants")
+      .reduce((s, t) => s + t.amount, 0);
+    const prevRestaurants = transactions
+      .filter((t) => {
+        const n = normalizeDate(t.date);
+        return n.startsWith(prevMonth) && t.type === "expense" && t.category === "food" && classifyFood(t.note || "") === "restaurants";
+      })
+      .reduce((s, t) => s + t.amount, 0);
+    if (prevRestaurants > 0 && currentRestaurants > prevRestaurants) {
+      const pct = ((currentRestaurants - prevRestaurants) / prevRestaurants) * 100;
+      if (pct >= 10) {
+        alerts.push({
+          emoji: "\u{1F37D}\u{FE0F}",
+          description: `Restaurant spending up ${Math.round(pct)}% vs last month`,
+          amount: currentRestaurants,
+          color: pct >= 30 ? colors.red : "#FF9500",
+        });
+      }
+    }
+
+    // 3. Amazon purchases
+    const amazonTxns = monthExpenses.filter((t) =>
+      (t.note || "").toLowerCase().includes("amazon") || (t.note || "").toLowerCase().includes("amzn")
+    );
+    if (amazonTxns.length >= 3) {
+      const amazonTotal = amazonTxns.reduce((s, t) => s + t.amount, 0);
+      alerts.push({
+        emoji: "\u{1F4E6}",
+        description: `${amazonTxns.length} Amazon purchases this month totaling ${formatCurrency(amazonTotal)}`,
+        amount: amazonTotal,
+        color: "#FF9500",
+      });
+    }
+
+    // 4. Delivery / DoorDash
+    const deliveryTotal = monthExpenses
+      .filter((t) => t.category === "food" && classifyFood(t.note || "") === "delivery")
+      .reduce((s, t) => s + t.amount, 0);
+    if (deliveryTotal > 0) {
+      alerts.push({
+        emoji: "\u{1F4F1}",
+        description: `Delivery/DoorDash: ${formatCurrency(deliveryTotal)} this month`,
+        amount: deliveryTotal,
+        color: deliveryTotal > 100 ? colors.red : "#FF9500",
+      });
+    }
+
+    // 5. Coffee shops
+    const coffeeTxns = monthExpenses.filter(
+      (t) => t.category === "food" && classifyFood(t.note || "") === "coffee"
+    );
+    const coffeeTotal = coffeeTxns.reduce((s, t) => s + t.amount, 0);
+    if (coffeeTxns.length >= 2 && coffeeTotal > 0) {
+      alerts.push({
+        emoji: "\u{2615}",
+        description: `Coffee shops: ${formatCurrency(coffeeTotal)} this month (${coffeeTxns.length} visits)`,
+        amount: coffeeTotal,
+        color: coffeeTotal > 50 ? "#FF9500" : "#FF9500",
+      });
+    }
+
+    return alerts;
+  }, [monthExpenses, transactions, prevMonth, currentBudget, foodBreakdown]);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -1226,6 +1348,50 @@ export default function InsightsScreen() {
           lastMonthTotal={prevMonthExpenseTotal}
         />
 
+        {/* Weekly Income Card */}
+        {(profile?.monthlyIncome ?? 0) > 0 && (
+          <View style={[styles.chartCard, { borderColor: colors.primary + "40" }]}>
+            <SectionHeader title="Weekly Snapshot" subtitle="Income, spending & savings this week" />
+            <View style={{ gap: 10 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600" }}>
+                  Weekly Income
+                </Text>
+                <Text style={{ color: colors.primary, fontSize: 16, fontWeight: "800" }}>
+                  {formatCurrency(weeklyStats.weeklyIncome)}
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600" }}>
+                  Weekly Spending
+                </Text>
+                <Text style={{ color: colors.red, fontSize: 16, fontWeight: "800" }}>
+                  {formatCurrency(weeklyStats.weekSpending)}
+                </Text>
+              </View>
+              <View style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingTop: 8,
+                borderTopWidth: 1,
+                borderTopColor: colors.cardBorder,
+              }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600" }}>
+                  Weekly Savings
+                </Text>
+                <Text style={{
+                  color: weeklyStats.weeklySavings >= 0 ? colors.primary : colors.red,
+                  fontSize: 18,
+                  fontWeight: "800",
+                }}>
+                  {weeklyStats.weeklySavings >= 0 ? "+" : ""}{formatCurrency(weeklyStats.weeklySavings)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Income vs Expenses */}
         <View style={styles.chartCard}>
           <SectionHeader title="Income vs Expenses" subtitle={formatMonthLabel(activeMonth)} />
@@ -1242,6 +1408,50 @@ export default function InsightsScreen() {
             <FoodBreakdownChart data={foodBreakdown.data} total={foodBreakdown.total} />
           </View>
         )}
+
+        {/* Waste Alerts */}
+        <View style={[styles.chartCard, {
+          borderColor: wasteAlerts.length > 0 ? colors.red + "60" : colors.primary + "40",
+          borderWidth: wasteAlerts.length > 0 ? 1.5 : 1,
+        }]}>
+          <SectionHeader
+            title="Waste Alerts"
+            subtitle={wasteAlerts.length > 0 ? "Spending patterns to watch" : undefined}
+          />
+          {wasteAlerts.length === 0 ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
+              <Text style={{ fontSize: 20 }}>{"\u2705"}</Text>
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
+                You're doing great! No spending alerts this month.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {wasteAlerts.map((alert, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    backgroundColor: alert.color + "10",
+                    borderRadius: radius.lg,
+                    padding: 10,
+                    borderLeftWidth: 3,
+                    borderLeftColor: alert.color,
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>{alert.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
+                      {alert.description}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
 
         {/* Shopping Breakdown */}
         {(shoppingBreakdown.groceryAmount > 0 || shoppingBreakdown.retailAmount > 0) && (
