@@ -418,12 +418,40 @@ export default function BudgetScreen() {
       )}
 
       <View style={styles.catList}>
-        {categories.map((cat) => {
+        {categories
+          .filter((cat) => {
+            if (viewMode !== "weekly") return true;
+            const freq = cat.frequency || "monthly";
+            // In weekly view, hide monthly/bimonthly/quarterly fixed bills
+            // Only show weekly, biweekly, and flexible categories
+            if (freq === "weekly" || freq === "biweekly") return true;
+            if (cat.type === "flexible") return true;
+            // For monthly fixed bills, only show in the week they're due
+            if (cat.dueDay && freq === "monthly") {
+              const [y, m] = currentMonth.split("-").map(Number);
+              const dueDate = new Date(y, m - 1, cat.dueDay);
+              const dayOfWeek = dueDate.getDay();
+              const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+              const weekStart = cat.dueDay - mondayOffset;
+              const weekEnd = weekStart + 6;
+              // Check if current week contains the due day
+              const now = new Date();
+              const today = now.getDate();
+              const todayDow = now.getDay();
+              const todayMondayOffset = todayDow === 0 ? 6 : todayDow - 1;
+              const thisWeekStart = today - todayMondayOffset;
+              const thisWeekEnd = thisWeekStart + 6;
+              return cat.dueDay >= thisWeekStart && cat.dueDay <= thisWeekEnd;
+            }
+            // Monthly fixed without due day = hide from weekly
+            return false;
+          })
+          .map((cat) => {
           const catKey = cat.name.toLowerCase();
           const freq = cat.frequency || "monthly";
           const displayAllocated =
             viewMode === "weekly"
-              ? getWeeklyAmount(cat.allocated, freq)
+              ? (freq === "weekly" ? cat.allocated : freq === "biweekly" ? cat.allocated : cat.allocated)
               : getMonthlyAmount(cat.allocated, freq);
           return (
             <CategoryRow
