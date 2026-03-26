@@ -17,6 +17,7 @@ import {
   Info,
   LogOut,
   Upload,
+  FileText,
 } from "lucide-react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
@@ -29,6 +30,7 @@ import { parseCSV } from "../../src/lib/csv-parser";
 import { parseOFX } from "../../src/lib/ofx-parser";
 import { parsePDF } from "../../src/lib/pdf-parser";
 import { ImportPreview } from "../../src/components/ImportPreview";
+import { CSVImportSheet } from "../../src/components/CSVImportSheet";
 import type { Transaction } from "../../src/types";
 
 function SettingRow({
@@ -88,6 +90,7 @@ export default function SettingsScreen() {
   );
   const [previewTxns, setPreviewTxns] = useState<Transaction[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [csvImportVisible, setCsvImportVisible] = useState(false);
 
   const handleSaveIncome = () => {
     const parsed = parseFloat(incomeText);
@@ -177,6 +180,17 @@ export default function SettingsScreen() {
 
   const handleConfirmImport = async (txns: Transaction[]) => {
     setShowPreview(false);
+    await addTransactions(txns);
+    notification("Success");
+    const msg = `Successfully imported ${txns.length} transaction${txns.length !== 1 ? "s" : ""}.`;
+    if (Platform.OS === "web") {
+      window.alert(msg);
+    } else {
+      Alert.alert("Import Complete", msg);
+    }
+  };
+
+  const handleCSVImport = async (txns: Transaction[]) => {
     await addTransactions(txns);
     notification("Success");
     const msg = `Successfully imported ${txns.length} transaction${txns.length !== 1 ? "s" : ""}.`;
@@ -294,6 +308,11 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>DATA</Text>
           <SettingRow
+            icon={<FileText size={20} color={colors.primary} />}
+            label="Import Bank Statement"
+            onPress={() => setCsvImportVisible(true)}
+          />
+          <SettingRow
             icon={<Upload size={20} color={colors.textSecondary} />}
             label="Import Transactions"
             onPress={handleImportFile}
@@ -325,6 +344,13 @@ export default function SettingsScreen() {
         transactions={previewTxns}
         onImport={handleConfirmImport}
         onClose={() => setShowPreview(false)}
+      />
+
+      <CSVImportSheet
+        visible={csvImportVisible}
+        onClose={() => setCsvImportVisible(false)}
+        onImport={handleCSVImport}
+        existingTransactions={transactions}
       />
     </SafeAreaView>
   );

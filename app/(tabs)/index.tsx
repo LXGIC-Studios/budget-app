@@ -5,9 +5,11 @@ import {
   Pressable,
   StyleSheet,
   FlatList,
+  Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Upload } from "lucide-react-native";
 import { impact, notification } from "../../src/lib/haptics";
 import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
@@ -15,6 +17,7 @@ import { StatCard } from "../../src/components/StatCard";
 import { TransactionItem } from "../../src/components/TransactionItem";
 import { FAB } from "../../src/components/FAB";
 import { QuickAddSheet } from "../../src/components/QuickAddSheet";
+import { CSVImportSheet } from "../../src/components/CSVImportSheet";
 import {
   formatCurrency,
   formatMonthLabel,
@@ -23,7 +26,9 @@ import {
   getWeekRange,
   formatWeekLabel,
   shiftWeek,
+  generateId,
 } from "../../src/utils";
+import type { Transaction } from "../../src/types";
 
 export default function Dashboard() {
   const {
@@ -32,6 +37,7 @@ export default function Dashboard() {
     currentMonth,
     setCurrentMonth,
     addTransaction,
+    addTransactions,
     deleteTransaction,
     updateTransaction,
   } = useApp();
@@ -40,6 +46,7 @@ export default function Dashboard() {
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [editingTxn, setEditingTxn] = useState<typeof transactions[0] | undefined>(undefined);
   const [sheetInitialMode, setSheetInitialMode] = useState<"expense" | "income" | undefined>(undefined);
+  const [csvImportVisible, setCsvImportVisible] = useState(false);
 
   const monthlyIncome = profile?.monthlyIncome ?? 0;
 
@@ -108,6 +115,40 @@ export default function Dashboard() {
   const handleDeleteTxn = (id: string) => {
     notification("Warning");
     deleteTransaction(id);
+  };
+
+  const handleSplit = async (original: Transaction, splits: { category: string; amount: number }[]) => {
+    // Delete the original transaction, then create split children
+    await deleteTransaction(original.id);
+
+    const splitTxns: Transaction[] = splits.map((s) => ({
+      id: generateId(),
+      type: original.type,
+      amount: s.amount,
+      category: s.category,
+      note: `[split] ${original.note ?? ""}`.trim(),
+      date: original.date,
+      createdAt: new Date().toISOString(),
+    }));
+
+    await addTransactions(splitTxns);
+
+    const msg = `Split into ${splits.length} transactions.`;
+    if (Platform.OS === "web") {
+      window.alert(msg);
+    } else {
+      Alert.alert("Split Complete", msg);
+    }
+  };
+
+  const handleCSVImport = async (txns: Transaction[]) => {
+    await addTransactions(txns);
+    const msg = `Successfully imported ${txns.length} transaction${txns.length !== 1 ? "s" : ""}.`;
+    if (Platform.OS === "web") {
+      window.alert(msg);
+    } else {
+      Alert.alert("Import Complete", msg);
+    }
   };
 
   return (
@@ -200,6 +241,18 @@ export default function Dashboard() {
         </Pressable>
       </View>
 
+      {/* Import CSV button */}
+      <Pressable
+        onPress={() => {
+          impact("Light");
+          setCsvImportVisible(true);
+        }}
+        style={styles.importBtn}
+      >
+        <Upload size={14} color={colors.primaryText} strokeWidth={2.5} />
+        <Text style={styles.importBtnText}>IMPORT CSV</Text>
+      </Pressable>
+
       {/* Recent transactions */}
       <View style={styles.recentHeader}>
         <Text style={styles.recentTitle}>RECENT TRANSACTIONS</Text>
@@ -256,7 +309,20 @@ export default function Dashboard() {
           setSheetVisible(false);
           setEditingTxn(undefined);
         }}
+        onSplit={(original, splits) => {
+          setSheetVisible(false);
+          setEditingTxn(undefined);
+          handleSplit(original, splits);
+        }}
         initialMode={sheetInitialMode}
+      />
+
+      {/* CSV Import Sheet */}
+      <CSVImportSheet
+        visible={csvImportVisible}
+        onClose={() => setCsvImportVisible(false)}
+        onImport={handleCSVImport}
+        existingTransactions={transactions}
       />
     </SafeAreaView>
   );
@@ -334,7 +400,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  importBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: colors.primarySolid,
+    paddingVertical: 10,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: 2,
+  },
+  importBtnText: {
+    color: colors.primaryText,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
   },
   recentHeader: {
     flexDirection: "row",

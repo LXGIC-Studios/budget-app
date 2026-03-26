@@ -15,7 +15,12 @@ import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
 import type { Transaction } from "../types";
-import { generateId, formatShortDate } from "../utils";
+import { generateId, formatShortDate, formatCurrency } from "../utils";
+
+interface SplitRow {
+  category: string;
+  amount: string;
+}
 
 interface Props {
   visible: boolean;
@@ -24,10 +29,11 @@ interface Props {
   editTransaction?: Transaction | null;
   onUpdate?: (id: string, updates: Partial<Omit<Transaction, "id" | "createdAt">>) => void;
   onDelete?: (id: string) => void;
+  onSplit?: (original: Transaction, splits: { category: string; amount: number }[]) => void;
   initialMode?: "expense" | "income";
 }
 
-export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, initialMode }: Props) {
+export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode }: Props) {
   const [mode, setMode] = useState<"expense" | "income">(initialMode ?? "expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
@@ -35,6 +41,11 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateInput, setDateInput] = useState("");
   const [initialized, setInitialized] = useState(false);
+
+  // Split mode state
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitRows, setSplitRows] = useState<SplitRow[]>([]);
+  const [editingSplitCategory, setEditingSplitCategory] = useState<number | null>(null);
 
   // Pre-fill fields when editing or when initialMode changes
   if (visible && !initialized) {
@@ -49,6 +60,9 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
       setMode(initialMode);
       setCategory(initialMode === "expense" ? "food" : "salary");
     }
+    setSplitMode(false);
+    setSplitRows([]);
+    setEditingSplitCategory(null);
     setInitialized(true);
   }
   if (!visible && initialized) {
@@ -100,6 +114,9 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     setNote("");
     setSelectedDate(new Date());
     setDateInput("");
+    setSplitMode(false);
+    setSplitRows([]);
+    setEditingSplitCategory(null);
     onClose();
   };
 
@@ -161,6 +178,225 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     setCategory(m === "expense" ? "food" : "salary");
     impact("Light");
   };
+
+  // --- Split logic ---
+  const originalAmount = editTransaction ? editTransaction.amount : parseFloat(amount) || 0;
+
+  const handleEnterSplit = () => {
+    impact("Medium");
+    const half = Math.round((originalAmount / 2) * 100) / 100;
+    const other = Math.round((originalAmount - half) * 100) / 100;
+    setSplitRows([
+      { category: editTransaction?.category ?? "food", amount: String(half) },
+      { category: "other", amount: String(other) },
+    ]);
+    setEditingSplitCategory(null);
+    setSplitMode(true);
+  };
+
+  const handleAddSplitRow = () => {
+    impact("Light");
+    setSplitRows((prev) => [...prev, { category: "other", amount: "" }]);
+  };
+
+  const handleRemoveSplitRow = (index: number) => {
+    impact("Light");
+    setSplitRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSplitAmountChange = (index: number, value: string) => {
+    setSplitRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], amount: value };
+      return updated;
+    });
+  };
+
+  const handleSplitCategoryChange = (index: number, cat: string) => {
+    setSplitRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], category: cat };
+      return updated;
+    });
+    setEditingSplitCategory(null);
+    impact("Light");
+  };
+
+  const splitTotal = splitRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+  const splitTotalRounded = Math.round(splitTotal * 100) / 100;
+  const splitBalanced = splitTotalRounded === originalAmount;
+  const splitRemaining = Math.round((originalAmount - splitTotal) * 100) / 100;
+
+  const handleSaveSplit = () => {
+    if (!splitBalanced || !editTransaction || !onSplit) return;
+
+    const splits = splitRows
+      .filter((r) => parseFloat(r.amount) > 0)
+      .map((r) => ({
+        category: r.category,
+        amount: Math.round(parseFloat(r.amount) * 100) / 100,
+      }));
+
+    if (splits.length < 2) return;
+
+    notification("Success");
+    onSplit(editTransaction, splits);
+    handleClose();
+  };
+
+  // --- Render ---
+  if (splitMode && isEditing) {
+    return (
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent
+        onRequestClose={handleClose}
+      >
+        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.sheetWrap}
+        >
+          <View style={styles.sheet}>
+            <View style={styles.handle} />
+
+            {/* Header */}
+            <View style={styles.splitHeader}>
+              <Text style={styles.splitTitle}>SPLIT TRANSACTION</Text>
+              <Text style={styles.splitOriginal}>
+                Original: {formatCurrency(originalAmount)}
+              </Text>
+            </View>
+
+            {/* Split rows */}
+            <ScrollView style={styles.splitList} keyboardShouldPersistTaps="handled">
+              {splitRows.map((row, index) => (
+                <View key={index}>
+                  <View style={styles.splitRow}>
+                    <View style={styles.splitRowLeft}>
+                      <Pressable
+                        onPress={() =>
+                          setEditingSplitCategory(
+                            editingSplitCategory === index ? null : index
+                          )
+                        }
+                        style={[
+                          styles.splitCatBtn,
+                          editingSplitCategory === index && styles.splitCatBtnActive,
+                        ]}
+                      >
+                        <Text style={styles.splitCatEmoji}>
+                          {categories.find((c) => c.id === row.category)?.emoji ?? "📦"}
+                        </Text>
+                        <Text style={styles.splitCatText}>
+                          {categories.find((c) => c.id === row.category)?.name ?? row.category}
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <View style={styles.splitRowRight}>
+                      <Text style={styles.splitDollar}>$</Text>
+                      <TextInput
+                        style={styles.splitAmountInput}
+                        value={row.amount}
+                        onChangeText={(v) => handleSplitAmountChange(index, v)}
+                        keyboardType="decimal-pad"
+                        placeholder="0.00"
+                        placeholderTextColor={colors.dimmed}
+                      />
+                      {splitRows.length > 2 && (
+                        <Pressable
+                          onPress={() => handleRemoveSplitRow(index)}
+                          style={styles.splitRemoveBtn}
+                        >
+                          <Text style={styles.splitRemoveText}>✕</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Category picker for this row */}
+                  {editingSplitCategory === index && (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.splitCatPicker}
+                    >
+                      {categories.map((c) => (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => handleSplitCategoryChange(index, c.id)}
+                          style={[
+                            styles.splitCatPickerPill,
+                            row.category === c.id && styles.splitCatPickerPillActive,
+                          ]}
+                        >
+                          <Text style={styles.splitCatPickerEmoji}>{c.emoji}</Text>
+                          <Text
+                            style={[
+                              styles.splitCatPickerLabel,
+                              row.category === c.id && styles.splitCatPickerLabelActive,
+                            ]}
+                          >
+                            {c.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Add split row */}
+            <Pressable onPress={handleAddSplitRow} style={styles.addSplitBtn}>
+              <Text style={styles.addSplitText}>+ ADD SPLIT</Text>
+            </Pressable>
+
+            {/* Balance indicator */}
+            <View style={styles.splitBalance}>
+              <Text
+                style={[
+                  styles.splitBalanceText,
+                  splitBalanced
+                    ? { color: colors.primary }
+                    : { color: colors.red },
+                ]}
+              >
+                {splitBalanced
+                  ? "BALANCED ✓"
+                  : splitRemaining > 0
+                    ? `${formatCurrency(splitRemaining)} REMAINING`
+                    : `${formatCurrency(Math.abs(splitRemaining))} OVER`}
+              </Text>
+            </View>
+
+            {/* Save split */}
+            <Pressable
+              onPress={handleSaveSplit}
+              style={[
+                styles.saveBtn,
+                !splitBalanced && styles.saveBtnDisabled,
+              ]}
+            >
+              <Text style={styles.saveBtnText}>SAVE SPLIT</Text>
+            </Pressable>
+
+            {/* Back to edit */}
+            <Pressable
+              onPress={() => {
+                setSplitMode(false);
+                setEditingSplitCategory(null);
+              }}
+              style={styles.backBtn}
+            >
+              <Text style={styles.backBtnText}>BACK TO EDIT</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -288,16 +524,37 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
             )}
           </View>
 
-          {/* Save */}
-          <Pressable
-            onPress={handleSave}
-            style={[
-              styles.saveBtn,
-              !amount && styles.saveBtnDisabled,
-            ]}
-          >
-            <Text style={styles.saveBtnText}>{isEditing ? "SAVE CHANGES" : "SAVE"}</Text>
-          </Pressable>
+          {/* Action buttons */}
+          {isEditing && onSplit ? (
+            <View style={styles.editActions}>
+              <Pressable
+                onPress={handleSave}
+                style={[
+                  styles.saveBtn,
+                  { flex: 1 },
+                  !amount && styles.saveBtnDisabled,
+                ]}
+              >
+                <Text style={styles.saveBtnText}>SAVE CHANGES</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleEnterSplit}
+                style={styles.splitBtn}
+              >
+                <Text style={styles.splitBtnText}>SPLIT</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={handleSave}
+              style={[
+                styles.saveBtn,
+                !amount && styles.saveBtnDisabled,
+              ]}
+            >
+              <Text style={styles.saveBtnText}>{isEditing ? "SAVE CHANGES" : "SAVE"}</Text>
+            </Pressable>
+          )}
 
           {/* Delete (edit mode only) */}
           {isEditing && onDelete && (
@@ -450,6 +707,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+  editActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
   saveBtn: {
     backgroundColor: colors.primarySolid,
     paddingVertical: 16,
@@ -466,6 +727,19 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: "uppercase",
   },
+  splitBtn: {
+    backgroundColor: colors.purple,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    borderRadius: 2,
+  },
+  splitBtnText: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
   deleteBtn: {
     backgroundColor: colors.red,
     paddingVertical: 14,
@@ -478,5 +752,169 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
+  },
+  backBtn: {
+    paddingVertical: 14,
+    alignItems: "center",
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  backBtnText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  // Split mode styles
+  splitHeader: {
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  splitTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 3,
+    textTransform: "uppercase",
+  },
+  splitOriginal: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  splitList: {
+    maxHeight: 280,
+  },
+  splitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 2,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  splitRowLeft: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  splitCatBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  splitCatBtnActive: {
+    borderColor: colors.primary,
+  },
+  splitCatEmoji: {
+    fontSize: 14,
+  },
+  splitCatText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  splitRowRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  splitDollar: {
+    color: colors.primary,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  splitAmountInput: {
+    width: 80,
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.white,
+    textAlign: "right",
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  splitRemoveBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 2,
+    backgroundColor: colors.redBg,
+    borderWidth: 1,
+    borderColor: colors.redBorder,
+    marginLeft: 4,
+  },
+  splitRemoveText: {
+    color: colors.red,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  splitCatPicker: {
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  splitCatPickerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 2,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  splitCatPickerPillActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  splitCatPickerEmoji: {
+    fontSize: 13,
+  },
+  splitCatPickerLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  splitCatPickerLabelActive: {
+    color: colors.primary,
+  },
+  addSplitBtn: {
+    paddingVertical: 12,
+    alignItems: "center",
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+    backgroundColor: colors.primaryLight,
+  },
+  addSplitText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  splitBalance: {
+    alignItems: "center",
+    paddingVertical: spacing.xs,
+  },
+  splitBalanceText: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
 });
