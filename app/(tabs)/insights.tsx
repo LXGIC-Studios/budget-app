@@ -43,11 +43,37 @@ function cleanMerchantName(note: string): string {
   n = n.replace(/^Card Purchase\s+/i, "");
   // Strip "With Pin" prefix
   n = n.replace(/^With Pin\s+/i, "");
+  // Strip "Dd *" / "DD *" / "Dd*" prefix (DoorDash)
+  n = n.replace(/^[Dd]{2}\s*\*\s*/i, "");
+  // Strip "SQ *" prefix (Square)
+  n = n.replace(/^SQ\s*\*\s*/i, "");
+  // Strip "TST*" prefix (Toast)
+  n = n.replace(/^TST\s*\*\s*/i, "");
+  // Strip "SPO*" prefix
+  n = n.replace(/^SPO\s*\*\s*/i, "");
+  // Strip store/warehouse numbers like "#1659", "Whse #1659", "Store #123"
+  n = n.replace(/\s+(Whse|Store|Str|Ste)\s*#?\s*\d+/i, "");
+  n = n.replace(/\s*#\d+\s*$/, "");
   // Strip trailing city/state like "Hendersonvill TN" or "Nashville TN" or "Amzn.Com/Bill WA"
   // Match: 2+ letter word followed by 2-letter state code at end
   n = n.replace(/\s+[A-Z][a-zA-Z.*\/]+\s+[A-Z]{2}$/, "");
   // Strip trailing lone state code
   n = n.replace(/\s+[A-Z]{2}$/, "");
+  // Clean up known brand names
+  const lower = n.toLowerCase();
+  if (lower.includes("doordash")) n = "DoorDash";
+  else if (lower.includes("costco")) n = "Costco";
+  else if (lower.includes("walmart")) n = "Walmart";
+  else if (lower.includes("kroger")) n = "Kroger";
+  else if (lower.includes("target")) n = "Target";
+  else if (lower.includes("amazon") || lower.includes("amzn")) n = "Amazon";
+  else if (lower.includes("starbucks")) n = "Starbucks";
+  else if (lower.includes("publix")) n = "Publix";
+  else if (lower.includes("instacart")) n = "Instacart";
+  else if (lower.includes("uber eat")) n = "Uber Eats";
+  else if (lower.includes("grubhub")) n = "Grubhub";
+  else if (lower.includes("dunkin")) n = "Dunkin'";
+  else if (lower.includes("chick-fil-a") || lower.includes("chickfila")) n = "Chick-fil-A";
   return n.trim() || note;
 }
 
@@ -135,7 +161,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
   return (
     <View style={{ gap: 2 }}>
       <Text style={styles.chartTitle}>{title}</Text>
-      {subtitle && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{subtitle}</Text>}
+      {subtitle && <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{subtitle}</Text>}
     </View>
   );
 }
@@ -263,7 +289,6 @@ function IncomeVsExpenses({
               width: `${(expenses / maxVal) * 100}%`,
               backgroundColor: colors.red,
               borderRadius: 6,
-              opacity: 0.8,
             }}
           />
         </View>
@@ -374,23 +399,24 @@ function FoodBreakdownChart({
   return (
     <View style={{ gap: 10 }}>
       {/* Donut-style summary row */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 8 }}>
         <View style={{
-          width: 68,
-          height: 68,
-          borderRadius: 34,
+          width: 80,
+          height: 80,
+          borderRadius: 40,
           borderWidth: 3,
           borderColor: colors.primary,
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: colors.surface,
+          padding: 8,
         }}>
-          <Text style={{ color: colors.white, fontSize: 15, fontWeight: "800" }}>
+          <Text style={{ color: colors.white, fontSize: 14, fontWeight: "800" }} numberOfLines={1} adjustsFontSizeToFit>
             {formatCurrency(total).replace(".00", "")}
           </Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 9 }}>TOTAL</Text>
+          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 9 }}>TOTAL</Text>
         </View>
-        <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {data.map((item) => {
             const cfg = FOOD_SUB_CONFIG[item.subcategory];
             const pct = ((item.amount / total) * 100).toFixed(0);
@@ -433,13 +459,14 @@ function FoodBreakdownChart({
             <View style={{ height: 20, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
               <View style={{
                 height: "100%",
-                width: `${Math.max(pct, 2)}%`,
+                width: `${Math.max(pct, 5)}%`,
+                minWidth: 20,
                 backgroundColor: cfg.color,
                 borderRadius: 4,
               }} />
             </View>
             {item.topMerchant && (
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 2 }}>
                 Top: {cleanMerchantName(item.topMerchant)}
               </Text>
             )}
@@ -521,7 +548,7 @@ function ShoppingBreakdownChart({
             }} />
           </View>
           {topGrocery && (
-            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+            <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 2 }}>
               Top: {cleanMerchantName(topGrocery)}
             </Text>
           )}
@@ -548,7 +575,7 @@ function ShoppingBreakdownChart({
             }} />
           </View>
           {topRetail && (
-            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+            <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 2 }}>
               Top: {cleanMerchantName(topRetail)}
             </Text>
           )}
@@ -1523,7 +1550,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.md,
-    paddingBottom: 100,
+    paddingBottom: 140,
   },
   header: {
     color: colors.white,

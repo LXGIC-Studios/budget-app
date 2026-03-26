@@ -15,13 +15,14 @@ export default function TabLayout() {
           backgroundColor: "#080808",
           borderTopColor: colors.cardBorder,
           borderTopWidth: 1,
-          height: 96,
-          paddingBottom: 40,
+          height: Platform.OS === "web" ? 60 : 96,
+          paddingBottom: Platform.OS === "web" ? 8 : 40,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: "500",
+          marginBottom: Platform.OS === "web" ? 4 : 0,
         },
         tabBarIconStyle: {
           marginBottom: 2,
