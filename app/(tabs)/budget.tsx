@@ -424,7 +424,7 @@ export default function BudgetScreen() {
           const displayAllocated =
             viewMode === "weekly"
               ? getWeeklyAmount(cat.allocated, freq)
-              : cat.allocated;
+              : getMonthlyAmount(cat.allocated, freq);
           return (
             <CategoryRow
               key={cat.id}
