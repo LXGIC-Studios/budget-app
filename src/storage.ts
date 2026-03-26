@@ -173,6 +173,19 @@ export async function deleteTransaction(id: string): Promise<void> {
   await supabase.from("transactions").delete().eq("id", id);
 }
 
+export async function updateTransaction(
+  id: string,
+  updates: Partial<Omit<Transaction, "id" | "createdAt">>
+): Promise<void> {
+  const updateData: Record<string, unknown> = {};
+  if (updates.type !== undefined) updateData.type = updates.type;
+  if (updates.amount !== undefined) updateData.amount = updates.amount;
+  if (updates.category !== undefined) updateData.category = updates.category;
+  if (updates.note !== undefined) updateData.note = updates.note;
+  if (updates.date !== undefined) updateData.date = updates.date;
+  await supabase.from("transactions").update(updateData).eq("id", id);
+}
+
 // Budgets
 export async function getBudgetForMonth(
   month: string

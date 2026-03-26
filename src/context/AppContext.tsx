@@ -27,6 +27,7 @@ interface AppContextValue extends AppState {
   addTransaction: (txn: Transaction) => Promise<void>;
   addTransactions: (txns: Transaction[]) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  updateTransaction: (id: string, updates: Partial<Omit<Transaction, "id" | "createdAt">>) => Promise<void>;
   saveBudget: (budget: MonthlyBudget) => Promise<void>;
   addDebt: (debt: Debt) => Promise<void>;
   updateDebt: (id: string, updates: Partial<Omit<Debt, "id" | "createdAt">>) => Promise<void>;
@@ -115,6 +116,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteTransaction = useCallback(
     async (id: string) => {
       await storage.deleteTransaction(id);
+      await reload();
+    },
+    [reload]
+  );
+
+  const updateTransaction = useCallback(
+    async (id: string, updates: Partial<Omit<Transaction, "id" | "createdAt">>) => {
+      await storage.updateTransaction(id, updates);
       await reload();
     },
     [reload]
@@ -230,6 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addTransaction,
         addTransactions,
         deleteTransaction,
+        updateTransaction,
         saveBudget,
         addDebt,
         updateDebt,
@@ -265,6 +275,7 @@ export function useApp(): AppContextValue {
       addTransaction: async () => {},
       addTransactions: async () => {},
       deleteTransaction: async () => {},
+      updateTransaction: async () => {},
       saveBudget: async () => {},
       addDebt: async () => {},
       updateDebt: async () => {},
