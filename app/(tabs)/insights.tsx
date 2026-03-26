@@ -1229,17 +1229,21 @@ export default function InsightsScreen() {
     }));
   }, [currentBudget, monthExpenses]);
 
-  // Weekly Income breakdown
+  // Weekly Income breakdown - uses REAL income transactions, not averages
   const weeklyStats = useMemo(() => {
-    const monthlyIncome = profile?.monthlyIncome ?? 0;
-    const weeklyIncome = monthlyIncome / 4.33;
+    // Get all income transactions for this month
+    const monthIncome = transactions
+      .filter((t) => t.type === "income" && normalizeDate(t.date).startsWith(activeMonth))
+      .reduce((s, t) => s + t.amount, 0);
 
-    // Current week spending (Mon–Sun containing today)
+    // Current week spending & income (Mon–Sun containing today)
     const now = new Date();
     const [y, m] = activeMonth.split("-").map(Number);
     const isCurrentMonth = now.getFullYear() === y && now.getMonth() + 1 === m;
 
     let weekSpending = 0;
+    let weekIncome = 0;
+
     if (isCurrentMonth) {
       const today = now.getDate();
       const dayOfWeek = now.getDay(); // 0=Sun
@@ -1247,21 +1251,31 @@ export default function InsightsScreen() {
       const weekStart = today - mondayOffset;
       const weekEnd = weekStart + 6;
 
-      monthExpenses.forEach((t) => {
-        const day = parseInt(normalizeDate(t.date).split("-")[2], 10);
-        if (day >= weekStart && day <= weekEnd) weekSpending += t.amount;
+      transactions.forEach((t) => {
+        const normalized = normalizeDate(t.date);
+        if (!normalized.startsWith(activeMonth)) return;
+        const day = parseInt(normalized.split("-")[2], 10);
+        if (day >= weekStart && day <= weekEnd) {
+          if (t.type === "expense") weekSpending += t.amount;
+          if (t.type === "income") weekIncome += t.amount;
+        }
       });
     } else {
-      // For past months, show average weekly
-      const [py, pm] = activeMonth.split("-").map(Number);
-      const daysInM = new Date(py, pm, 0).getDate();
-      const totalSpent = monthExpenses.reduce((s, t) => s + t.amount, 0);
-      weekSpending = (totalSpent / daysInM) * 7;
+      // For past months, break into actual weeks
+      const allMonthTxns = transactions.filter((t) => normalizeDate(t.date).startsWith(activeMonth));
+      const daysInM = new Date(y, m, 0).getDate();
+      const numWeeks = Math.ceil(daysInM / 7);
+      const totalSpent = allMonthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+      const totalInc = allMonthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+      weekSpending = totalSpent / numWeeks;
+      weekIncome = totalInc / numWeeks;
     }
 
+    // Use real weekly income, fall back to profile-based if no income transactions
+    const weeklyIncome = weekIncome > 0 ? weekIncome : (profile?.monthlyIncome ?? 0) / 4.33;
     const weeklySavings = weeklyIncome - weekSpending;
-    return { weeklyIncome, weekSpending, weeklySavings };
-  }, [profile, monthExpenses, activeMonth]);
+    return { weeklyIncome, weekSpending, weeklySavings, monthIncome };
+  }, [profile, transactions, activeMonth]);
 
   // Waste Alerts
   const wasteAlerts = useMemo(() => {

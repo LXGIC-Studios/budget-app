@@ -6,6 +6,7 @@ import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
 
 interface Props {
   transaction: Transaction;
+  onPress?: () => void;
   onLongPress?: () => void;
 }
 
@@ -17,11 +18,11 @@ function getCategoryEmoji(category: string): string {
   return found?.emoji ?? "\uD83D\uDCE6";
 }
 
-export function TransactionItem({ transaction, onLongPress }: Props) {
+export function TransactionItem({ transaction, onPress, onLongPress }: Props) {
   const isExpense = transaction.type === "expense";
 
   return (
-    <Pressable onLongPress={onLongPress} style={styles.container}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} style={styles.container}>
       <View style={styles.emojiBox}>
         <Text style={styles.emoji}>{getCategoryEmoji(transaction.category)}</Text>
       </View>

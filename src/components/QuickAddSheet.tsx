@@ -21,18 +21,44 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onSave: (txn: Transaction) => void;
+  editTransaction?: Transaction | null;
+  onUpdate?: (id: string, updates: Partial<Omit<Transaction, "id" | "createdAt">>) => void;
+  onDelete?: (id: string) => void;
+  initialMode?: "expense" | "income";
 }
 
-export function QuickAddSheet({ visible, onClose, onSave }: Props) {
-  const [mode, setMode] = useState<"expense" | "income">("expense");
+export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, initialMode }: Props) {
+  const [mode, setMode] = useState<"expense" | "income">(initialMode ?? "expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
   const [note, setNote] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateInput, setDateInput] = useState("");
+  const [initialized, setInitialized] = useState(false);
+
+  // Pre-fill fields when editing or when initialMode changes
+  if (visible && !initialized) {
+    if (editTransaction) {
+      setMode(editTransaction.type);
+      setAmount(String(editTransaction.amount));
+      setCategory(editTransaction.category);
+      setNote(editTransaction.note ?? "");
+      setSelectedDate(new Date(editTransaction.date));
+      setDateInput("");
+    } else if (initialMode) {
+      setMode(initialMode);
+      setCategory(initialMode === "expense" ? "food" : "salary");
+    }
+    setInitialized(true);
+  }
+  if (!visible && initialized) {
+    setInitialized(false);
+  }
 
   const categories =
     mode === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+
+  const isEditing = !!editTransaction;
 
   const handleSave = () => {
     const parsed = parseFloat(amount);
@@ -40,17 +66,27 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
 
     notification("Success");
 
-    const txn: Transaction = {
-      id: generateId(),
-      type: mode,
-      amount: Math.round(parsed * 100) / 100,
-      category,
-      note: note.trim() || undefined,
-      date: selectedDate.toISOString(),
-      createdAt: new Date().toISOString(),
-    };
+    if (isEditing && onUpdate) {
+      onUpdate(editTransaction.id, {
+        type: mode,
+        amount: Math.round(parsed * 100) / 100,
+        category,
+        note: note.trim() || undefined,
+        date: selectedDate.toISOString(),
+      });
+    } else {
+      const txn: Transaction = {
+        id: generateId(),
+        type: mode,
+        amount: Math.round(parsed * 100) / 100,
+        category,
+        note: note.trim() || undefined,
+        date: selectedDate.toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      onSave(txn);
+    }
 
-    onSave(txn);
     setAmount("");
     setCategory(mode === "expense" ? "food" : "salary");
     setNote("");
@@ -262,8 +298,22 @@ export function QuickAddSheet({ visible, onClose, onSave }: Props) {
               !amount && styles.saveBtnDisabled,
             ]}
           >
-            <Text style={styles.saveBtnText}>Save</Text>
+            <Text style={styles.saveBtnText}>{isEditing ? "Save Changes" : "Save"}</Text>
           </Pressable>
+
+          {/* Delete (edit mode only) */}
+          {isEditing && onDelete && (
+            <Pressable
+              onPress={() => {
+                notification("Warning");
+                onDelete(editTransaction!.id);
+                handleClose();
+              }}
+              style={styles.deleteBtn}
+            >
+              <Text style={styles.deleteBtnText}>Delete Transaction</Text>
+            </Pressable>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -414,6 +464,18 @@ const styles = StyleSheet.create({
   saveBtnText: {
     color: colors.bg,
     fontSize: 17,
+    fontWeight: "700",
+  },
+  deleteBtn: {
+    paddingVertical: 14,
+    alignItems: "center",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.red,
+  },
+  deleteBtnText: {
+    color: colors.red,
+    fontSize: 15,
     fontWeight: "700",
   },
 });

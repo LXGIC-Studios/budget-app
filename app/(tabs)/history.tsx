@@ -23,10 +23,11 @@ import type { Transaction } from "../../src/types";
 type Filter = "all" | "income" | "expense";
 
 export default function HistoryScreen() {
-  const { transactions, deleteTransaction, addTransaction } = useApp();
+  const { transactions, deleteTransaction, addTransaction, updateTransaction } = useApp();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
 
   const filtered = useMemo(() => {
     let list = transactions;
@@ -136,6 +137,10 @@ export default function HistoryScreen() {
         renderItem={({ item }) => (
           <TransactionItem
             transaction={item}
+            onPress={() => {
+              setEditingTxn(item);
+              setSheetVisible(true);
+            }}
             onLongPress={() => handleDelete(item)}
           />
         )}
@@ -153,11 +158,24 @@ export default function HistoryScreen() {
         stickySectionHeadersEnabled={false}
       />
 
-      <FAB onPress={() => setSheetVisible(true)} />
+      <FAB onPress={() => {
+        setEditingTxn(undefined);
+        setSheetVisible(true);
+      }} />
       <QuickAddSheet
         visible={sheetVisible}
-        onClose={() => setSheetVisible(false)}
+        onClose={() => {
+          setSheetVisible(false);
+          setEditingTxn(undefined);
+        }}
         onSave={addTransaction}
+        editTransaction={editingTxn}
+        onUpdate={updateTransaction}
+        onDelete={(id) => {
+          deleteTransaction(id);
+          setSheetVisible(false);
+          setEditingTxn(undefined);
+        }}
       />
     </SafeAreaView>
   );

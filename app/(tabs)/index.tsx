@@ -33,10 +33,13 @@ export default function Dashboard() {
     setCurrentMonth,
     addTransaction,
     deleteTransaction,
+    updateTransaction,
   } = useApp();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [viewMode, setViewMode] = useState<"monthly" | "weekly">("monthly");
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
+  const [editingTxn, setEditingTxn] = useState<typeof transactions[0] | undefined>(undefined);
+  const [sheetInitialMode, setSheetInitialMode] = useState<"expense" | "income" | undefined>(undefined);
 
   const monthlyIncome = profile?.monthlyIncome ?? 0;
 
@@ -68,7 +71,20 @@ export default function Dashboard() {
     [activeTxns]
   );
 
-  const displayIncome = viewMode === "weekly" ? monthlyIncome / 4.33 : monthlyIncome;
+  // Use REAL income from transactions, not averages
+  const actualIncome = useMemo(
+    () =>
+      activeTxns
+        .filter((t) => t.type === "income")
+        .reduce((s, t) => s + t.amount, 0),
+    [activeTxns]
+  );
+
+  // For monthly: use real income if we have any, otherwise fall back to profile
+  // For weekly: always use real income from that week's transactions
+  const displayIncome = viewMode === "weekly"
+    ? actualIncome
+    : (actualIncome > 0 ? actualIncome : monthlyIncome);
   const leftToSpend = displayIncome - totalSpent;
   const isOver = leftToSpend < 0;
 
@@ -152,11 +168,24 @@ export default function Dashboard() {
           label="Spent"
           value={formatCurrency(totalSpent)}
         />
-        <StatCard
-          emoji={"\uD83D\uDCB5"}
-          label={viewMode === "weekly" ? "Wk Income" : "Income"}
-          value={formatCurrency(displayIncome)}
-        />
+        <Pressable
+          onPress={() => {
+            setEditingTxn(undefined);
+            setSheetInitialMode("income");
+            setSheetVisible(true);
+            impact("Light");
+          }}
+          style={{ flex: 1 }}
+        >
+          <StatCard
+            emoji={"\uD83D\uDCB5"}
+            label={viewMode === "weekly" ? "Wk Income" : "Income"}
+            value={formatCurrency(displayIncome)}
+          />
+          <View style={styles.incomeAddHint}>
+            <Text style={styles.incomeAddHintText}>+ Add</Text>
+          </View>
+        </Pressable>
       </View>
 
       {/* Recent transactions */}
@@ -173,6 +202,11 @@ export default function Dashboard() {
         renderItem={({ item }) => (
           <TransactionItem
             transaction={item}
+            onPress={() => {
+              setEditingTxn(item);
+              setSheetInitialMode(undefined);
+              setSheetVisible(true);
+            }}
             onLongPress={() => handleDeleteTxn(item.id)}
           />
         )}
@@ -188,13 +222,29 @@ export default function Dashboard() {
       />
 
       {/* FAB */}
-      <FAB onPress={() => setSheetVisible(true)} />
+      <FAB onPress={() => {
+        setEditingTxn(undefined);
+        setSheetInitialMode(undefined);
+        setSheetVisible(true);
+      }} />
 
       {/* Quick Add Sheet */}
       <QuickAddSheet
         visible={sheetVisible}
-        onClose={() => setSheetVisible(false)}
+        onClose={() => {
+          setSheetVisible(false);
+          setEditingTxn(undefined);
+          setSheetInitialMode(undefined);
+        }}
         onSave={addTransaction}
+        editTransaction={editingTxn}
+        onUpdate={updateTransaction}
+        onDelete={(id) => {
+          deleteTransaction(id);
+          setSheetVisible(false);
+          setEditingTxn(undefined);
+        }}
+        initialMode={sheetInitialMode}
       />
     </SafeAreaView>
   );
@@ -285,5 +335,19 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: colors.dimmed,
     fontSize: 14,
+  },
+  incomeAddHint: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  incomeAddHintText: {
+    color: colors.bg,
+    fontSize: 9,
+    fontWeight: "800",
   },
 });
