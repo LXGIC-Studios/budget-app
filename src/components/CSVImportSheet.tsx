@@ -27,11 +27,18 @@ interface ReviewItem {
   isDuplicate: boolean;
 }
 
+interface BudgetCat {
+  id: string;
+  name: string;
+  emoji: string;
+}
+
 interface Props {
   visible: boolean;
   onClose: () => void;
   onImport: (txns: Transaction[]) => void;
   existingTransactions: Transaction[];
+  budgetCategories?: BudgetCat[];
 }
 
 function getCategoryEmoji(id: string): string {
@@ -74,7 +81,7 @@ async function readFileContent(uri: string): Promise<string> {
   return FileSystem.readAsStringAsync(uri);
 }
 
-export function CSVImportSheet({ visible, onClose, onImport, existingTransactions }: Props) {
+export function CSVImportSheet({ visible, onClose, onImport, existingTransactions, budgetCategories }: Props) {
   const [step, setStep] = useState<"pick" | "loading" | "review">("pick");
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [editingCategory, setEditingCategory] = useState<number | null>(null);
@@ -366,7 +373,9 @@ export function CSVImportSheet({ visible, onClose, onImport, existingTransaction
                         contentContainerStyle={styles.catPickerRow}
                       >
                         {(item.transaction.type === "expense"
-                          ? EXPENSE_CATEGORIES
+                          ? (budgetCategories && budgetCategories.length > 0
+                              ? [...budgetCategories, ...EXPENSE_CATEGORIES.filter(c => !budgetCategories!.find(b => b.id === c.id))]
+                              : EXPENSE_CATEGORIES)
                           : INCOME_CATEGORIES
                         ).map((cat) => (
                           <Pressable

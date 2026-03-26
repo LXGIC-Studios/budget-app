@@ -81,7 +81,7 @@ function filterDuplicates(
 }
 
 export default function SettingsScreen() {
-  const { profile, saveProfile, resetAll, addTransactions, transactions } =
+  const { profile, saveProfile, resetAll, addTransactions, transactions, currentBudget } =
     useApp();
   const { user, signOut } = useAuth();
   const [editingIncome, setEditingIncome] = useState(false);
@@ -351,6 +351,7 @@ export default function SettingsScreen() {
         onClose={() => setCsvImportVisible(false)}
         onImport={handleCSVImport}
         existingTransactions={transactions}
+        budgetCategories={currentBudget?.categories?.map(c => ({ id: c.name.toLowerCase().replace(/[^a-z0-9]/g, '-'), name: c.name, emoji: c.emoji })) ?? []}
       />
     </SafeAreaView>
   );
