@@ -91,7 +91,7 @@ function CategoryRow({
       style={[
         styles.catCard,
         {
-          borderLeftWidth: 2,
+          borderLeftWidth: 3,
           borderLeftColor: accentColor,
           backgroundColor: cardBg,
           borderColor: cardBorderColor,
@@ -532,7 +532,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    letterSpacing: 4,
+    letterSpacing: 3,
+    textTransform: "uppercase",
     textShadowColor: 'rgba(0, 255, 204, 0.3)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
@@ -560,22 +561,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    borderRadius: radius.full,
+    borderRadius: 2,
     padding: 3,
     marginBottom: spacing.md,
   },
   viewToggleBtn: {
     paddingVertical: 7,
     paddingHorizontal: 20,
-    borderRadius: radius.full,
+    borderRadius: 2,
   },
   viewToggleBtnActive: {
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 6,
+    backgroundColor: '#00ffcc',
   },
   viewToggleText: {
     color: colors.textSecondary,
@@ -584,7 +580,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   viewToggleTextActive: {
-    color: colors.bg,
+    color: '#050505',
   },
   // Monthly summary
   summaryRow: {
@@ -600,7 +596,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.greenBg,
     borderWidth: 1,
     borderColor: colors.greenBorder,
-    borderRadius: radius.lg,
+    borderRadius: 2,
     paddingVertical: 14,
     paddingHorizontal: spacing.sm,
   },
@@ -608,7 +604,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 3,
+    textTransform: "uppercase",
   },
   summaryValue: {
     color: colors.white,
@@ -622,7 +619,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.greenBg,
     borderWidth: 1,
     borderColor: colors.greenBorder,
-    borderRadius: radius.lg,
+    borderRadius: 2,
     padding: spacing.md,
   },
   weeklyCardTitle: {
@@ -630,7 +627,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     marginBottom: spacing.sm,
-    letterSpacing: 2,
+    letterSpacing: 3,
+    textTransform: "uppercase",
   },
   weeklyCardRows: {
     gap: 0,
@@ -665,7 +663,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.greenBg,
     borderWidth: 1,
     borderColor: colors.greenBorder,
-    borderRadius: radius.lg,
+    borderRadius: 2,
     padding: spacing.md,
     gap: spacing.sm,
   },
@@ -689,15 +687,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   fixedBadge: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: '#00ffcc',
     borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.full,
+    borderColor: '#00ffcc',
+    borderRadius: 2,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
   fixedText: {
-    color: colors.primary,
+    color: '#050505',
     fontSize: 9,
     fontWeight: "600",
     letterSpacing: 0.5,
@@ -720,12 +718,12 @@ const styles = StyleSheet.create({
   barBg: {
     height: 6,
     backgroundColor: colors.dimmed,
-    borderRadius: 3,
+    borderRadius: 1,
     overflow: "hidden",
   },
   barFill: {
     height: 6,
-    borderRadius: 3,
+    borderRadius: 1,
   },
   // Edit modal
   modalBackdrop: {
@@ -738,8 +736,8 @@ const styles = StyleSheet.create({
   modalCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.primaryBorder,
-    borderRadius: radius.lg,
+    borderColor: 'rgba(0,255,204,0.3)',
+    borderRadius: 2,
     padding: spacing.lg,
     width: "100%",
     maxWidth: 340,
@@ -766,8 +764,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     backgroundColor: colors.inputBg,
     borderWidth: 1,
-    borderColor: colors.primaryBorder,
-    borderRadius: radius.md,
+    borderColor: 'rgba(0,255,204,0.3)',
+    borderRadius: 2,
     padding: spacing.md,
   },
   modalDollar: {
@@ -789,22 +787,24 @@ const styles = StyleSheet.create({
   freqPill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: radius.full,
+    borderRadius: 2,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.inputBg,
   },
   freqPillActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
+    borderColor: '#00ffcc',
+    backgroundColor: '#00ffcc',
   },
   freqPillText: {
     color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "600",
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   freqPillTextActive: {
-    color: colors.primary,
+    color: '#050505',
   },
   modalBtnRow: {
     flexDirection: "row",
@@ -816,7 +816,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    borderRadius: radius.md,
+    borderRadius: 2,
   },
   modalCancelBtnText: {
     color: colors.textSecondary,
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingVertical: 14,
     alignItems: "center",
-    borderRadius: radius.md,
+    borderRadius: 2,
   },
   modalBtnText: {
     color: colors.bg,

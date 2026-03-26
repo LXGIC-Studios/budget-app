@@ -35,14 +35,14 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: radius.full,
+    borderRadius: 2,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   selected: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
+    backgroundColor: colors.primarySolid,
+    borderColor: colors.primarySolid,
   },
   emoji: {
     fontSize: 16,
@@ -50,9 +50,12 @@ const styles = StyleSheet.create({
   label: {
     color: colors.textSecondary,
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "600",
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
   selectedLabel: {
-    color: colors.primary,
+    color: colors.primaryText,
+    fontWeight: "700",
   },
 });

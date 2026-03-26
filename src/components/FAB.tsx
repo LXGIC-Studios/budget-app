@@ -15,7 +15,7 @@ export function FAB({ onPress }: Props) {
 
   return (
     <Pressable onPress={handlePress} style={styles.fab}>
-      <Plus size={26} color={colors.bg} strokeWidth={2.5} />
+      <Plus size={26} color={colors.primaryText} strokeWidth={2.5} />
     </Pressable>
   );
 }
@@ -27,8 +27,8 @@ const styles = StyleSheet.create({
     right: spacing.lg,
     width: 56,
     height: 56,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
+    borderRadius: 2,
+    backgroundColor: colors.primarySolid,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.primary,

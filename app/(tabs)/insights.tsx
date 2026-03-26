@@ -269,13 +269,13 @@ function IncomeVsExpenses({
             {formatCurrency(income)}
           </Text>
         </View>
-        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
+        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
           <View
             style={{
               height: "100%",
               width: `${(income / maxVal) * 100}%`,
               backgroundColor: colors.primary,
-              borderRadius: 6,
+              borderRadius: 2,
               opacity: 0.8,
             }}
           />
@@ -291,13 +291,13 @@ function IncomeVsExpenses({
             {formatCurrency(expenses)}
           </Text>
         </View>
-        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
+        <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
           <View
             style={{
               height: "100%",
               width: `${(expenses / maxVal) * 100}%`,
               backgroundColor: colors.red,
-              borderRadius: 6,
+              borderRadius: 2,
             }}
           />
         </View>
@@ -367,13 +367,13 @@ function MonthlyIncomeExpenseChart({
             </View>
             {/* Income bar */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 12, letterSpacing: 1 }}>IN</Text>
-              <View style={{ flex: 1, height: 14, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, width: 12, letterSpacing: 1, textTransform: "uppercase" }}>IN</Text>
+              <View style={{ flex: 1, height: 14, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
                 <View style={{
                   height: "100%",
                   width: `${(item.income / maxVal) * 100}%`,
                   backgroundColor: colors.primary,
-                  borderRadius: 4,
+                  borderRadius: 2,
                   opacity: item.isCurrent ? 0.9 : 0.5,
                 }} />
               </View>
@@ -383,13 +383,13 @@ function MonthlyIncomeExpenseChart({
             </View>
             {/* Expense bar */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 12, letterSpacing: 1 }}>EX</Text>
-              <View style={{ flex: 1, height: 14, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, width: 12, letterSpacing: 1, textTransform: "uppercase" }}>EX</Text>
+              <View style={{ flex: 1, height: 14, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
                 <View style={{
                   height: "100%",
                   width: `${(item.expenses / maxVal) * 100}%`,
                   backgroundColor: colors.red,
-                  borderRadius: 4,
+                  borderRadius: 2,
                   opacity: item.isCurrent ? 0.9 : 0.5,
                 }} />
               </View>
@@ -422,7 +422,7 @@ function FoodBreakdownChart({
         <View style={{
           width: 80,
           height: 80,
-          borderRadius: 40,
+          borderRadius: 2,
           borderWidth: 3,
           borderColor: colors.primary,
           alignItems: "center",
@@ -451,15 +451,14 @@ function FoodBreakdownChart({
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 4,
-                backgroundColor: colors.surface,
+                backgroundColor: cfg.color,
                 paddingHorizontal: 8,
                 paddingVertical: 4,
-                borderRadius: radius.full,
+                borderRadius: 2,
                 borderWidth: 1,
                 borderColor: cfg.color + "40",
               }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: cfg.color }} />
-                <Text style={{ color: colors.white, fontSize: 11, fontWeight: "600" }}>
+                <Text style={{ color: '#050505', fontSize: 11, fontWeight: "600" }}>
                   {cfg.label} {pct}%
                 </Text>
               </View>
@@ -482,13 +481,13 @@ function FoodBreakdownChart({
                 {formatCurrency(item.amount)} ({item.count}x)
               </Text>
             </View>
-            <View style={{ height: 20, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+            <View style={{ height: 20, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
               <View style={{
                 height: "100%",
                 width: `${Math.max(pct, 5)}%`,
                 minWidth: 20,
                 backgroundColor: cfg.color,
-                borderRadius: 4,
+                borderRadius: 2,
               }} />
             </View>
             {item.topMerchant && (
@@ -529,7 +528,7 @@ function ShoppingBreakdownChart({
   return (
     <View style={{ gap: 10 }}>
       {/* Stacked bar */}
-      <View style={{ height: 28, borderRadius: 6, overflow: "hidden", flexDirection: "row" }}>
+      <View style={{ height: 28, borderRadius: 2, overflow: "hidden", flexDirection: "row" }}>
         {groceryAmount > 0 && (
           <View style={{ width: `${groceryPct}%`, height: "100%", backgroundColor: "#10B981" }} />
         )}
@@ -541,13 +540,13 @@ function ShoppingBreakdownChart({
       {/* Legend pills */}
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#10B981" }} />
+          <View style={{ width: 8, height: 8, borderRadius: 1, backgroundColor: "#10B981" }} />
           <Text style={{ color: colors.white, fontSize: 11, fontWeight: "600" }}>
             Groceries {groceryPct.toFixed(0)}%
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF00FF" }} />
+          <View style={{ width: 8, height: 8, borderRadius: 1, backgroundColor: "#FF00FF" }} />
           <Text style={{ color: colors.white, fontSize: 11, fontWeight: "600" }}>
             Retail {retailPct.toFixed(0)}%
           </Text>
@@ -565,12 +564,12 @@ function ShoppingBreakdownChart({
               {formatCurrency(groceryAmount)} ({groceryCount}x)
             </Text>
           </View>
-          <View style={{ height: 16, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+          <View style={{ height: 16, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
             <View style={{
               height: "100%",
               width: `${Math.max(groceryPct, 2)}%`,
               backgroundColor: "#10B981",
-              borderRadius: 4,
+              borderRadius: 2,
             }} />
           </View>
           {topGrocery && (
@@ -592,12 +591,12 @@ function ShoppingBreakdownChart({
               {formatCurrency(retailAmount)} ({retailCount}x)
             </Text>
           </View>
-          <View style={{ height: 16, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+          <View style={{ height: 16, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
             <View style={{
               height: "100%",
               width: `${Math.max(retailPct, 2)}%`,
               backgroundColor: "#FF00FF",
-              borderRadius: 4,
+              borderRadius: 2,
             }} />
           </View>
           {topRetail && (
@@ -638,13 +637,13 @@ function GroceryStoreBreakdown({
                 {formatCurrency(item.amount)} ({item.count} {item.count === 1 ? "trip" : "trips"})
               </Text>
             </View>
-            <View style={{ height: 6, backgroundColor: colors.dimmed, borderRadius: 3, overflow: "hidden" }}>
+            <View style={{ height: 6, backgroundColor: colors.dimmed, borderRadius: 1, overflow: "hidden" }}>
               <View
                 style={{
                   height: "100%",
                   width: `${(item.amount / maxAmount) * 100}%`,
                   backgroundColor: PALETTE[i % PALETTE.length],
-                  borderRadius: 3,
+                  borderRadius: 1,
                 }}
               />
             </View>
@@ -676,13 +675,13 @@ function SpendingByCategoryChart({
               {formatCurrency(item.amount)} ({item.percent.toFixed(1)}%)
             </Text>
           </View>
-          <View style={{ height: 20, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+          <View style={{ height: 20, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
             <View
               style={{
                 height: "100%",
                 width: `${Math.max(item.percent, 1)}%`,
                 backgroundColor: item.color,
-                borderRadius: 4,
+                borderRadius: 2,
               }}
             />
           </View>
@@ -716,13 +715,13 @@ function MonthlySpendingTrend({
               {formatCurrency(item.total)}
             </Text>
           </View>
-          <View style={{ height: 24, backgroundColor: colors.dimmed, borderRadius: 6, overflow: "hidden" }}>
+          <View style={{ height: 24, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
             <View
               style={{
                 height: "100%",
                 width: `${(item.total / maxVal) * 100}%`,
                 backgroundColor: item.isCurrent ? colors.primary : colors.primaryDark,
-                borderRadius: 6,
+                borderRadius: 2,
                 opacity: item.isCurrent ? 1 : 0.6,
               }}
             />
@@ -760,13 +759,13 @@ function TopMerchants({
                 {formatCurrency(item.amount)} ({item.count}x)
               </Text>
             </View>
-            <View style={{ height: 6, backgroundColor: colors.dimmed, borderRadius: 3, overflow: "hidden" }}>
+            <View style={{ height: 6, backgroundColor: colors.dimmed, borderRadius: 1, overflow: "hidden" }}>
               <View
                 style={{
                   height: "100%",
                   width: `${(item.amount / maxAmount) * 100}%`,
                   backgroundColor: PALETTE[i % PALETTE.length],
-                  borderRadius: 3,
+                  borderRadius: 1,
                 }}
               />
             </View>
@@ -900,13 +899,13 @@ function BudgetVsActualChart({
                 {formatCurrency(item.spent)} / {formatCurrency(item.allocated)}
               </Text>
             </View>
-            <View style={{ height: 12, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
+            <View style={{ height: 12, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
               <View
                 style={{
                   height: "100%",
                   width: `${Math.max(barPct, 1)}%`,
                   backgroundColor: isOver ? colors.red : colors.primary,
-                  borderRadius: 4,
+                  borderRadius: 2,
                 }}
               />
             </View>
@@ -960,7 +959,7 @@ function MonthSelector({
               style={{
                 paddingHorizontal: 14,
                 paddingVertical: 6,
-                borderRadius: radius.full,
+                borderRadius: 2,
                 backgroundColor: active ? colors.primary : colors.surface,
                 borderWidth: 1,
                 borderColor: active ? colors.primary : colors.cardBorder,
@@ -1492,24 +1491,28 @@ export default function InsightsScreen() {
 
         {/* Weekly Income Card */}
         {(profile?.monthlyIncome ?? 0) > 0 && (
-          <View style={[styles.chartCard, { borderColor: colors.greenBorder }]}>
+          <View style={[styles.chartCard, { borderColor: colors.cardBorder }]}>
             <SectionHeader title="Weekly Snapshot" subtitle="Income, spending & savings this week" />
             <View style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
                   WEEKLY INCOME
                 </Text>
-                <Text style={{
-                  color: colors.primary,
-                  fontSize: 17,
-                  fontWeight: "800",
-                  letterSpacing: -0.5,
-                  textShadowColor: 'rgba(0,255,204,0.3)',
-                  textShadowOffset: { width: 0, height: 0 },
-                  textShadowRadius: 8,
+                <View style={{
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 0,
                 }}>
-                  {formatCurrency(weeklyStats.weeklyIncome)}
-                </Text>
+                  <Text style={{
+                    color: colors.bg,
+                    fontSize: 17,
+                    fontWeight: "800",
+                    letterSpacing: -0.5,
+                  }}>
+                    {formatCurrency(weeklyStats.weeklyIncome)}
+                  </Text>
+                </View>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
@@ -1584,8 +1587,8 @@ export default function InsightsScreen() {
 
         {/* Waste Alerts */}
         <View style={[styles.chartCard, {
-          borderColor: wasteAlerts.length > 0 ? colors.redBorder : colors.primaryBorder,
-          borderWidth: wasteAlerts.length > 0 ? 1.5 : 1,
+          borderColor: wasteAlerts.length > 0 ? colors.red : colors.cardBorder,
+          borderWidth: 1,
           backgroundColor: wasteAlerts.length > 0 ? colors.redBg : colors.card,
         }]}>
           <SectionHeader
@@ -1609,7 +1612,7 @@ export default function InsightsScreen() {
                     alignItems: "center",
                     gap: 10,
                     backgroundColor: alert.color + "10",
-                    borderRadius: radius.lg,
+                    borderRadius: 2,
                     padding: 10,
                     borderLeftWidth: 3,
                     borderLeftColor: alert.color,
@@ -1701,12 +1704,13 @@ const styles = StyleSheet.create({
   },
   header: {
     color: colors.white,
-    fontSize: 32,
-    fontWeight: "900",
+    fontSize: 28,
+    fontWeight: "800",
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
     letterSpacing: 4,
+    textTransform: "uppercase",
   },
 
   // Stats grid
@@ -1719,12 +1723,12 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: "45%",
-    backgroundColor: colors.greenBg,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.primaryBorder,
+    borderColor: colors.cardBorder,
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
-    borderRadius: radius.lg,
+    borderRadius: 2,
     padding: spacing.md,
     gap: spacing.xs,
   },
@@ -1752,17 +1756,18 @@ const styles = StyleSheet.create({
   chartCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.primaryBorder,
-    borderRadius: radius.lg,
+    borderColor: colors.cardBorder,
+    borderRadius: 2,
     padding: spacing.md,
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
   chartTitle: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 3,
+    textTransform: "uppercase",
   },
 
   // Legend
@@ -1778,7 +1783,7 @@ const styles = StyleSheet.create({
   legendDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: 1,
   },
   legendText: {
     color: colors.textSecondary,

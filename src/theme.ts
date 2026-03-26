@@ -7,6 +7,8 @@ export const colors = {
   primaryDark: '#00cca3',
   primaryLight: 'rgba(0, 255, 204, 0.08)',
   primaryBorder: 'rgba(0, 255, 204, 0.2)',
+  primarySolid: '#00ffcc',
+  primaryText: '#050505',
   accent: '#ff003c',
   pink: '#ff0080',
   purple: '#8b00ff',
@@ -34,9 +36,9 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  full: 999,
+  sm: 2,
+  md: 4,
+  lg: 6,
+  xl: 6,
+  full: 2,
 } as const;

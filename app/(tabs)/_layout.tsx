@@ -13,7 +13,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           backgroundColor: "#050505",
-          borderTopColor: 'rgba(0,255,204,0.15)',
+          borderTopColor: 'rgba(0,255,204,0.3)',
           borderTopWidth: 1,
           height: Platform.OS === "web" ? 60 : 96,
           paddingBottom: Platform.OS === "web" ? 8 : 40,

@@ -118,14 +118,12 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   };
 
   const handleDateInput = (text: string) => {
-    // Auto-format: add slashes as user types
     const digits = text.replace(/\D/g, "");
     let formatted = digits;
     if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
     if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4, 8);
     setDateInput(formatted);
 
-    // Parse when complete: MM/DD/YYYY
     if (digits.length === 8) {
       const month = parseInt(digits.slice(0, 2), 10);
       const day = parseInt(digits.slice(2, 4), 10);
@@ -194,7 +192,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
                   mode === "expense" && styles.modeBtnTextActiveExpense,
                 ]}
               >
-                Expense
+                EXPENSE
               </Text>
             </Pressable>
             <Pressable
@@ -210,7 +208,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
                   mode === "income" && styles.modeBtnTextActiveIncome,
                 ]}
               >
-                Income
+                INCOME
               </Text>
             </Pressable>
           </View>
@@ -263,7 +261,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
               style={[styles.dateQuickBtn, isToday && styles.dateQuickBtnActive]}
             >
               <Text style={[styles.dateQuickBtnText, isToday && styles.dateQuickBtnTextActive]}>
-                Today
+                TODAY
               </Text>
             </Pressable>
             <Pressable
@@ -271,7 +269,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
               style={[styles.dateQuickBtn, isYesterday && styles.dateQuickBtnActive]}
             >
               <Text style={[styles.dateQuickBtnText, isYesterday && styles.dateQuickBtnTextActive]}>
-                Yesterday
+                YESTERDAY
               </Text>
             </Pressable>
             <TextInput
@@ -298,7 +296,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
               !amount && styles.saveBtnDisabled,
             ]}
           >
-            <Text style={styles.saveBtnText}>{isEditing ? "Save Changes" : "Save"}</Text>
+            <Text style={styles.saveBtnText}>{isEditing ? "SAVE CHANGES" : "SAVE"}</Text>
           </Pressable>
 
           {/* Delete (edit mode only) */}
@@ -311,7 +309,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
               }}
               style={styles.deleteBtn}
             >
-              <Text style={styles.deleteBtnText}>Delete Transaction</Text>
+              <Text style={styles.deleteBtnText}>DELETE TRANSACTION</Text>
             </Pressable>
           )}
         </View>
@@ -333,8 +331,10 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.card,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+    borderTopWidth: 1,
+    borderTopColor: colors.primarySolid,
     padding: spacing.lg,
     paddingBottom: spacing.xl + 16,
     gap: spacing.lg,
@@ -351,31 +351,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    borderRadius: radius.full,
+    borderRadius: 2,
     padding: 3,
   },
   modeBtn: {
     flex: 1,
     paddingVertical: 10,
     alignItems: "center",
-    borderRadius: radius.full,
+    borderRadius: 2,
   },
   modeBtnActiveExpense: {
     backgroundColor: colors.red,
   },
   modeBtnActiveIncome: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primarySolid,
   },
   modeBtnText: {
     color: colors.textSecondary,
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: 14,
+    letterSpacing: 2,
   },
   modeBtnTextActiveExpense: {
     color: colors.white,
   },
   modeBtnTextActiveIncome: {
-    color: colors.bg,
+    color: colors.primaryText,
   },
   amountRow: {
     flexDirection: "row",
@@ -400,8 +401,8 @@ const styles = StyleSheet.create({
   noteInput: {
     backgroundColor: colors.inputBg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.md,
+    borderColor: 'rgba(0, 255, 204, 0.3)',
+    borderRadius: 2,
     padding: spacing.md,
     color: colors.white,
     fontSize: 15,
@@ -414,29 +415,30 @@ const styles = StyleSheet.create({
   dateQuickBtn: {
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: radius.full,
+    borderRadius: 2,
     backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   dateQuickBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.primarySolid,
+    borderColor: colors.primarySolid,
   },
   dateQuickBtnText: {
     color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   dateQuickBtnTextActive: {
-    color: colors.bg,
+    color: colors.primaryText,
   },
   dateInput: {
     flex: 1,
     backgroundColor: colors.inputBg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.md,
+    borderColor: 'rgba(0, 255, 204, 0.3)',
+    borderRadius: 2,
     paddingVertical: 8,
     paddingHorizontal: spacing.sm,
     color: colors.white,
@@ -449,33 +451,32 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   saveBtn: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primarySolid,
     paddingVertical: 16,
     alignItems: "center",
-    borderRadius: radius.md,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    borderRadius: 2,
   },
   saveBtnDisabled: {
     opacity: 0.4,
   },
   saveBtnText: {
-    color: colors.bg,
+    color: colors.primaryText,
     fontSize: 17,
     fontWeight: "700",
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
   deleteBtn: {
+    backgroundColor: colors.red,
     paddingVertical: 14,
     alignItems: "center",
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.red,
+    borderRadius: 2,
   },
   deleteBtnText: {
-    color: colors.red,
+    color: colors.white,
     fontSize: 15,
     fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
 });

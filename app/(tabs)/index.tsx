@@ -169,12 +169,14 @@ export default function Dashboard() {
           value={formatCurrency(Math.abs(leftToSpend))}
           color={isOver ? colors.red : colors.primary}
           accentColor={isOver ? colors.red : colors.primary}
+          variant={isOver ? "negative" : "positive"}
         />
         <StatCard
           emoji={"\uD83D\uDCCA"}
           label="Spent"
           value={formatCurrency(totalSpent)}
-          accentColor={colors.pink}
+          accentColor={colors.red}
+          variant="neutral"
         />
         <Pressable
           onPress={() => {
@@ -190,6 +192,7 @@ export default function Dashboard() {
             label={viewMode === "weekly" ? "Wk Income" : "Income"}
             value={formatCurrency(displayIncome)}
             accentColor={colors.primary}
+            variant="positive"
           />
           <View style={styles.incomeAddHint}>
             <Text style={styles.incomeAddHintText}>+ ADD</Text>
@@ -281,6 +284,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     marginTop: 2,
+    letterSpacing: 3,
+    textTransform: "uppercase",
   },
   monthRow: {
     flexDirection: "row",
@@ -295,7 +300,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     minWidth: 200,
     textAlign: "center",
-    letterSpacing: 1,
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
   viewToggleRow: {
     flexDirection: "row",
@@ -303,21 +309,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    borderRadius: radius.full,
+    borderRadius: 2,
     padding: 3,
     marginBottom: spacing.md,
   },
   viewToggleBtn: {
     paddingVertical: 7,
     paddingHorizontal: 20,
-    borderRadius: radius.full,
+    borderRadius: 2,
   },
   viewToggleBtnActive: {
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    backgroundColor: colors.primarySolid,
   },
   viewToggleText: {
     color: colors.textSecondary,
@@ -326,7 +328,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   viewToggleTextActive: {
-    color: colors.bg,
+    color: colors.primaryText,
   },
   statsRow: {
     flexDirection: "row",
@@ -343,9 +345,10 @@ const styles = StyleSheet.create({
   },
   recentTitle: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 3,
+    textTransform: "uppercase",
   },
   recentCount: {
     color: colors.textSecondary,
@@ -375,13 +378,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 6,
     right: 6,
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
+    backgroundColor: colors.primarySolid,
+    borderRadius: 2,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   incomeAddHintText: {
-    color: colors.bg,
+    color: colors.primaryText,
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1,

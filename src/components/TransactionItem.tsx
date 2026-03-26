@@ -11,9 +11,9 @@ interface Props {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  food: '#FF9500',
-  shopping: '#ff0080',
-  bills: '#3B82F6',
+  food: '#ff0080',
+  shopping: '#8b00ff',
+  bills: '#00ffcc',
   transport: '#ccff00',
   transfer: '#00ffff',
   fun: '#EC4899',
@@ -39,8 +39,8 @@ export function TransactionItem({ transaction, onPress, onLongPress }: Props) {
 
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={[styles.container, {
-      borderLeftWidth: 2,
-      borderLeftColor: catColor + '60',
+      borderLeftWidth: 3,
+      borderLeftColor: catColor,
     }]}>
       <View style={[styles.emojiBox, { borderColor: catColor + '30' }]}>
         <Text style={styles.emoji}>{getCategoryEmoji(transaction.category)}</Text>
@@ -57,9 +57,6 @@ export function TransactionItem({ transaction, onPress, onLongPress }: Props) {
       <Text
         style={[styles.amount, {
           color: isExpense ? colors.red : colors.primary,
-          textShadowColor: isExpense ? 'rgba(255,0,60,0.3)' : 'rgba(0,255,204,0.3)',
-          textShadowOffset: { width: 0, height: 0 },
-          textShadowRadius: 6,
         }]}
       >
         {isExpense ? "-" : "+"}
@@ -80,7 +77,7 @@ const styles = StyleSheet.create({
   emojiBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: 2,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -104,7 +101,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   amount: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "800",
     letterSpacing: -0.3,
   },
