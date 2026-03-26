@@ -35,6 +35,15 @@ const PALETTE = [
   "#A855F7", "#22D3EE", "#84CC16", "#F97316", "#06B6D4",
 ];
 
+// --- Text glow for key numbers ---
+const CYBER_GLOW = [
+  { textShadowColor: 'rgba(0,255,204,0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
+];
+
+const RED_GLOW = [
+  { textShadowColor: 'rgba(255,0,60,0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
+];
+
 // --- Merchant name cleaning ---
 
 function cleanMerchantName(note: string): string {
@@ -160,8 +169,8 @@ function EmptyState({ message }: { message: string }) {
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={{ gap: 2 }}>
-      <Text style={styles.chartTitle}>{title}</Text>
-      {subtitle && <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>{subtitle}</Text>}
+      <Text style={styles.chartTitle}>{title.toUpperCase()}</Text>
+      {subtitle && <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{subtitle}</Text>}
     </View>
   );
 }
@@ -253,10 +262,10 @@ function IncomeVsExpenses({
     <View style={{ gap: 12 }}>
       <View>
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
-            Income
+          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700", letterSpacing: 2 }}>
+            INCOME
           </Text>
-          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
+          <Text style={{ color: colors.primary, fontSize: 15, fontWeight: "800", letterSpacing: -0.5, textShadowColor: 'rgba(0,255,204,0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }}>
             {formatCurrency(income)}
           </Text>
         </View>
@@ -275,10 +284,10 @@ function IncomeVsExpenses({
 
       <View>
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700" }}>
-            Expenses
+          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700", letterSpacing: 2 }}>
+            EXPENSES
           </Text>
-          <Text style={{ color: colors.red, fontSize: 14, fontWeight: "700" }}>
+          <Text style={{ color: colors.red, fontSize: 15, fontWeight: "800", letterSpacing: -0.5, textShadowColor: 'rgba(255,0,60,0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }}>
             {formatCurrency(expenses)}
           </Text>
         </View>
@@ -301,10 +310,18 @@ function IncomeVsExpenses({
         borderTopWidth: 1,
         borderTopColor: colors.cardBorder,
       }}>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600" }}>
-          Net {isPositive ? "Surplus" : "Deficit"}
+        <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600", letterSpacing: 2 }}>
+          {isPositive ? "NET SURPLUS" : "NET DEFICIT"}
         </Text>
-        <Text style={{ color: isPositive ? colors.primary : colors.red, fontSize: 16, fontWeight: "800" }}>
+        <Text style={{
+          color: isPositive ? colors.primary : colors.red,
+          fontSize: 18,
+          fontWeight: "800",
+          letterSpacing: -0.5,
+          textShadowColor: isPositive ? 'rgba(0,255,204,0.3)' : 'rgba(255,0,60,0.3)',
+          textShadowOffset: { width: 0, height: 0 },
+          textShadowRadius: 8,
+        }}>
           {isPositive ? "+" : ""}{formatCurrency(net)}
         </Text>
       </View>
@@ -335,20 +352,22 @@ function MonthlyIncomeExpenseChart({
                 color: item.isCurrent ? colors.primary : colors.white,
                 fontSize: 13,
                 fontWeight: item.isCurrent ? "700" : "500",
+                letterSpacing: 2,
               }}>
-                {item.label}
+                {item.label.toUpperCase()}
               </Text>
               <Text style={{
                 color: isPositive ? colors.primary : colors.red,
-                fontSize: 12,
-                fontWeight: "600",
+                fontSize: 13,
+                fontWeight: "700",
+                letterSpacing: -0.5,
               }}>
                 {isPositive ? "+" : ""}{formatCurrency(net)}
               </Text>
             </View>
             {/* Income bar */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 12 }}>IN</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 12, letterSpacing: 1 }}>IN</Text>
               <View style={{ flex: 1, height: 14, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
                 <View style={{
                   height: "100%",
@@ -358,13 +377,13 @@ function MonthlyIncomeExpenseChart({
                   opacity: item.isCurrent ? 0.9 : 0.5,
                 }} />
               </View>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 62, textAlign: "right" }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 62, textAlign: "right", fontWeight: "700", letterSpacing: -0.5 }}>
                 {formatCurrency(item.income)}
               </Text>
             </View>
             {/* Expense bar */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 12 }}>EX</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 12, letterSpacing: 1 }}>EX</Text>
               <View style={{ flex: 1, height: 14, backgroundColor: colors.dimmed, borderRadius: 4, overflow: "hidden" }}>
                 <View style={{
                   height: "100%",
@@ -374,7 +393,7 @@ function MonthlyIncomeExpenseChart({
                   opacity: item.isCurrent ? 0.9 : 0.5,
                 }} />
               </View>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 62, textAlign: "right" }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, width: 62, textAlign: "right", fontWeight: "700", letterSpacing: -0.5 }}>
                 {formatCurrency(item.expenses)}
               </Text>
             </View>
@@ -411,10 +430,17 @@ function FoodBreakdownChart({
           backgroundColor: colors.surface,
           padding: 8,
         }}>
-          <Text style={{ color: colors.white, fontSize: 14, fontWeight: "800" }} numberOfLines={1} adjustsFontSizeToFit>
+          <Text style={{
+            color: colors.white,
+            fontSize: 28,
+            fontWeight: "800",
+            textShadowColor: 'rgba(0,255,204,0.3)',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 8,
+          }} numberOfLines={1} adjustsFontSizeToFit>
             {formatCurrency(total).replace(".00", "")}
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 9 }}>TOTAL</Text>
+          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 9, letterSpacing: 2 }}>TOTAL</Text>
         </View>
         <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {data.map((item) => {
@@ -449,10 +475,10 @@ function FoodBreakdownChart({
         return (
           <View key={item.subcategory}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
-              <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
-                {cfg.emoji} {cfg.label}
+              <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
+                {cfg.emoji} {cfg.label.toUpperCase()}
               </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: -0.5 }}>
                 {formatCurrency(item.amount)} ({item.count}x)
               </Text>
             </View>
@@ -532,10 +558,10 @@ function ShoppingBreakdownChart({
       {groceryAmount > 0 && (
         <View>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
-            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
-              {"\u{1F6D2}"} Groceries
+            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
+              {"\u{1F6D2}"} GROCERIES
             </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: -0.5 }}>
               {formatCurrency(groceryAmount)} ({groceryCount}x)
             </Text>
           </View>
@@ -559,10 +585,10 @@ function ShoppingBreakdownChart({
       {retailAmount > 0 && (
         <View>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
-            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
-              {"\u{1F6CD}\u{FE0F}"} Retail
+            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
+              {"\u{1F6CD}\u{FE0F}"} RETAIL
             </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: -0.5 }}>
               {formatCurrency(retailAmount)} ({retailCount}x)
             </Text>
           </View>
@@ -585,6 +611,50 @@ function ShoppingBreakdownChart({
   );
 }
 
+// --- Grocery Store Breakdown ---
+
+function GroceryStoreBreakdown({
+  data,
+}: {
+  data: { name: string; amount: number; count: number }[];
+}) {
+  if (data.length === 0) return <EmptyState message="No grocery store data" />;
+
+  const maxAmount = Math.max(...data.map((d) => d.amount), 1);
+
+  return (
+    <View style={{ gap: 6 }}>
+      {data.map((item, i) => (
+        <View key={`${item.name}-${i}`} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, width: 20, textAlign: "right", fontWeight: "700" }}>
+            {i + 1}.
+          </Text>
+          <View style={{ flex: 1, gap: 3 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: -0.5 }}>
+                {formatCurrency(item.amount)} ({item.count} {item.count === 1 ? "trip" : "trips"})
+              </Text>
+            </View>
+            <View style={{ height: 6, backgroundColor: colors.dimmed, borderRadius: 3, overflow: "hidden" }}>
+              <View
+                style={{
+                  height: "100%",
+                  width: `${(item.amount / maxAmount) * 100}%`,
+                  backgroundColor: PALETTE[i % PALETTE.length],
+                  borderRadius: 3,
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // --- Spending by Category (Horizontal Bar Chart) ---
 
 function SpendingByCategoryChart({
@@ -599,10 +669,10 @@ function SpendingByCategoryChart({
       {data.map((item, i) => (
         <View key={`${item.name}-${i}`}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
-              {item.emoji} {item.name}
+            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
+              {item.emoji} {item.name.toUpperCase()}
             </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: -0.5 }}>
               {formatCurrency(item.amount)} ({item.percent.toFixed(1)}%)
             </Text>
           </View>
@@ -639,10 +709,10 @@ function MonthlySpendingTrend({
       {data.map((item, i) => (
         <View key={`${item.label}-${i}`}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-            <Text style={{ color: item.isCurrent ? colors.primary : colors.white, fontSize: 13, fontWeight: item.isCurrent ? "700" : "500" }}>
-              {item.label}
+            <Text style={{ color: item.isCurrent ? colors.primary : colors.white, fontSize: 13, fontWeight: item.isCurrent ? "700" : "500", letterSpacing: 2 }}>
+              {item.label.toUpperCase()}
             </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: -0.5 }}>
               {formatCurrency(item.total)}
             </Text>
           </View>
@@ -678,7 +748,7 @@ function TopMerchants({
     <View style={{ gap: 6 }}>
       {data.map((item, i) => (
         <View key={`${item.name}-${i}`} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ color: colors.textSecondary, fontSize: 12, width: 20, textAlign: "right" }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, width: 20, textAlign: "right", fontWeight: "700" }}>
             {i + 1}.
           </Text>
           <View style={{ flex: 1, gap: 3 }}>
@@ -686,7 +756,7 @@ function TopMerchants({
               <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
                 {item.name}
               </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: -0.5 }}>
                 {formatCurrency(item.amount)} ({item.count}x)
               </Text>
             </View>
@@ -823,10 +893,10 @@ function BudgetVsActualChart({
         return (
           <View key={`${item.name}-${i}`}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 3 }}>
-              <Text style={{ color: colors.white, fontSize: 12, fontWeight: "600" }}>
-                {item.emoji} {item.name}
+              <Text style={{ color: colors.white, fontSize: 12, fontWeight: "600", letterSpacing: 2 }}>
+                {item.emoji} {item.name.toUpperCase()}
               </Text>
-              <Text style={{ color: isOver ? colors.red : colors.textSecondary, fontSize: 12 }}>
+              <Text style={{ color: isOver ? colors.red : colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: -0.5 }}>
                 {formatCurrency(item.spent)} / {formatCurrency(item.allocated)}
               </Text>
             </View>
@@ -900,8 +970,9 @@ function MonthSelector({
                 color: active ? colors.bg : colors.white,
                 fontSize: 13,
                 fontWeight: active ? "700" : "500",
+                letterSpacing: 1,
               }}>
-                {label}
+                {label.toUpperCase()}
               </Text>
             </Pressable>
           );
@@ -1081,6 +1152,36 @@ export default function InsightsScreen() {
     };
   }, [monthExpenses]);
 
+  // Grocery Store Breakdown - individual stores from food + shopping categories
+  const groceryStoreBreakdown = useMemo(() => {
+    const storeMap: Record<string, { amount: number; count: number }> = {};
+
+    // Grocery transactions from food category
+    monthExpenses
+      .filter((t) => t.category === "food" && classifyFood(t.note || "") === "groceries")
+      .forEach((t) => {
+        const name = cleanMerchantName(t.note || "Unknown");
+        if (!storeMap[name]) storeMap[name] = { amount: 0, count: 0 };
+        storeMap[name].amount += t.amount;
+        storeMap[name].count += 1;
+      });
+
+    // Grocery merchants from shopping category
+    monthExpenses
+      .filter((t) => t.category === "shopping" && isGroceryMerchant(t.note || ""))
+      .forEach((t) => {
+        const name = cleanMerchantName(t.note || "Unknown");
+        if (!storeMap[name]) storeMap[name] = { amount: 0, count: 0 };
+        storeMap[name].amount += t.amount;
+        storeMap[name].count += 1;
+      });
+
+    return Object.entries(storeMap)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10);
+  }, [monthExpenses]);
+
   // Spending by Category (with food subcategories expanded)
   const categorySpending = useMemo(() => {
     const map: Record<string, { amount: number; name: string; emoji: string; color: string }> = {};
@@ -1236,7 +1337,7 @@ export default function InsightsScreen() {
       .filter((t) => t.type === "income" && normalizeDate(t.date).startsWith(activeMonth))
       .reduce((s, t) => s + t.amount, 0);
 
-    // Current week spending & income (Mon–Sun containing today)
+    // Current week spending & income (Mon-Sun containing today)
     const now = new Date();
     const [y, m] = activeMonth.split("-").map(Number);
     const isCurrentMonth = now.getFullYear() === y && now.getMonth() + 1 === m;
@@ -1368,7 +1469,7 @@ export default function InsightsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.header}>Insights</Text>
+        <Text style={styles.header}>INSIGHTS</Text>
 
         {/* Month Selector */}
         {availableMonths.length > 1 && (
@@ -1391,22 +1492,38 @@ export default function InsightsScreen() {
 
         {/* Weekly Income Card */}
         {(profile?.monthlyIncome ?? 0) > 0 && (
-          <View style={[styles.chartCard, { borderColor: colors.primary + "40" }]}>
+          <View style={[styles.chartCard, { borderColor: colors.greenBorder }]}>
             <SectionHeader title="Weekly Snapshot" subtitle="Income, spending & savings this week" />
             <View style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600" }}>
-                  Weekly Income
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
+                  WEEKLY INCOME
                 </Text>
-                <Text style={{ color: colors.primary, fontSize: 16, fontWeight: "800" }}>
+                <Text style={{
+                  color: colors.primary,
+                  fontSize: 17,
+                  fontWeight: "800",
+                  letterSpacing: -0.5,
+                  textShadowColor: 'rgba(0,255,204,0.3)',
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
+                }}>
                   {formatCurrency(weeklyStats.weeklyIncome)}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600" }}>
-                  Weekly Spending
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
+                  WEEKLY SPENDING
                 </Text>
-                <Text style={{ color: colors.red, fontSize: 16, fontWeight: "800" }}>
+                <Text style={{
+                  color: colors.red,
+                  fontSize: 17,
+                  fontWeight: "800",
+                  letterSpacing: -0.5,
+                  textShadowColor: 'rgba(255,0,60,0.3)',
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
+                }}>
                   {formatCurrency(weeklyStats.weekSpending)}
                 </Text>
               </View>
@@ -1418,13 +1535,17 @@ export default function InsightsScreen() {
                 borderTopWidth: 1,
                 borderTopColor: colors.cardBorder,
               }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600" }}>
-                  Weekly Savings
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
+                  WEEKLY SAVINGS
                 </Text>
                 <Text style={{
                   color: weeklyStats.weeklySavings >= 0 ? colors.primary : colors.red,
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: "800",
+                  letterSpacing: -0.5,
+                  textShadowColor: weeklyStats.weeklySavings >= 0 ? 'rgba(0,255,204,0.3)' : 'rgba(255,0,60,0.3)',
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
                 }}>
                   {weeklyStats.weeklySavings >= 0 ? "+" : ""}{formatCurrency(weeklyStats.weeklySavings)}
                 </Text>
@@ -1441,7 +1562,7 @@ export default function InsightsScreen() {
 
         {/* Food Breakdown - includes groceries from shopping */}
         {foodBreakdown.total > 0 && (
-          <View style={[styles.chartCard, { borderColor: "#FF950040" }]}>
+          <View style={[styles.chartCard, { borderColor: "rgba(255, 149, 0, 0.25)" }]}>
             <SectionHeader
               title="Food & Grocery Breakdown"
               subtitle="Groceries, delivery, coffee & dining out"
@@ -1450,19 +1571,31 @@ export default function InsightsScreen() {
           </View>
         )}
 
+        {/* Grocery Store Breakdown */}
+        {groceryStoreBreakdown.length > 0 && (
+          <View style={[styles.chartCard, { borderColor: "rgba(16, 185, 129, 0.25)" }]}>
+            <SectionHeader
+              title="Grocery Store Breakdown"
+              subtitle="Spending by store across food & shopping"
+            />
+            <GroceryStoreBreakdown data={groceryStoreBreakdown} />
+          </View>
+        )}
+
         {/* Waste Alerts */}
         <View style={[styles.chartCard, {
-          borderColor: wasteAlerts.length > 0 ? colors.red + "60" : colors.primary + "40",
+          borderColor: wasteAlerts.length > 0 ? colors.redBorder : colors.primaryBorder,
           borderWidth: wasteAlerts.length > 0 ? 1.5 : 1,
+          backgroundColor: wasteAlerts.length > 0 ? colors.redBg : colors.card,
         }]}>
           <SectionHeader
-            title="Waste Alerts"
+            title="WASTE ALERTS"
             subtitle={wasteAlerts.length > 0 ? "Spending patterns to watch" : undefined}
           />
           {wasteAlerts.length === 0 ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8 }}>
               <Text style={{ fontSize: 20 }}>{"\u2705"}</Text>
-              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700" }}>
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700", letterSpacing: 1 }}>
                 You're doing great! No spending alerts this month.
               </Text>
             </View>
@@ -1484,7 +1617,7 @@ export default function InsightsScreen() {
                 >
                   <Text style={{ fontSize: 18 }}>{alert.emoji}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.white, fontSize: 13, fontWeight: "600" }}>
+                    <Text style={{ color: colors.white, fontSize: 13, fontWeight: "700" }}>
                       {alert.description}
                     </Text>
                   </View>
@@ -1496,7 +1629,7 @@ export default function InsightsScreen() {
 
         {/* Shopping Breakdown */}
         {(shoppingBreakdown.groceryAmount > 0 || shoppingBreakdown.retailAmount > 0) && (
-          <View style={[styles.chartCard, { borderColor: "#FF00FF40" }]}>
+          <View style={[styles.chartCard, { borderColor: "rgba(255, 0, 255, 0.25)" }]}>
             <SectionHeader
               title="Shopping Breakdown"
               subtitle="Groceries vs retail purchases"
@@ -1569,11 +1702,11 @@ const styles = StyleSheet.create({
   header: {
     color: colors.white,
     fontSize: 32,
-    fontWeight: "800",
+    fontWeight: "900",
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
-    letterSpacing: -0.5,
+    letterSpacing: 4,
   },
 
   // Stats grid
@@ -1586,9 +1719,11 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: "45%",
-    backgroundColor: colors.card,
+    backgroundColor: colors.greenBg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.primaryBorder,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
     borderRadius: radius.lg,
     padding: spacing.md,
     gap: spacing.xs,
@@ -1596,14 +1731,17 @@ const styles = StyleSheet.create({
   statLabel: {
     color: colors.textSecondary,
     fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 1,
+    fontWeight: "700",
+    letterSpacing: 2,
   },
   statValue: {
     color: colors.white,
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     letterSpacing: -0.5,
+    textShadowColor: 'rgba(0,255,204,0.3)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   statSub: {
     color: colors.textSecondary,
@@ -1614,16 +1752,17 @@ const styles = StyleSheet.create({
   chartCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.primaryBorder,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
   chartTitle: {
-    color: colors.white,
-    fontSize: 16,
+    color: colors.textSecondary,
+    fontSize: 11,
     fontWeight: "700",
+    letterSpacing: 2,
   },
 
   // Legend

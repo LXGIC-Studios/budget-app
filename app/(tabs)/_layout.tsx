@@ -12,16 +12,18 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: "#080808",
-          borderTopColor: colors.cardBorder,
+          backgroundColor: "#050505",
+          borderTopColor: 'rgba(0,255,204,0.15)',
           borderTopWidth: 1,
           height: Platform.OS === "web" ? 60 : 96,
           paddingBottom: Platform.OS === "web" ? 8 : 40,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "500",
+          fontSize: 9,
+          fontWeight: "700",
+          letterSpacing: 1,
+          textTransform: "uppercase",
           marginBottom: Platform.OS === "web" ? 4 : 0,
         },
         tabBarIconStyle: {
@@ -33,8 +35,15 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <Home size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 6,
+            } : undefined}>
+              <Home size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -42,8 +51,15 @@ export default function TabLayout() {
         name="budget"
         options={{
           title: "Budget",
-          tabBarIcon: ({ color, size }) => (
-            <BarChart3 size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 6,
+            } : undefined}>
+              <BarChart3 size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -51,8 +67,15 @@ export default function TabLayout() {
         name="debt"
         options={{
           title: "Debt",
-          tabBarIcon: ({ color, size }) => (
-            <CreditCard size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 6,
+            } : undefined}>
+              <CreditCard size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -60,8 +83,15 @@ export default function TabLayout() {
         name="insights"
         options={{
           title: "Insights",
-          tabBarIcon: ({ color, size }) => (
-            <TrendingUp size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 6,
+            } : undefined}>
+              <TrendingUp size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -69,8 +99,15 @@ export default function TabLayout() {
         name="history"
         options={{
           title: "History",
-          tabBarIcon: ({ color, size }) => (
-            <List size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 6,
+            } : undefined}>
+              <List size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -78,8 +115,15 @@ export default function TabLayout() {
         name="household"
         options={{
           title: "Household",
-          tabBarIcon: ({ color }) => (
-            <Users size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 6,
+            } : undefined}>
+              <Users size={20} color={color} />
+            </View>
           ),
         }}
       />
@@ -87,8 +131,15 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: "Settings",
-          tabBarIcon: ({ color }) => (
-            <Settings size={20} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 6,
+            } : undefined}>
+              <Settings size={20} color={color} />
+            </View>
           ),
         }}
       />

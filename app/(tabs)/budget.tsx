@@ -78,8 +78,26 @@ function CategoryRow({
   const freq = cat.frequency || "monthly";
   const showFreqBadge = freq !== "monthly";
 
+  // Left accent border color by type: fixed = primary (#00ffcc), flexible = yellow (#ccff00)
+  const accentColor = cat.type === "fixed" ? colors.primary : colors.yellow;
+
+  // Tinted background based on over/under status
+  const cardBg = isOver ? colors.redBg : colors.greenBg;
+  const cardBorderColor = isOver ? colors.redBorder : colors.greenBorder;
+
   return (
-    <Pressable onPress={onPress} style={styles.catCard}>
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.catCard,
+        {
+          borderLeftWidth: 2,
+          borderLeftColor: accentColor,
+          backgroundColor: cardBg,
+          borderColor: cardBorderColor,
+        },
+      ]}
+    >
       <View style={styles.catHeader}>
         <View style={{ flex: 1 }}>
           <View style={styles.catInfo}>
@@ -100,7 +118,13 @@ function CategoryRow({
             <Text style={styles.dueDayText}>{formatDueDay(cat.dueDay)}</Text>
           )}
         </View>
-        <Text style={[styles.catSpent, isOver && { color: colors.red }]}>
+        <Text
+          style={[
+            styles.catSpent,
+            isOver && { color: colors.red, textShadowColor: 'rgba(255, 0, 60, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6 },
+            !isOver && { textShadowColor: 'rgba(0, 255, 204, 0.4)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 4 },
+          ]}
+        >
           {formatCurrency(spent)}{" "}
           <Text style={styles.catOf}>/ {formatCurrency(displayAllocated)}</Text>
         </Text>
@@ -233,7 +257,7 @@ export default function BudgetScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Text style={styles.header}>Budget</Text>
+      <Text style={styles.header}>BUDGET</Text>
 
       {/* Period navigation */}
       {viewMode === "monthly" ? (
@@ -241,7 +265,7 @@ export default function BudgetScreen() {
           <Pressable onPress={() => navigateMonth(-1)} hitSlop={12}>
             <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.periodLabel}>{formatMonthLabel(currentMonth)}</Text>
+          <Text style={styles.periodLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
           <Pressable onPress={() => navigateMonth(1)} hitSlop={12}>
             <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
@@ -251,7 +275,7 @@ export default function BudgetScreen() {
           <Pressable onPress={() => navigateWeek(-1)} hitSlop={12}>
             <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.periodLabel}>{formatWeekLabel(currentWeek)}</Text>
+          <Text style={styles.periodLabel}>{formatWeekLabel(currentWeek).toUpperCase()}</Text>
           <Pressable onPress={() => navigateWeek(1)} hitSlop={12}>
             <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
@@ -262,18 +286,24 @@ export default function BudgetScreen() {
       <View style={styles.viewToggleRow}>
         <Pressable
           onPress={() => switchViewMode("monthly")}
-          style={[styles.viewToggleBtn, viewMode === "monthly" && styles.viewToggleBtnActive]}
+          style={[
+            styles.viewToggleBtn,
+            viewMode === "monthly" && styles.viewToggleBtnActive,
+          ]}
         >
           <Text style={[styles.viewToggleText, viewMode === "monthly" && styles.viewToggleTextActive]}>
-            Monthly
+            MONTHLY
           </Text>
         </Pressable>
         <Pressable
           onPress={() => switchViewMode("weekly")}
-          style={[styles.viewToggleBtn, viewMode === "weekly" && styles.viewToggleBtnActive]}
+          style={[
+            styles.viewToggleBtn,
+            viewMode === "weekly" && styles.viewToggleBtnActive,
+          ]}
         >
           <Text style={[styles.viewToggleText, viewMode === "weekly" && styles.viewToggleTextActive]}>
-            Weekly
+            WEEKLY
           </Text>
         </Pressable>
       </View>
@@ -281,22 +311,40 @@ export default function BudgetScreen() {
       {/* Summary */}
       {viewMode === "monthly" ? (
         <View style={styles.summaryRow}>
-          <View style={styles.summaryItem}>
+          <View style={[styles.summaryItem, { backgroundColor: colors.greenBg, borderColor: colors.greenBorder }]}>
             <Text style={styles.summaryLabel}>INCOME</Text>
-            <Text style={styles.summaryValue}>{formatCurrency(monthlyIncome)}</Text>
+            <Text style={[styles.summaryValue, { textShadowColor: 'rgba(0, 255, 204, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }]}>
+              {formatCurrency(monthlyIncome)}
+            </Text>
           </View>
-          <View style={styles.summaryItem}>
+          <View
+            style={[
+              styles.summaryItem,
+              totalBudgetMonthly > monthlyIncome
+                ? { backgroundColor: colors.redBg, borderColor: colors.redBorder }
+                : { backgroundColor: colors.yellowBg, borderColor: colors.yellowBorder },
+            ]}
+          >
             <Text style={styles.summaryLabel}>BUDGETED</Text>
             <Text
               style={[
                 styles.summaryValue,
-                totalBudgetMonthly > monthlyIncome && { color: colors.red },
+                totalBudgetMonthly > monthlyIncome
+                  ? { color: colors.red, textShadowColor: 'rgba(255, 0, 60, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }
+                  : { textShadowColor: 'rgba(204, 255, 0, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
               ]}
             >
               {formatCurrency(totalBudgetMonthly)}
             </Text>
           </View>
-          <View style={styles.summaryItem}>
+          <View
+            style={[
+              styles.summaryItem,
+              monthlyIncome - totalBudgetMonthly >= 0
+                ? { backgroundColor: colors.greenBg, borderColor: colors.greenBorder }
+                : { backgroundColor: colors.redBg, borderColor: colors.redBorder },
+            ]}
+          >
             <Text style={styles.summaryLabel}>REMAINING</Text>
             <Text
               style={[
@@ -304,6 +352,12 @@ export default function BudgetScreen() {
                 {
                   color:
                     monthlyIncome - totalBudgetMonthly >= 0 ? colors.primary : colors.red,
+                  textShadowColor:
+                    monthlyIncome - totalBudgetMonthly >= 0
+                      ? 'rgba(0, 255, 204, 0.6)'
+                      : 'rgba(255, 0, 60, 0.6)',
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
                 },
               ]}
             >
@@ -314,16 +368,28 @@ export default function BudgetScreen() {
       ) : (
         /* Weekly Savings Breakdown Card */
         <View style={styles.weeklyCard}>
-          <Text style={styles.weeklyCardTitle}>Weekly Breakdown</Text>
+          <Text style={styles.weeklyCardTitle}>WEEKLY BREAKDOWN</Text>
           <View style={styles.weeklyCardRows}>
             <View style={styles.weeklyCardRow}>
               <Text style={styles.weeklyCardLabel}>Weekly Paycheck</Text>
-              <Text style={styles.weeklyCardValue}>{formatCurrency(weeklyIncome)}</Text>
+              <Text
+                style={[
+                  styles.weeklyCardValue,
+                  { textShadowColor: 'rgba(0, 255, 204, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6 },
+                ]}
+              >
+                {formatCurrency(weeklyIncome)}
+              </Text>
             </View>
             <View style={styles.weeklyCardDivider} />
             <View style={styles.weeklyCardRow}>
               <Text style={styles.weeklyCardLabel}>Bills Set-Aside</Text>
-              <Text style={[styles.weeklyCardValue, { color: colors.red }]}>
+              <Text
+                style={[
+                  styles.weeklyCardValue,
+                  { color: colors.red, textShadowColor: 'rgba(255, 0, 60, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6 },
+                ]}
+              >
                 {formatCurrency(totalBudgetWeekly)}
               </Text>
             </View>
@@ -333,7 +399,14 @@ export default function BudgetScreen() {
               <Text
                 style={[
                   styles.weeklyCardValue,
-                  { color: weeklyLeftForSpending >= 0 ? colors.primary : colors.red },
+                  {
+                    color: weeklyLeftForSpending >= 0 ? colors.primary : colors.red,
+                    textShadowColor: weeklyLeftForSpending >= 0
+                      ? 'rgba(0, 255, 204, 0.6)'
+                      : 'rgba(255, 0, 60, 0.6)',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 6,
+                  },
                 ]}
               >
                 {formatCurrency(weeklyLeftForSpending)}
@@ -392,7 +465,7 @@ export default function BudgetScreen() {
 
             {/* Frequency picker */}
             <View>
-              <Text style={styles.modalFieldLabel}>Frequency</Text>
+              <Text style={styles.modalFieldLabel}>FREQUENCY</Text>
               <View style={styles.freqRow}>
                 {FREQUENCY_OPTIONS.map((opt) => (
                   <Pressable
@@ -418,7 +491,7 @@ export default function BudgetScreen() {
 
             {/* Due day */}
             <View>
-              <Text style={styles.modalFieldLabel}>Due Day (optional)</Text>
+              <Text style={styles.modalFieldLabel}>DUE DAY (OPTIONAL)</Text>
               <View style={styles.modalInputRow}>
                 <TextInput
                   style={[styles.modalInput, { fontSize: 18 }]}
@@ -455,11 +528,14 @@ const styles = StyleSheet.create({
   header: {
     color: colors.white,
     fontSize: 32,
-    fontWeight: "800",
+    fontWeight: "900",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    letterSpacing: -0.5,
+    letterSpacing: 4,
+    textShadowColor: 'rgba(0, 255, 204, 0.3)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   // Period navigation
   periodRow: {
@@ -471,12 +547,13 @@ const styles = StyleSheet.create({
   },
   periodLabel: {
     color: colors.white,
-    fontSize: 18,
-    fontWeight: "600",
-    minWidth: 160,
+    fontSize: 22,
+    fontWeight: "800",
+    minWidth: 200,
     textAlign: "center",
+    letterSpacing: 2,
   },
-  // View mode toggle (matches dashboard)
+  // View mode toggle
   viewToggleRow: {
     flexDirection: "row",
     alignSelf: "center",
@@ -494,11 +571,17 @@ const styles = StyleSheet.create({
   },
   viewToggleBtnActive: {
     backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 6,
   },
   viewToggleText: {
     color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
   },
   viewToggleTextActive: {
     color: colors.bg,
@@ -514,31 +597,31 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: colors.card,
+    backgroundColor: colors.greenBg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.greenBorder,
     borderRadius: radius.lg,
     paddingVertical: 14,
     paddingHorizontal: spacing.sm,
   },
   summaryLabel: {
     color: colors.textSecondary,
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 1,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
   },
   summaryValue: {
     color: colors.white,
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "800",
   },
   // Weekly savings breakdown card
   weeklyCard: {
     marginHorizontal: spacing.md,
     marginBottom: spacing.lg,
-    backgroundColor: colors.card,
+    backgroundColor: colors.greenBg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.greenBorder,
     borderRadius: radius.lg,
     padding: spacing.md,
   },
@@ -547,7 +630,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     marginBottom: spacing.sm,
-    letterSpacing: 0.3,
+    letterSpacing: 2,
   },
   weeklyCardRows: {
     gap: 0,
@@ -565,8 +648,8 @@ const styles = StyleSheet.create({
   },
   weeklyCardValue: {
     color: colors.white,
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "800",
   },
   weeklyCardDivider: {
     height: 1,
@@ -579,9 +662,9 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   catCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.greenBg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.greenBorder,
     borderRadius: radius.lg,
     padding: spacing.md,
     gap: spacing.sm,
@@ -627,8 +710,8 @@ const styles = StyleSheet.create({
   },
   catSpent: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
   },
   catOf: {
     color: colors.textSecondary,
@@ -655,7 +738,7 @@ const styles = StyleSheet.create({
   modalCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.primaryBorder,
     borderRadius: radius.lg,
     padding: spacing.lg,
     width: "100%",
@@ -667,12 +750,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
   modalFieldLabel: {
     color: colors.textSecondary,
     fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
+    fontWeight: "700",
+    letterSpacing: 2,
     marginBottom: spacing.sm,
   },
   modalInputRow: {
@@ -681,7 +766,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     backgroundColor: colors.inputBg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.primaryBorder,
     borderRadius: radius.md,
     padding: spacing.md,
   },

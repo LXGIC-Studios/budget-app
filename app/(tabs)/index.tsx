@@ -112,13 +112,19 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <Text style={styles.headerTitle}>STACKD</Text>
+        <Text style={styles.headerSubtitle}>Your financial command center</Text>
+      </View>
+
       {/* Period selector */}
       {viewMode === "monthly" ? (
         <View style={styles.monthRow}>
           <Pressable onPress={() => navigateMonth(-1)} hitSlop={12}>
             <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth)}</Text>
+          <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
           <Pressable onPress={() => navigateMonth(1)} hitSlop={12}>
             <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
@@ -128,7 +134,7 @@ export default function Dashboard() {
           <Pressable onPress={() => navigateWeek(-1)} hitSlop={12}>
             <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.monthLabel}>{formatWeekLabel(currentWeek)}</Text>
+          <Text style={styles.monthLabel}>{formatWeekLabel(currentWeek).toUpperCase()}</Text>
           <Pressable onPress={() => navigateWeek(1)} hitSlop={12}>
             <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
@@ -142,7 +148,7 @@ export default function Dashboard() {
           style={[styles.viewToggleBtn, viewMode === "monthly" && styles.viewToggleBtnActive]}
         >
           <Text style={[styles.viewToggleText, viewMode === "monthly" && styles.viewToggleTextActive]}>
-            Monthly
+            MONTHLY
           </Text>
         </Pressable>
         <Pressable
@@ -150,7 +156,7 @@ export default function Dashboard() {
           style={[styles.viewToggleBtn, viewMode === "weekly" && styles.viewToggleBtnActive]}
         >
           <Text style={[styles.viewToggleText, viewMode === "weekly" && styles.viewToggleTextActive]}>
-            Weekly
+            WEEKLY
           </Text>
         </Pressable>
       </View>
@@ -162,11 +168,13 @@ export default function Dashboard() {
           label="Left to Spend"
           value={formatCurrency(Math.abs(leftToSpend))}
           color={isOver ? colors.red : colors.primary}
+          accentColor={isOver ? colors.red : colors.primary}
         />
         <StatCard
           emoji={"\uD83D\uDCCA"}
           label="Spent"
           value={formatCurrency(totalSpent)}
+          accentColor={colors.pink}
         />
         <Pressable
           onPress={() => {
@@ -181,16 +189,17 @@ export default function Dashboard() {
             emoji={"\uD83D\uDCB5"}
             label={viewMode === "weekly" ? "Wk Income" : "Income"}
             value={formatCurrency(displayIncome)}
+            accentColor={colors.primary}
           />
           <View style={styles.incomeAddHint}>
-            <Text style={styles.incomeAddHintText}>+ Add</Text>
+            <Text style={styles.incomeAddHintText}>+ ADD</Text>
           </View>
         </Pressable>
       </View>
 
       {/* Recent transactions */}
       <View style={styles.recentHeader}>
-        <Text style={styles.recentTitle}>Recent Transactions</Text>
+        <Text style={styles.recentTitle}>RECENT TRANSACTIONS</Text>
         <Text style={styles.recentCount}>
           {activeTxns.length} this {viewMode === "weekly" ? "week" : "month"}
         </Text>
@@ -255,6 +264,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
+  headerRow: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  headerTitle: {
+    color: colors.white,
+    fontSize: 32,
+    fontWeight: "900",
+    letterSpacing: 4,
+    textTransform: "uppercase",
+  },
+  headerSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "500",
+    marginTop: 2,
+  },
   monthRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -264,10 +291,11 @@ const styles = StyleSheet.create({
   },
   monthLabel: {
     color: colors.white,
-    fontSize: 18,
-    fontWeight: "600",
-    minWidth: 160,
+    fontSize: 22,
+    fontWeight: "800",
+    minWidth: 200,
     textAlign: "center",
+    letterSpacing: 1,
   },
   viewToggleRow: {
     flexDirection: "row",
@@ -286,11 +314,16 @@ const styles = StyleSheet.create({
   },
   viewToggleBtnActive: {
     backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
   viewToggleText: {
     color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
   },
   viewToggleTextActive: {
     color: colors.bg,
@@ -309,13 +342,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   recentTitle: {
-    color: colors.white,
-    fontSize: 18,
+    color: colors.textSecondary,
+    fontSize: 11,
     fontWeight: "700",
+    letterSpacing: 2,
   },
   recentCount: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   list: {
     flexGrow: 1,
@@ -349,5 +384,6 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontSize: 9,
     fontWeight: "800",
+    letterSpacing: 1,
   },
 });

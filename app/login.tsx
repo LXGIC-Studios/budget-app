@@ -20,6 +20,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) return;
@@ -47,8 +49,8 @@ export default function LoginScreen() {
         style={styles.inner}
       >
         <View style={styles.content}>
-          <Text style={styles.logo}>Stackd</Text>
-          <Text style={styles.tagline}>Budget smarter.</Text>
+          <Text style={styles.logo}>STACKD</Text>
+          <Text style={styles.tagline}>BUDGET SMARTER.</Text>
 
           <View style={styles.toggle}>
             <Pressable
@@ -58,7 +60,7 @@ export default function LoginScreen() {
               <Text
                 style={[styles.toggleText, mode === "login" && styles.toggleTextActive]}
               >
-                Log In
+                LOG IN
               </Text>
             </Pressable>
             <Pressable
@@ -68,13 +70,13 @@ export default function LoginScreen() {
               <Text
                 style={[styles.toggleText, mode === "signup" && styles.toggleTextActive]}
               >
-                Sign Up
+                SIGN UP
               </Text>
             </Pressable>
           </View>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, emailFocused && styles.inputFocused]}
             placeholder="Email"
             placeholderTextColor={colors.dimmed}
             keyboardType="email-address"
@@ -82,15 +84,19 @@ export default function LoginScreen() {
             autoCorrect={false}
             value={email}
             onChangeText={setEmail}
+            onFocus={() => setEmailFocused(true)}
+            onBlur={() => setEmailFocused(false)}
           />
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, passwordFocused && styles.inputFocused]}
             placeholder="Password"
             placeholderTextColor={colors.dimmed}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            onFocus={() => setPasswordFocused(true)}
+            onBlur={() => setPasswordFocused(false)}
           />
 
           {error && <Text style={styles.error}>{error}</Text>}
@@ -104,7 +110,7 @@ export default function LoginScreen() {
               <ActivityIndicator color={colors.bg} />
             ) : (
               <Text style={styles.btnText}>
-                {mode === "login" ? "Log In" : "Create Account"}
+                {mode === "login" ? "LOG IN" : "CREATE ACCOUNT"}
               </Text>
             )}
           </Pressable>
@@ -129,16 +135,21 @@ const styles = StyleSheet.create({
   },
   logo: {
     color: colors.primary,
-    fontSize: 44,
-    fontWeight: "800",
+    fontSize: 56,
+    fontWeight: "900",
     textAlign: "center",
-    letterSpacing: -1,
+    letterSpacing: 6,
+    textShadowColor: 'rgba(0,255,204,0.4)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 20,
   },
   tagline: {
     color: colors.textSecondary,
-    fontSize: 16,
+    fontSize: 13,
     textAlign: "center",
     marginBottom: spacing.xl,
+    letterSpacing: 3,
+    fontWeight: "600",
   },
   toggle: {
     flexDirection: "row",
@@ -159,8 +170,9 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     color: colors.textSecondary,
-    fontWeight: "600",
-    fontSize: 15,
+    fontWeight: "700",
+    fontSize: 13,
+    letterSpacing: 2,
   },
   toggleTextActive: {
     color: colors.bg,
@@ -174,6 +186,13 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
   },
+  inputFocused: {
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
   error: {
     color: colors.red,
     fontSize: 14,
@@ -186,16 +205,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     borderRadius: radius.md,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
   },
   btnDisabled: {
     opacity: 0.6,
   },
   btnText: {
     color: colors.bg,
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
 });

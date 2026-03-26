@@ -10,6 +10,17 @@ interface Props {
   onLongPress?: () => void;
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  food: '#FF9500',
+  shopping: '#ff0080',
+  bills: '#3B82F6',
+  transport: '#ccff00',
+  transfer: '#00ffff',
+  fun: '#EC4899',
+  health: '#14B8A6',
+  other: '#707070',
+};
+
 function getCategoryEmoji(category: string): string {
   const lower = category.toLowerCase();
   const found =
@@ -18,12 +29,20 @@ function getCategoryEmoji(category: string): string {
   return found?.emoji ?? "\uD83D\uDCE6";
 }
 
+function getCategoryColor(category: string): string {
+  return CATEGORY_COLORS[category.toLowerCase()] || '#707070';
+}
+
 export function TransactionItem({ transaction, onPress, onLongPress }: Props) {
   const isExpense = transaction.type === "expense";
+  const catColor = getCategoryColor(transaction.category);
 
   return (
-    <Pressable onPress={onPress} onLongPress={onLongPress} style={styles.container}>
-      <View style={styles.emojiBox}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} style={[styles.container, {
+      borderLeftWidth: 2,
+      borderLeftColor: catColor + '60',
+    }]}>
+      <View style={[styles.emojiBox, { borderColor: catColor + '30' }]}>
         <Text style={styles.emoji}>{getCategoryEmoji(transaction.category)}</Text>
       </View>
       <View style={styles.info}>
@@ -36,7 +55,12 @@ export function TransactionItem({ transaction, onPress, onLongPress }: Props) {
         </Text>
       </View>
       <Text
-        style={[styles.amount, { color: isExpense ? colors.red : colors.primary }]}
+        style={[styles.amount, {
+          color: isExpense ? colors.red : colors.primary,
+          textShadowColor: isExpense ? 'rgba(255,0,60,0.3)' : 'rgba(0,255,204,0.3)',
+          textShadowOffset: { width: 0, height: 0 },
+          textShadowRadius: 6,
+        }]}
       >
         {isExpense ? "-" : "+"}
         {formatCurrency(transaction.amount)}
@@ -81,7 +105,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: -0.3,
   },
 });
