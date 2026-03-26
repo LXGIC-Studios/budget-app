@@ -257,6 +257,7 @@ export default function BudgetScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
       <Text style={styles.header}>BUDGET</Text>
 
       {/* Period navigation */}
@@ -416,7 +417,7 @@ export default function BudgetScreen() {
         </View>
       )}
 
-      <ScrollView contentContainerStyle={styles.catList}>
+      <View style={styles.catList}>
         {categories.map((cat) => {
           const catKey = cat.name.toLowerCase();
           const freq = cat.frequency || "monthly";
@@ -434,6 +435,7 @@ export default function BudgetScreen() {
             />
           );
         })}
+      </View>
       </ScrollView>
 
       <FAB onPress={() => setSheetVisible(true)} />
