@@ -240,41 +240,28 @@ export default function HistoryScreen() {
         </ScrollView>
       </View>
 
-      {/* Category Filter - Dropdown */}
+      {/* Category Filter - Grid */}
       <View style={styles.filterSection}>
         <Text style={styles.filterLabel}>CATEGORY</Text>
-        <Pressable
-          onPress={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-          style={[styles.dropdownBtn, selectedCategory !== "all" && styles.dropdownBtnActive]}
-        >
-          <Text style={[styles.dropdownBtnText, selectedCategory !== "all" && styles.dropdownBtnTextActive]}>
-            {selectedCategory === "all" ? "ALL CATEGORIES" : selectedCategory.toUpperCase()}
-          </Text>
-          <Text style={[styles.dropdownArrow, selectedCategory !== "all" && styles.dropdownBtnTextActive]}>
-            {categoryDropdownOpen ? "▲" : "▼"}
-          </Text>
-        </Pressable>
-        {categoryDropdownOpen && (
-          <View style={styles.dropdownList}>
+        <View style={styles.catGrid}>
+          <Pressable
+            onPress={() => { setSelectedCategory("all"); impact("Light"); }}
+            style={[styles.catGridPill, selectedCategory === "all" && styles.catGridPillActive]}
+          >
+            <Text style={[styles.catGridText, selectedCategory === "all" && styles.catGridTextActive]}>ALL</Text>
+          </Pressable>
+          {categories.map((cat) => (
             <Pressable
-              onPress={() => { setSelectedCategory("all"); setCategoryDropdownOpen(false); impact("Light"); }}
-              style={[styles.dropdownItem, selectedCategory === "all" && styles.dropdownItemActive]}
+              key={cat}
+              onPress={() => { setSelectedCategory(cat); impact("Light"); }}
+              style={[styles.catGridPill, selectedCategory === cat && styles.catGridPillActive]}
             >
-              <Text style={[styles.dropdownItemText, selectedCategory === "all" && styles.dropdownItemTextActive]}>ALL</Text>
+              <Text style={[styles.catGridText, selectedCategory === cat && styles.catGridTextActive]} numberOfLines={1}>
+                {cat.toUpperCase()}
+              </Text>
             </Pressable>
-            {categories.map((cat) => (
-              <Pressable
-                key={cat}
-                onPress={() => { setSelectedCategory(cat); setCategoryDropdownOpen(false); impact("Light"); }}
-                style={[styles.dropdownItem, selectedCategory === cat && styles.dropdownItemActive]}
-              >
-                <Text style={[styles.dropdownItemText, selectedCategory === cat && styles.dropdownItemTextActive]}>
-                  {cat.toUpperCase()}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
+          ))}
+        </View>
       </View>
 
       {/* Transaction Count */}
@@ -446,61 +433,31 @@ const styles = StyleSheet.create({
   pillTextActive: {
     color: colors.primaryText,
   },
-  dropdownBtn: {
+  catGrid: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginHorizontal: spacing.md,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    flexWrap: "wrap",
+    gap: 6,
+    paddingHorizontal: spacing.md,
+  },
+  catGridPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 2,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    borderRadius: 2,
   },
-  dropdownBtnActive: {
+  catGridPillActive: {
+    backgroundColor: colors.primarySolid,
     borderColor: colors.primarySolid,
-    backgroundColor: 'rgba(0,255,204,0.08)',
   },
-  dropdownBtnText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  dropdownBtnTextActive: {
-    color: colors.primarySolid,
-  },
-  dropdownArrow: {
+  catGridText: {
     color: colors.textSecondary,
     fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
-  dropdownList: {
-    marginHorizontal: spacing.md,
-    marginTop: 4,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: 2,
-    maxHeight: 300,
-    overflow: "scroll" as any,
-  },
-  dropdownItem: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#111',
-  },
-  dropdownItemActive: {
-    backgroundColor: colors.primarySolid,
-  },
-  dropdownItemText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 1,
-  },
-  dropdownItemTextActive: {
+  catGridTextActive: {
     color: colors.primaryText,
   },
   countRow: {
