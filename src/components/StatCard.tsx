@@ -58,19 +58,21 @@ export function StatCard({ label, value, emoji, color = colors.white, accentColo
 const styles = StyleSheet.create({
   card: {
     flex: 1,
+    minWidth: "30%",
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: 2,
-    padding: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     alignItems: "center",
-    gap: spacing.xs,
+    gap: 2,
   },
   emoji: {
-    fontSize: 20,
+    fontSize: 16,
   },
   value: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "800",
     letterSpacing: -0.5,
   },
