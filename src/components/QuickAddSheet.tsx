@@ -463,12 +463,8 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
             />
           </View>
 
-          {/* Categories */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.catRow}
-          >
+          {/* Categories - Grid */}
+          <View style={styles.catGrid}>
             {categories.map((c) => (
               <CategoryPill
                 key={c.id}
@@ -478,7 +474,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
                 onPress={() => setCategory(c.id)}
               />
             ))}
-          </ScrollView>
+          </View>
 
           {/* Note */}
           <TextInput
@@ -654,6 +650,11 @@ const styles = StyleSheet.create({
   },
   catRow: {
     gap: spacing.sm,
+  },
+  catGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
   },
   noteInput: {
     backgroundColor: colors.inputBg,
