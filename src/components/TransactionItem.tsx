@@ -22,11 +22,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function getCategoryEmoji(category: string): string {
-  const lower = category.toLowerCase();
   const found =
-    EXPENSE_CATEGORIES.find((c) => c.id === lower) ||
-    INCOME_CATEGORIES.find((c) => c.id === lower);
-  return found?.emoji ?? "\uD83D\uDCE6";
+    EXPENSE_CATEGORIES.find((c) => c.id.toLowerCase() === category.toLowerCase()) ||
+    INCOME_CATEGORIES.find((c) => c.id.toLowerCase() === category.toLowerCase());
+  return found?.emoji ?? "📦";
 }
 
 function getCategoryColor(category: string): string {
