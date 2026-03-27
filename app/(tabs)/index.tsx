@@ -4,7 +4,7 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  FlatList,
+  ScrollView,
   Alert,
   Platform,
 } from "react-native";
@@ -159,6 +159,7 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>STACKD</Text>
@@ -325,11 +326,15 @@ export default function Dashboard() {
         </Text>
       </View>
 
-      <FlatList
-        data={recentTxns}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+      {recentTxns.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>No transactions yet</Text>
+          <Text style={styles.emptySubtext}>Tap the + button to add one</Text>
+        </View>
+      ) : (
+        recentTxns.map((item) => (
           <TransactionItem
+            key={item.id}
             transaction={item}
             onPress={() => {
               setEditingTxn(item);
@@ -338,17 +343,9 @@ export default function Dashboard() {
             }}
             onLongPress={() => handleDeleteTxn(item.id)}
           />
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>No transactions yet</Text>
-            <Text style={styles.emptySubtext}>
-              Tap the + button to add one
-            </Text>
-          </View>
-        }
-        contentContainerStyle={styles.list}
-      />
+        ))
+      )}
+      </ScrollView>
 
       {/* FAB */}
       <FAB onPress={() => {
