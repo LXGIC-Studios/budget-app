@@ -103,8 +103,11 @@ export default function LoginScreen() {
 
           <Pressable
             onPress={handleSubmit}
+            onPressIn={Platform.OS === "web" ? handleSubmit : undefined}
             disabled={submitting}
             style={[styles.btn, submitting && styles.btnDisabled]}
+            accessible
+            accessibilityRole="button"
           >
             {submitting ? (
               <ActivityIndicator color={colors.bg} />
@@ -132,6 +135,9 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: spacing.md,
+    maxWidth: 400,
+    width: "100%",
+    alignSelf: "center",
   },
   logo: {
     color: colors.primarySolid,
@@ -180,9 +186,9 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
   },
   input: {
-    backgroundColor: colors.inputBg,
+    backgroundColor: '#0a0a0a',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 204, 0.3)',
+    borderColor: '#1a1a1a',
     borderRadius: 2,
     padding: spacing.md,
     color: colors.white,
