@@ -78,13 +78,22 @@ export interface Bill {
 }
 
 export const EXPENSE_CATEGORIES = [
-  { id: "food", name: "Food", emoji: "\uD83C\uDF54" },
-  { id: "shopping", name: "Shopping", emoji: "\uD83D\uDED2" },
-  { id: "transport", name: "Transport", emoji: "\uD83D\uDE97" },
-  { id: "bills", name: "Bills", emoji: "\uD83C\uDFE0" },
-  { id: "fun", name: "Fun", emoji: "\uD83C\uDFAE" },
-  { id: "health", name: "Health", emoji: "\uD83D\uDC8A" },
-  { id: "other", name: "Other", emoji: "\uD83D\uDCE6" },
+  { id: "Eating Out", name: "Eating Out", emoji: "🍔" },
+  { id: "Groceries", name: "Groceries", emoji: "🛒" },
+  { id: "Amazon", name: "Amazon", emoji: "📦" },
+  { id: "Subscriptions", name: "Subscriptions", emoji: "📺" },
+  { id: "Gas/Car", name: "Gas/Car", emoji: "⛽" },
+  { id: "Laura", name: "Laura", emoji: "👶" },
+  { id: "Venmo", name: "Venmo", emoji: "💸" },
+  { id: "Credit Card Payments", name: "Credit Card Payments", emoji: "💳" },
+  { id: "Mortgage", name: "Mortgage", emoji: "🏠" },
+  { id: "AT&T", name: "AT&T", emoji: "📱" },
+  { id: "NES Electric", name: "NES Electric", emoji: "💡" },
+  { id: "Hville Utility", name: "Hville Utility", emoji: "💧" },
+  { id: "Car Insurance", name: "Car Insurance", emoji: "🚗" },
+  { id: "Orkin Pest", name: "Orkin Pest", emoji: "🐛" },
+  { id: "Car Wash", name: "Car Wash", emoji: "🧼" },
+  { id: "Other", name: "Other", emoji: "📦" },
 ] as const;
 
 export const INCOME_CATEGORIES = [
