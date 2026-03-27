@@ -36,6 +36,7 @@ export default function HistoryScreen() {
     new Date().getMonth()
   );
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
   const monthScrollRef = useRef<ScrollView>(null);
@@ -239,56 +240,41 @@ export default function HistoryScreen() {
         </ScrollView>
       </View>
 
-      {/* Category Filter */}
+      {/* Category Filter - Dropdown */}
       <View style={styles.filterSection}>
         <Text style={styles.filterLabel}>CATEGORY</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollRow}
+        <Pressable
+          onPress={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+          style={[styles.dropdownBtn, selectedCategory !== "all" && styles.dropdownBtnActive]}
         >
-          <Pressable
-            onPress={() => {
-              impact("Light");
-              setSelectedCategory("all");
-            }}
-            style={[
-              styles.pill,
-              selectedCategory === "all" && styles.pillActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.pillText,
-                selectedCategory === "all" && styles.pillTextActive,
-              ]}
-            >
-              ALL
-            </Text>
-          </Pressable>
-          {categories.map((cat) => (
+          <Text style={[styles.dropdownBtnText, selectedCategory !== "all" && styles.dropdownBtnTextActive]}>
+            {selectedCategory === "all" ? "ALL CATEGORIES" : selectedCategory.toUpperCase()}
+          </Text>
+          <Text style={[styles.dropdownArrow, selectedCategory !== "all" && styles.dropdownBtnTextActive]}>
+            {categoryDropdownOpen ? "▲" : "▼"}
+          </Text>
+        </Pressable>
+        {categoryDropdownOpen && (
+          <View style={styles.dropdownList}>
             <Pressable
-              key={cat}
-              onPress={() => {
-                impact("Light");
-                setSelectedCategory(cat);
-              }}
-              style={[
-                styles.pill,
-                selectedCategory === cat && styles.pillActive,
-              ]}
+              onPress={() => { setSelectedCategory("all"); setCategoryDropdownOpen(false); impact("Light"); }}
+              style={[styles.dropdownItem, selectedCategory === "all" && styles.dropdownItemActive]}
             >
-              <Text
-                style={[
-                  styles.pillText,
-                  selectedCategory === cat && styles.pillTextActive,
-                ]}
-              >
-                {cat.toUpperCase()}
-              </Text>
+              <Text style={[styles.dropdownItemText, selectedCategory === "all" && styles.dropdownItemTextActive]}>ALL</Text>
             </Pressable>
-          ))}
-        </ScrollView>
+            {categories.map((cat) => (
+              <Pressable
+                key={cat}
+                onPress={() => { setSelectedCategory(cat); setCategoryDropdownOpen(false); impact("Light"); }}
+                style={[styles.dropdownItem, selectedCategory === cat && styles.dropdownItemActive]}
+              >
+                <Text style={[styles.dropdownItemText, selectedCategory === cat && styles.dropdownItemTextActive]}>
+                  {cat.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Transaction Count */}
@@ -441,6 +427,63 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   pillTextActive: {
+    color: colors.primaryText,
+  },
+  dropdownBtn: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginHorizontal: spacing.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 2,
+  },
+  dropdownBtnActive: {
+    borderColor: colors.primarySolid,
+    backgroundColor: 'rgba(0,255,204,0.08)',
+  },
+  dropdownBtnText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  dropdownBtnTextActive: {
+    color: colors.primarySolid,
+  },
+  dropdownArrow: {
+    color: colors.textSecondary,
+    fontSize: 10,
+  },
+  dropdownList: {
+    marginHorizontal: spacing.md,
+    marginTop: 4,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 2,
+    maxHeight: 300,
+    overflow: "scroll" as any,
+  },
+  dropdownItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#111',
+  },
+  dropdownItemActive: {
+    backgroundColor: colors.primarySolid,
+  },
+  dropdownItemText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+  dropdownItemTextActive: {
     color: colors.primaryText,
   },
   countRow: {
