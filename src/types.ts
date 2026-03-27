@@ -78,20 +78,11 @@ export interface Bill {
 }
 
 export const EXPENSE_CATEGORIES = [
-  { id: "Mortgage", name: "Mortgage", emoji: "🏠" },
-  { id: "Laura", name: "Laura", emoji: "👶" },
   { id: "Groceries", name: "Groceries", emoji: "🛒" },
-  { id: "AT&T Cell", name: "AT&T Cell", emoji: "📱" },
-  { id: "AT&T Internet", name: "AT&T Internet", emoji: "🌐" },
-  { id: "NES Electric", name: "NES Electric", emoji: "💡" },
+  { id: "Household Supplies", name: "Household Supplies", emoji: "🧻" },
   { id: "Non-Food Monthly", name: "Non-Food Monthly", emoji: "🧴" },
-  { id: "Car Insurance", name: "Car Insurance", emoji: "🚗" },
-  { id: "Orkin Pest", name: "Orkin Pest", emoji: "🐛" },
   { id: "Subscriptions", name: "Subscriptions", emoji: "📺" },
   { id: "Gas/Transport", name: "Gas/Transport", emoji: "⛽" },
-  { id: "Household Supplies", name: "Household Supplies", emoji: "🧻" },
-  { id: "Hville Utility", name: "Hville Utility", emoji: "💧" },
-  { id: "Car Wash", name: "Car Wash", emoji: "🧼" },
   { id: "Prescriptions", name: "Prescriptions", emoji: "💊" },
   { id: "Other", name: "Other", emoji: "📦" },
 ] as const;
