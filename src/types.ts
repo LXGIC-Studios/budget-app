@@ -78,6 +78,7 @@ export interface Bill {
 }
 
 export const EXPENSE_CATEGORIES = [
+  { id: "Eating Out", name: "Eating Out", emoji: "🍔" },
   { id: "Groceries", name: "Groceries", emoji: "🛒" },
   { id: "Household Supplies", name: "Household Supplies", emoji: "🧻" },
   { id: "Non-Food Monthly", name: "Non-Food Monthly", emoji: "🧴" },
