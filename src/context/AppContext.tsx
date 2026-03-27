@@ -4,10 +4,14 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember } from "../types";
 import * as storage from "../storage";
 import { getMonthKey } from "../utils";
+
+// Known ending balance from bank data as of Dec 31, 2025
+const DEC_2025_ENDING_BALANCE = 1373;
 
 interface AppState {
   profile: UserProfile | null;
@@ -21,6 +25,7 @@ interface AppState {
 }
 
 interface AppContextValue extends AppState {
+  monthlyRollover: number;
   setCurrentMonth: (month: string) => void;
   reload: () => Promise<void>;
   saveProfile: (profile: UserProfile) => Promise<void>;
@@ -215,6 +220,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [reload]
   );
 
+  // Compute rollover balance for the current month.
+  // Starting from DEC_2025_ENDING_BALANCE, sum all income and subtract all
+  // expenses for every month BEFORE currentMonth.
+  const monthlyRollover = useMemo(() => {
+    let balance = DEC_2025_ENDING_BALANCE;
+    for (const t of state.transactions) {
+      const txnMonth = t.date.substring(0, 7); // "YYYY-MM"
+      if (txnMonth < "2026-01") continue; // before our starting point
+      if (txnMonth >= state.currentMonth) continue; // not a prior month
+      if (t.type === "income") {
+        balance += t.amount;
+      } else {
+        balance -= t.amount;
+      }
+    }
+    return balance;
+  }, [state.transactions, state.currentMonth]);
+
   const resetAll = useCallback(async () => {
     await storage.resetAllData();
     setState({
@@ -233,6 +256,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         ...state,
+        monthlyRollover,
         setCurrentMonth,
         reload,
         saveProfile,
@@ -269,6 +293,7 @@ export function useApp(): AppContextValue {
       loading: true,
       household: null,
       householdMembers: [],
+      monthlyRollover: 0,
       setCurrentMonth: () => {},
       reload: async () => {},
       saveProfile: async () => {},

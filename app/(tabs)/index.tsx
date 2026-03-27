@@ -40,6 +40,7 @@ export default function Dashboard() {
     addTransactions,
     deleteTransaction,
     updateTransaction,
+    monthlyRollover,
   } = useApp();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [viewMode, setViewMode] = useState<"monthly" | "weekly">("monthly");
@@ -92,7 +93,12 @@ export default function Dashboard() {
   const displayIncome = viewMode === "weekly"
     ? actualIncome
     : (actualIncome > 0 ? actualIncome : monthlyIncome);
-  const leftToSpend = displayIncome - totalSpent;
+
+  // Available = rollover + this month's income (monthly only)
+  const available = viewMode === "weekly"
+    ? displayIncome
+    : monthlyRollover + displayIncome;
+  const leftToSpend = available - totalSpent;
   const isOver = leftToSpend < 0;
 
   const recentTxns = activeTxns.slice(0, 15);
@@ -203,43 +209,101 @@ export default function Dashboard() {
       </View>
 
       {/* Stat cards */}
-      <View style={styles.statsRow}>
-        <StatCard
-          emoji={"\uD83D\uDCB0"}
-          label="Left to Spend"
-          value={formatCurrency(Math.abs(leftToSpend))}
-          color={isOver ? colors.red : colors.primary}
-          accentColor={isOver ? colors.red : colors.primary}
-          variant={isOver ? "negative" : "positive"}
-        />
-        <StatCard
-          emoji={"\uD83D\uDCCA"}
-          label="Spent"
-          value={formatCurrency(totalSpent)}
-          accentColor={colors.red}
-          variant="neutral"
-        />
-        <Pressable
-          onPress={() => {
-            setEditingTxn(undefined);
-            setSheetInitialMode("income");
-            setSheetVisible(true);
-            impact("Light");
-          }}
-          style={{ flex: 1 }}
-        >
-          <StatCard
-            emoji={"\uD83D\uDCB5"}
-            label={viewMode === "weekly" ? "Wk Income" : "Income"}
-            value={formatCurrency(displayIncome)}
-            accentColor={colors.primary}
-            variant="positive"
-          />
-          <View style={styles.incomeAddHint}>
-            <Text style={styles.incomeAddHintText}>+ ADD</Text>
+      {viewMode === "monthly" ? (
+        <>
+          <View style={styles.statsRow}>
+            <StatCard
+              emoji={"\uD83D\uDD04"}
+              label="Rollover"
+              value={formatCurrency(monthlyRollover)}
+              accentColor={colors.yellow}
+              variant="neutral"
+            />
+            <Pressable
+              onPress={() => {
+                setEditingTxn(undefined);
+                setSheetInitialMode("income");
+                setSheetVisible(true);
+                impact("Light");
+              }}
+              style={{ flex: 1 }}
+            >
+              <StatCard
+                emoji={"\uD83D\uDCB5"}
+                label="Income"
+                value={formatCurrency(displayIncome)}
+                accentColor={colors.primary}
+                variant="positive"
+              />
+              <View style={styles.incomeAddHint}>
+                <Text style={styles.incomeAddHintText}>+ ADD</Text>
+              </View>
+            </Pressable>
+            <StatCard
+              emoji={"\uD83D\uDCB0"}
+              label="Available"
+              value={formatCurrency(available)}
+              accentColor={colors.primary}
+              variant="positive"
+            />
           </View>
-        </Pressable>
-      </View>
+          <View style={styles.statsRow}>
+            <StatCard
+              emoji={"\uD83D\uDCCA"}
+              label="Spent"
+              value={formatCurrency(totalSpent)}
+              accentColor={colors.red}
+              variant="neutral"
+            />
+            <StatCard
+              emoji={leftToSpend >= 0 ? "\u2705" : "\u26A0\uFE0F"}
+              label="Left"
+              value={formatCurrency(Math.abs(leftToSpend))}
+              color={isOver ? colors.red : colors.primary}
+              accentColor={isOver ? colors.red : colors.primary}
+              variant={isOver ? "negative" : "positive"}
+            />
+          </View>
+        </>
+      ) : (
+        <View style={styles.statsRow}>
+          <StatCard
+            emoji={"\uD83D\uDCB0"}
+            label="Left to Spend"
+            value={formatCurrency(Math.abs(leftToSpend))}
+            color={isOver ? colors.red : colors.primary}
+            accentColor={isOver ? colors.red : colors.primary}
+            variant={isOver ? "negative" : "positive"}
+          />
+          <StatCard
+            emoji={"\uD83D\uDCCA"}
+            label="Spent"
+            value={formatCurrency(totalSpent)}
+            accentColor={colors.red}
+            variant="neutral"
+          />
+          <Pressable
+            onPress={() => {
+              setEditingTxn(undefined);
+              setSheetInitialMode("income");
+              setSheetVisible(true);
+              impact("Light");
+            }}
+            style={{ flex: 1 }}
+          >
+            <StatCard
+              emoji={"\uD83D\uDCB5"}
+              label="Wk Income"
+              value={formatCurrency(displayIncome)}
+              accentColor={colors.primary}
+              variant="positive"
+            />
+            <View style={styles.incomeAddHint}>
+              <Text style={styles.incomeAddHintText}>+ ADD</Text>
+            </View>
+          </Pressable>
+        </View>
+      )}
 
       {/* Import CSV button */}
       <Pressable

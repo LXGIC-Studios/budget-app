@@ -250,16 +250,43 @@ function TopStats({
 function IncomeVsExpenses({
   income,
   expenses,
+  rollover,
 }: {
   income: number;
   expenses: number;
+  rollover: number;
 }) {
-  const maxVal = Math.max(income, expenses, 1);
-  const net = income - expenses;
+  const available = rollover + income;
+  const maxVal = Math.max(available, expenses, 1);
+  const net = available - expenses;
   const isPositive = net >= 0;
 
   return (
     <View style={{ gap: 12 }}>
+      {rollover !== 0 && (
+        <View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+            <Text style={{ color: "#CCFF00", fontSize: 14, fontWeight: "700", letterSpacing: 2 }}>
+              ROLLOVER
+            </Text>
+            <Text style={{ color: "#CCFF00", fontSize: 15, fontWeight: "800", letterSpacing: -0.5, textShadowColor: 'rgba(204,255,0,0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }}>
+              {formatCurrency(rollover)}
+            </Text>
+          </View>
+          <View style={{ height: 28, backgroundColor: colors.dimmed, borderRadius: 2, overflow: "hidden" }}>
+            <View
+              style={{
+                height: "100%",
+                width: `${(Math.max(rollover, 0) / maxVal) * 100}%`,
+                backgroundColor: "#CCFF00",
+                borderRadius: 2,
+                opacity: 0.6,
+              }}
+            />
+          </View>
+        </View>
+      )}
+
       <View>
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
           <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "700", letterSpacing: 2 }}>
@@ -311,7 +338,7 @@ function IncomeVsExpenses({
         borderTopColor: colors.cardBorder,
       }}>
         <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600", letterSpacing: 2 }}>
-          {isPositive ? "NET SURPLUS" : "NET DEFICIT"}
+          {isPositive ? "BALANCE" : "NET DEFICIT"}
         </Text>
         <Text style={{
           color: isPositive ? colors.primary : colors.red,
@@ -984,7 +1011,7 @@ function MonthSelector({
 // --- Main Screen ---
 
 export default function InsightsScreen() {
-  const { transactions, currentBudget, currentMonth, profile } = useApp();
+  const { transactions, currentBudget, currentMonth, profile, monthlyRollover } = useApp();
 
   // Available months from transaction data
   const availableMonths = useMemo(() => {
@@ -1374,8 +1401,10 @@ export default function InsightsScreen() {
     // Use real weekly income, fall back to profile-based if no income transactions
     const weeklyIncome = weekIncome > 0 ? weekIncome : (profile?.monthlyIncome ?? 0) / 4.33;
     const weeklySavings = weeklyIncome - weekSpending;
-    return { weeklyIncome, weekSpending, weeklySavings, monthIncome };
-  }, [profile, transactions, activeMonth]);
+    // Weekly share of rollover (spread across ~4.33 weeks)
+    const weeklyRollover = monthlyRollover / 4.33;
+    return { weeklyIncome, weekSpending, weeklySavings, monthIncome, weeklyRollover };
+  }, [profile, transactions, activeMonth, monthlyRollover]);
 
   // Waste Alerts
   const wasteAlerts = useMemo(() => {
@@ -1492,8 +1521,26 @@ export default function InsightsScreen() {
         {/* Weekly Income Card */}
         {(profile?.monthlyIncome ?? 0) > 0 && (
           <View style={[styles.chartCard, { borderColor: colors.cardBorder }]}>
-            <SectionHeader title="Weekly Snapshot" subtitle="Income, spending & savings this week" />
+            <SectionHeader title="Weekly Snapshot" subtitle="Rollover, income, spending & savings this week" />
             <View style={{ gap: 10 }}>
+              {weeklyStats.weeklyRollover !== 0 && (
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
+                    WEEKLY ROLLOVER
+                  </Text>
+                  <Text style={{
+                    color: "#CCFF00",
+                    fontSize: 17,
+                    fontWeight: "800",
+                    letterSpacing: -0.5,
+                    textShadowColor: 'rgba(204,255,0,0.3)',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 8,
+                  }}>
+                    {formatCurrency(weeklyStats.weeklyRollover)}
+                  </Text>
+                </View>
+              )}
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600", letterSpacing: 2 }}>
                   WEEKLY INCOME
@@ -1560,7 +1607,7 @@ export default function InsightsScreen() {
         {/* Income vs Expenses */}
         <View style={styles.chartCard}>
           <SectionHeader title="Income vs Expenses" subtitle={formatMonthLabel(activeMonth)} />
-          <IncomeVsExpenses income={incomeTotal} expenses={expenseTotal} />
+          <IncomeVsExpenses income={incomeTotal} expenses={expenseTotal} rollover={monthlyRollover} />
         </View>
 
         {/* Food Breakdown - includes groceries from shopping */}

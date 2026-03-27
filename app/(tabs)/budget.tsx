@@ -145,7 +145,7 @@ function CategoryRow({
 }
 
 export default function BudgetScreen() {
-  const { profile, currentBudget, transactions, currentMonth, setCurrentMonth, saveBudget, addTransaction } =
+  const { profile, currentBudget, transactions, currentMonth, setCurrentMonth, saveBudget, addTransaction, monthlyRollover } =
     useApp();
 
   const monthlyIncome = profile?.monthlyIncome ?? 0;
@@ -167,6 +167,17 @@ export default function BudgetScreen() {
       ),
     [transactions, currentMonth]
   );
+
+  // Actual income from transactions this month
+  const actualMonthIncome = useMemo(
+    () =>
+      transactions
+        .filter((t) => t.date.startsWith(currentMonth) && t.type === "income")
+        .reduce((s, t) => s + t.amount, 0),
+    [transactions, currentMonth]
+  );
+  const displayIncome = actualMonthIncome > 0 ? actualMonthIncome : monthlyIncome;
+  const monthlyAvailable = monthlyRollover + displayIncome;
 
   // Weekly transactions
   const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
@@ -313,15 +324,15 @@ export default function BudgetScreen() {
       {viewMode === "monthly" ? (
         <View style={styles.summaryRow}>
           <View style={[styles.summaryItem, { backgroundColor: colors.greenBg, borderColor: colors.greenBorder }]}>
-            <Text style={styles.summaryLabel}>INCOME</Text>
+            <Text style={styles.summaryLabel}>AVAILABLE</Text>
             <Text style={[styles.summaryValue, { textShadowColor: 'rgba(0, 255, 204, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }]}>
-              {formatCurrency(monthlyIncome)}
+              {formatCurrency(monthlyAvailable)}
             </Text>
           </View>
           <View
             style={[
               styles.summaryItem,
-              totalBudgetMonthly > monthlyIncome
+              totalBudgetMonthly > monthlyAvailable
                 ? { backgroundColor: colors.redBg, borderColor: colors.redBorder }
                 : { backgroundColor: colors.yellowBg, borderColor: colors.yellowBorder },
             ]}
@@ -330,7 +341,7 @@ export default function BudgetScreen() {
             <Text
               style={[
                 styles.summaryValue,
-                totalBudgetMonthly > monthlyIncome
+                totalBudgetMonthly > monthlyAvailable
                   ? { color: colors.red, textShadowColor: 'rgba(255, 0, 60, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }
                   : { textShadowColor: 'rgba(204, 255, 0, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
               ]}
@@ -341,7 +352,7 @@ export default function BudgetScreen() {
           <View
             style={[
               styles.summaryItem,
-              monthlyIncome - totalBudgetMonthly >= 0
+              monthlyAvailable - totalBudgetMonthly >= 0
                 ? { backgroundColor: colors.greenBg, borderColor: colors.greenBorder }
                 : { backgroundColor: colors.redBg, borderColor: colors.redBorder },
             ]}
@@ -352,9 +363,9 @@ export default function BudgetScreen() {
                 styles.summaryValue,
                 {
                   color:
-                    monthlyIncome - totalBudgetMonthly >= 0 ? colors.primary : colors.red,
+                    monthlyAvailable - totalBudgetMonthly >= 0 ? colors.primary : colors.red,
                   textShadowColor:
-                    monthlyIncome - totalBudgetMonthly >= 0
+                    monthlyAvailable - totalBudgetMonthly >= 0
                       ? 'rgba(0, 255, 204, 0.6)'
                       : 'rgba(255, 0, 60, 0.6)',
                   textShadowOffset: { width: 0, height: 0 },
@@ -362,7 +373,7 @@ export default function BudgetScreen() {
                 },
               ]}
             >
-              {formatCurrency(monthlyIncome - totalBudgetMonthly)}
+              {formatCurrency(monthlyAvailable - totalBudgetMonthly)}
             </Text>
           </View>
         </View>
