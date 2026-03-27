@@ -329,6 +329,23 @@ export default function HistoryScreen() {
           setSheetVisible(false);
           setEditingTxn(undefined);
         }}
+        onSplit={async (original, splits) => {
+          await deleteTransaction(original.id);
+          const newTxns = splits.map((s, i) => ({
+            id: `${original.id}-split-${i}`,
+            type: original.type as "expense" | "income",
+            amount: s.amount,
+            category: s.category,
+            note: `[split] ${original.note || original.category}`,
+            date: original.date,
+            createdAt: new Date().toISOString(),
+          }));
+          for (const t of newTxns) {
+            await addTransaction(t);
+          }
+          setSheetVisible(false);
+          setEditingTxn(undefined);
+        }}
       />
     </SafeAreaView>
   );
