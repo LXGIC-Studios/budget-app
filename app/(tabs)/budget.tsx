@@ -7,10 +7,12 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
-import { impact } from "../../src/lib/haptics";
+import { impact, notification } from "../../src/lib/haptics";
 import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { FAB } from "../../src/components/FAB";
@@ -21,6 +23,7 @@ import {
   formatDueDay,
   formatMonthLabel,
   shiftMonth,
+  generateId,
 } from "../../src/utils";
 import type { BudgetCategory } from "../../src/types";
 
@@ -109,6 +112,17 @@ export default function BudgetScreen() {
   const [editCat, setEditCat] = useState<BudgetCategory | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editDueDay, setEditDueDay] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editEmoji, setEditEmoji] = useState("");
+  const [editType, setEditType] = useState<"fixed" | "flexible">("fixed");
+
+  // Add category modal state
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [addType, setAddType] = useState<"fixed" | "flexible">("fixed");
+  const [addName, setAddName] = useState("");
+  const [addEmoji, setAddEmoji] = useState("");
+  const [addAmount, setAddAmount] = useState("");
+  const [addDueDay, setAddDueDay] = useState("");
 
   const categories = currentBudget?.categories ?? [];
 
@@ -161,13 +175,16 @@ export default function BudgetScreen() {
   const handleEditSave = () => {
     if (!editCat || !currentBudget) return;
     const newAmount = parseFloat(editAmount) || 0;
-    const newDueDay = parseInt(editDueDay) || undefined;
+    const newDueDay = editType === "fixed" ? (parseInt(editDueDay) || undefined) : undefined;
+    const trimmedName = editName.trim();
+    const trimmedEmoji = editEmoji.trim();
+    if (!trimmedName) return;
     impact("Medium");
     const updated = {
       ...currentBudget,
       categories: currentBudget.categories.map((c) =>
         c.id === editCat.id
-          ? { ...c, allocated: newAmount, dueDay: newDueDay }
+          ? { ...c, name: trimmedName, emoji: trimmedEmoji, allocated: newAmount, type: editType, dueDay: newDueDay }
           : c
       ),
     };
@@ -175,10 +192,70 @@ export default function BudgetScreen() {
     setEditCat(null);
   };
 
+  const handleDeleteCategory = () => {
+    if (!editCat || !currentBudget) return;
+    const doDelete = () => {
+      notification("Success");
+      const updated = {
+        ...currentBudget,
+        categories: currentBudget.categories.filter((c) => c.id !== editCat.id),
+      };
+      saveBudget(updated);
+      setEditCat(null);
+    };
+    if (Platform.OS === "web") {
+      if (window.confirm(`Delete "${editCat.name}"? This cannot be undone.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert("Delete Category", `Delete "${editCat.name}"? This cannot be undone.`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: doDelete },
+      ]);
+    }
+  };
+
   const openEdit = (cat: BudgetCategory) => {
     setEditCat(cat);
     setEditAmount(cat.allocated.toString());
     setEditDueDay(cat.dueDay?.toString() || "");
+    setEditName(cat.name);
+    setEditEmoji(cat.emoji);
+    setEditType(cat.type);
+  };
+
+  const openAddModal = (type: "fixed" | "flexible") => {
+    impact("Medium");
+    setAddType(type);
+    setAddName("");
+    setAddEmoji("");
+    setAddAmount("");
+    setAddDueDay("");
+    setAddModalVisible(true);
+  };
+
+  const handleAddSave = () => {
+    if (!currentBudget) return;
+    const trimmedName = addName.trim();
+    const trimmedEmoji = addEmoji.trim();
+    const amount = parseFloat(addAmount) || 0;
+    if (!trimmedName) return;
+    impact("Medium");
+    const newCat: BudgetCategory = {
+      id: generateId(),
+      name: trimmedName,
+      emoji: trimmedEmoji || "📦",
+      allocated: amount,
+      type: addType,
+      dueDay: addType === "fixed" ? (parseInt(addDueDay) || undefined) : undefined,
+    };
+    const updated = {
+      ...currentBudget,
+      categories: [...currentBudget.categories, newCat],
+    };
+    saveBudget(updated);
+    notification("Success");
+    setAddModalVisible(false);
   };
 
   return (
@@ -265,6 +342,9 @@ export default function BudgetScreen() {
         {fixedCategories.length === 0 && (
           <Text style={styles.emptySection}>No fixed bills set up yet</Text>
         )}
+        <Pressable style={styles.addCategoryBtn} onPress={() => openAddModal("fixed")}>
+          <Text style={styles.addCategoryBtnText}>+ ADD CATEGORY</Text>
+        </Pressable>
       </View>
 
       {/* SPENDING BUDGET section */}
@@ -289,6 +369,9 @@ export default function BudgetScreen() {
         {flexibleCategories.length === 0 && (
           <Text style={styles.emptySection}>No spending categories set up yet</Text>
         )}
+        <Pressable style={styles.addCategoryBtn} onPress={() => openAddModal("flexible")}>
+          <Text style={styles.addCategoryBtnText}>+ ADD CATEGORY</Text>
+        </Pressable>
       </View>
       </ScrollView>
 
@@ -299,13 +382,60 @@ export default function BudgetScreen() {
         onSave={addTransaction}
       />
 
-      {/* Edit modal - simplified: amount + due day only */}
+      {/* Edit modal - full CRUD */}
       <Modal visible={!!editCat} transparent animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={() => setEditCat(null)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>
-              {editCat?.name} Budget
-            </Text>
+            <Text style={styles.modalTitle}>EDIT CATEGORY</Text>
+
+            {/* Name */}
+            <View>
+              <Text style={styles.modalFieldLabel}>NAME</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={[styles.modalInput, { fontSize: 16 }]}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Category name"
+                  placeholderTextColor={colors.dimmed}
+                  autoFocus
+                />
+              </View>
+            </View>
+
+            {/* Emoji */}
+            <View>
+              <Text style={styles.modalFieldLabel}>EMOJI</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={[styles.modalInput, { fontSize: 22 }]}
+                  value={editEmoji}
+                  onChangeText={(t) => setEditEmoji(t.slice(-2))}
+                  placeholder="📦"
+                  placeholderTextColor={colors.dimmed}
+                  maxLength={2}
+                />
+              </View>
+            </View>
+
+            {/* Type toggle */}
+            <View>
+              <Text style={styles.modalFieldLabel}>TYPE</Text>
+              <View style={styles.typeToggleRow}>
+                <Pressable
+                  style={[styles.typeToggleBtn, editType === "fixed" && styles.typeToggleBtnActive]}
+                  onPress={() => setEditType("fixed")}
+                >
+                  <Text style={[styles.typeToggleBtnText, editType === "fixed" && styles.typeToggleBtnTextActive]}>FIXED</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.typeToggleBtn, editType === "flexible" && styles.typeToggleBtnActive]}
+                  onPress={() => setEditType("flexible")}
+                >
+                  <Text style={[styles.typeToggleBtnText, editType === "flexible" && styles.typeToggleBtnTextActive]}>FLEXIBLE</Text>
+                </Pressable>
+              </View>
+            </View>
 
             {/* Amount */}
             <View>
@@ -317,13 +447,12 @@ export default function BudgetScreen() {
                   keyboardType="decimal-pad"
                   value={editAmount}
                   onChangeText={setEditAmount}
-                  autoFocus
                 />
               </View>
             </View>
 
-            {/* Due day - only for fixed bills */}
-            {editCat?.type === "fixed" && (
+            {/* Due day - only for fixed */}
+            {editType === "fixed" && (
               <View>
                 <Text style={styles.modalFieldLabel}>DUE DAY (OPTIONAL)</Text>
                 <View style={styles.modalInputRow}>
@@ -346,6 +475,110 @@ export default function BudgetScreen() {
               </Pressable>
               <Pressable onPress={handleEditSave} style={styles.modalBtn}>
                 <Text style={styles.modalBtnText}>Save</Text>
+              </Pressable>
+            </View>
+
+            {/* Delete button */}
+            <Pressable onPress={handleDeleteCategory} style={styles.deleteBtn}>
+              <Text style={styles.deleteBtnText}>DELETE CATEGORY</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Add category modal */}
+      <Modal visible={addModalVisible} transparent animationType="fade">
+        <Pressable style={styles.modalBackdrop} onPress={() => setAddModalVisible(false)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>ADD CATEGORY</Text>
+
+            {/* Name */}
+            <View>
+              <Text style={styles.modalFieldLabel}>NAME</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={[styles.modalInput, { fontSize: 16 }]}
+                  value={addName}
+                  onChangeText={setAddName}
+                  placeholder="Category name"
+                  placeholderTextColor={colors.dimmed}
+                  autoFocus
+                />
+              </View>
+            </View>
+
+            {/* Emoji */}
+            <View>
+              <Text style={styles.modalFieldLabel}>EMOJI</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={[styles.modalInput, { fontSize: 22 }]}
+                  value={addEmoji}
+                  onChangeText={(t) => setAddEmoji(t.slice(-2))}
+                  placeholder="📦"
+                  placeholderTextColor={colors.dimmed}
+                  maxLength={2}
+                />
+              </View>
+            </View>
+
+            {/* Type toggle */}
+            <View>
+              <Text style={styles.modalFieldLabel}>TYPE</Text>
+              <View style={styles.typeToggleRow}>
+                <Pressable
+                  style={[styles.typeToggleBtn, addType === "fixed" && styles.typeToggleBtnActive]}
+                  onPress={() => setAddType("fixed")}
+                >
+                  <Text style={[styles.typeToggleBtnText, addType === "fixed" && styles.typeToggleBtnTextActive]}>FIXED</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.typeToggleBtn, addType === "flexible" && styles.typeToggleBtnActive]}
+                  onPress={() => setAddType("flexible")}
+                >
+                  <Text style={[styles.typeToggleBtnText, addType === "flexible" && styles.typeToggleBtnTextActive]}>FLEXIBLE</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Amount */}
+            <View>
+              <Text style={styles.modalFieldLabel}>MONTHLY AMOUNT</Text>
+              <View style={styles.modalInputRow}>
+                <Text style={styles.modalDollar}>$</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  keyboardType="decimal-pad"
+                  value={addAmount}
+                  onChangeText={setAddAmount}
+                />
+              </View>
+            </View>
+
+            {/* Due day - only for fixed */}
+            {addType === "fixed" && (
+              <View>
+                <Text style={styles.modalFieldLabel}>DUE DAY (OPTIONAL)</Text>
+                <View style={styles.modalInputRow}>
+                  <TextInput
+                    style={[styles.modalInput, { fontSize: 18 }]}
+                    keyboardType="number-pad"
+                    value={addDueDay}
+                    onChangeText={setAddDueDay}
+                    placeholder="e.g. 15"
+                    placeholderTextColor={colors.dimmed}
+                    maxLength={2}
+                  />
+                </View>
+              </View>
+            )}
+
+            <View style={styles.modalBtnRow}>
+              <Pressable onPress={() => setAddModalVisible(false)} style={styles.modalCancelBtn}>
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={handleAddSave} style={styles.modalBtn}>
+                <Text style={styles.modalBtnText}>Add</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -600,5 +833,63 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontSize: 16,
     fontWeight: "700",
+  },
+  // Type toggle
+  typeToggleRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  typeToggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: '#1a1a1a',
+    borderRadius: 2,
+    backgroundColor: '#0a0a0a',
+  },
+  typeToggleBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(0, 255, 204, 0.08)',
+  },
+  typeToggleBtnText: {
+    color: colors.dimmed,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  typeToggleBtnTextActive: {
+    color: colors.primary,
+  },
+  // Delete button
+  deleteBtn: {
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: 'rgba(255, 0, 60, 0.3)',
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 0, 60, 0.06)',
+  },
+  deleteBtnText: {
+    color: '#ff003c',
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  // Add category button
+  addCategoryBtn: {
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 204, 0.15)',
+    borderRadius: 2,
+    borderStyle: "dashed",
+    backgroundColor: 'rgba(0, 255, 204, 0.03)',
+  },
+  addCategoryBtnText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
   },
 });
