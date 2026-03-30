@@ -13,7 +13,7 @@ import { Plus, Trash2, Target, Check } from "lucide-react-native";
 import { impact, notification } from "../../src/lib/haptics";
 import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
-import { formatCurrency, generateId } from "../../src/utils";
+import { formatCurrency, generateId, getMonthlyAmount } from "../../src/utils";
 import { calculateSnowball } from "../../src/lib/snowball";
 import type { Debt, DebtType } from "../../src/types";
 
@@ -85,14 +85,14 @@ export default function DebtScreen() {
   const monthlyIncome = profile?.monthlyIncome ?? 0;
   const emergencyFundCurrent = profile?.emergencyFundCurrent ?? 0;
 
-  // Use budgeted allocations for stable snowball math, not actual transactions.
-  // Actual spend fluctuates month to month; budgeted amounts represent your
-  // real fixed + flexible obligations and give accurate payoff dates.
+  // Fixed expenses = sum of all fixed budget categories (converted to monthly).
+  // This gives the real cost of living, so snowball surplus = income - fixed - minimums.
   const monthlyExpenses = useMemo(() => {
     if (currentBudget?.categories?.length) {
-      return currentBudget.categories.reduce((s, c) => s + c.allocated, 0);
+      return currentBudget.categories
+        .filter((c) => c.type === "fixed")
+        .reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
     }
-    // Fallback: sum actual expenses if no budget is set up yet
     return transactions
       .filter(
         (t) => t.date.startsWith(currentMonth) && t.type === "expense"
