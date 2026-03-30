@@ -62,6 +62,7 @@ export default function DebtScreen() {
     debts,
     transactions,
     currentMonth,
+    currentBudget,
     addDebt,
     updateDebt,
     deleteDebt,
@@ -84,13 +85,20 @@ export default function DebtScreen() {
   const monthlyIncome = profile?.monthlyIncome ?? 0;
   const emergencyFundCurrent = profile?.emergencyFundCurrent ?? 0;
 
+  // Use budgeted allocations for stable snowball math, not actual transactions.
+  // Actual spend fluctuates month to month; budgeted amounts represent your
+  // real fixed + flexible obligations and give accurate payoff dates.
   const monthlyExpenses = useMemo(() => {
+    if (currentBudget?.categories?.length) {
+      return currentBudget.categories.reduce((s, c) => s + c.allocated, 0);
+    }
+    // Fallback: sum actual expenses if no budget is set up yet
     return transactions
       .filter(
         (t) => t.date.startsWith(currentMonth) && t.type === "expense"
       )
       .reduce((s, t) => s + t.amount, 0);
-  }, [transactions, currentMonth]);
+  }, [currentBudget, transactions, currentMonth]);
 
   const snowball = useMemo(
     () => calculateSnowball(debts, monthlyIncome, monthlyExpenses),
