@@ -142,6 +142,9 @@ export default function BudgetScreen() {
   const [editType, setEditType] = useState<"fixed" | "flexible">("fixed");
 
   // Add category modal state
+  // Pay modal state
+  const [payAmount, setPayAmount] = useState("");
+
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [addType, setAddType] = useState<"fixed" | "flexible">("fixed");
   const [addName, setAddName] = useState("");
@@ -284,6 +287,30 @@ export default function BudgetScreen() {
     setEditName(cat.name);
     setEditEmoji(cat.emoji);
     setEditType(cat.type);
+    // Pre-fill pay amount with remaining balance
+    const displayAllocated = getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
+    const catKey = cat.name.toLowerCase();
+    const alreadySpent = spentByCategory[catKey] || 0;
+    const remaining = Math.max(0, Math.round((displayAllocated - alreadySpent) * 100) / 100);
+    setPayAmount(remaining > 0 ? remaining.toString() : displayAllocated.toString());
+  };
+
+  const handlePayBill = () => {
+    if (!editCat) return;
+    const parsed = parseFloat(payAmount);
+    if (!parsed || parsed <= 0) return;
+    notification("Success");
+    const txn: Transaction = {
+      id: generateId(),
+      type: "expense",
+      amount: Math.round(parsed * 100) / 100,
+      category: editCat.name,
+      note: `${editCat.name} - paid`,
+      date: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    addTransaction(txn);
+    setEditCat(null);
   };
 
   const openAddModal = (type: "fixed" | "flexible") => {
@@ -540,6 +567,28 @@ export default function BudgetScreen() {
                 <Text style={styles.modalBtnText}>Save</Text>
               </Pressable>
             </View>
+
+            {/* Pay this bill section - only for fixed bills */}
+            {editCat && editCat.type === "fixed" && (
+              <View style={styles.paySection}>
+                <View style={styles.paySectionDivider} />
+                <Text style={styles.paySectionTitle}>LOG PAYMENT</Text>
+                <View style={styles.modalInputRow}>
+                  <Text style={styles.modalDollar}>$</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    keyboardType="decimal-pad"
+                    value={payAmount}
+                    onChangeText={setPayAmount}
+                    placeholder="0.00"
+                    placeholderTextColor={colors.dimmed}
+                  />
+                </View>
+                <Pressable onPress={handlePayBill} style={styles.payBtn}>
+                  <Text style={styles.payBtnText}>I PAID THIS</Text>
+                </Pressable>
+              </View>
+            )}
 
             {/* Delete button */}
             <Pressable onPress={handleDeleteCategory} style={styles.deleteBtn}>
@@ -953,6 +1002,34 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 12,
     fontWeight: "700",
+    letterSpacing: 2,
+  },
+  // Pay section in edit modal
+  paySection: {
+    gap: spacing.sm,
+  },
+  paySectionDivider: {
+    height: 1,
+    backgroundColor: '#1a1a1a',
+    marginVertical: spacing.xs,
+  },
+  paySectionTitle: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textAlign: "center",
+  },
+  payBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderRadius: 2,
+  },
+  payBtnText: {
+    color: colors.bg,
+    fontSize: 16,
+    fontWeight: "800",
     letterSpacing: 2,
   },
   // Mark Paid button
