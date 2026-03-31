@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { impact, notification } from "../../src/lib/haptics";
+import type { Transaction } from "../../src/types";
 import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { FAB } from "../../src/components/FAB";
@@ -32,11 +33,13 @@ function CategoryRow({
   spent,
   displayAllocated,
   onPress,
+  onMarkPaid,
 }: {
   cat: BudgetCategory;
   spent: number;
   displayAllocated: number;
   onPress: () => void;
+  onMarkPaid?: () => void;
 }) {
   const pct = displayAllocated > 0 ? Math.min(spent / displayAllocated, 1.5) : 0;
   const isOver = spent > displayAllocated;
@@ -48,6 +51,9 @@ function CategoryRow({
   // Tinted background based on over/under status
   const cardBg = isOver ? colors.redBg : colors.greenBg;
   const cardBorderColor = isOver ? colors.redBorder : colors.greenBorder;
+
+  // For fixed bills: check if already paid (spent >= allocated)
+  const isPaid = cat.type === "fixed" && spent >= displayAllocated && displayAllocated > 0;
 
   return (
     <Pressable
@@ -99,6 +105,25 @@ function CategoryRow({
           ]}
         />
       </View>
+      {/* Mark Paid button for fixed bills */}
+      {cat.type === "fixed" && displayAllocated > 0 && (
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            if (!isPaid && onMarkPaid) {
+              onMarkPaid();
+            }
+          }}
+          style={[
+            styles.markPaidBtn,
+            isPaid && styles.markPaidBtnDone,
+          ]}
+        >
+          <Text style={[styles.markPaidText, isPaid && styles.markPaidTextDone]}>
+            {isPaid ? "PAID ✓" : "MARK PAID"}
+          </Text>
+        </Pressable>
+      )}
     </Pressable>
   );
 }
@@ -212,6 +237,43 @@ export default function BudgetScreen() {
         { text: "Cancel", style: "cancel" },
         { text: "Delete", style: "destructive", onPress: doDelete },
       ]);
+    }
+  };
+
+  const handleMarkPaid = (cat: BudgetCategory) => {
+    const displayAllocated = getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
+    const catKey = cat.name.toLowerCase();
+    const alreadySpent = spentByCategory[catKey] || 0;
+    const remaining = Math.round((displayAllocated - alreadySpent) * 100) / 100;
+    if (remaining <= 0) return; // already paid
+
+    const doMark = () => {
+      notification("Success");
+      const txn: Transaction = {
+        id: generateId(),
+        type: "expense",
+        amount: remaining,
+        category: cat.name,
+        note: `${cat.name} - marked paid`,
+        date: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      addTransaction(txn);
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm(`Mark ${cat.name} as paid? (${formatCurrency(remaining)})`)) {
+        doMark();
+      }
+    } else {
+      Alert.alert(
+        "Mark as Paid",
+        `Mark ${cat.name} as paid?\n${formatCurrency(remaining)}`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Mark Paid", onPress: doMark },
+        ]
+      );
     }
   };
 
@@ -336,6 +398,7 @@ export default function BudgetScreen() {
               spent={spentByCategory[catKey] || 0}
               displayAllocated={displayAllocated}
               onPress={() => openEdit(cat)}
+              onMarkPaid={() => handleMarkPaid(cat)}
             />
           );
         })}
@@ -891,5 +954,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 2,
+  },
+  // Mark Paid button
+  markPaidBtn: {
+    paddingVertical: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 204, 0.25)',
+    borderRadius: 2,
+    backgroundColor: 'rgba(0, 255, 204, 0.06)',
+    marginTop: 4,
+  },
+  markPaidBtnDone: {
+    borderColor: 'rgba(0, 255, 204, 0.15)',
+    backgroundColor: 'rgba(0, 255, 204, 0.03)',
+  },
+  markPaidText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  markPaidTextDone: {
+    color: colors.textSecondary,
   },
 });
