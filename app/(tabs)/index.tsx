@@ -10,9 +10,9 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, X, CheckCircle } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, X, Check } from "lucide-react-native";
 import { impact, notification } from "../../src/lib/haptics";
-import { colors, spacing } from "../../src/theme";
+import { colors, spacing, fonts } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { QuickAddSheet } from "../../src/components/QuickAddSheet";
 import { FAB } from "../../src/components/FAB";
@@ -50,49 +50,58 @@ function PayBillModal({ bill, onClose, onQuickPay, onCustomPay }: {
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={payStyles.overlay} onPress={onClose}>
-        <Pressable style={payStyles.sheet} onPress={(e) => e.stopPropagation()}>
-          <View style={payStyles.topBar}>
-            <Text style={payStyles.topBarEmoji}>{bill.emoji}</Text>
-            <Text style={payStyles.topBarName}>{bill.name.toUpperCase()}</Text>
+      <Pressable style={ps.overlay} onPress={onClose}>
+        <Pressable style={ps.sheet} onPress={(e) => e.stopPropagation()}>
+          {/* Header bar */}
+          <View style={ps.header}>
+            <View style={ps.headerLeft}>
+              <Text style={ps.headerEmoji}>{bill.emoji}</Text>
+              <View>
+                <Text style={ps.headerName}>{bill.name.toUpperCase()}</Text>
+                <Text style={ps.headerSub}>DUE {bill.dueDay ? `THE ${bill.dueDay}TH` : "THIS WEEK"}</Text>
+              </View>
+            </View>
             <Pressable onPress={onClose} hitSlop={12}>
-              <X size={20} color={colors.textSecondary} />
+              <X size={18} color={colors.textSecondary} />
             </Pressable>
           </View>
 
           {mode === "choose" ? (
             <>
-              <Pressable style={payStyles.quickPayBtn} onPress={() => onQuickPay(defaultAmount)}>
-                <View>
-                  <Text style={payStyles.quickPayLabel}>MARK PAID</Text>
-                  <Text style={payStyles.quickPaySub}>Exact amount - one tap</Text>
+              {/* One-tap pay */}
+              <Pressable style={ps.quickBtn} onPress={() => onQuickPay(defaultAmount)}>
+                <View style={ps.quickLeft}>
+                  <Text style={ps.quickLabel}>MARK PAID</Text>
+                  <Text style={ps.quickSub}>One tap - exact amount</Text>
                 </View>
-                <Text style={payStyles.quickPayAmount}>{formatCurrency(defaultAmount)}</Text>
+                <Text style={ps.quickAmt}>{formatCurrency(defaultAmount)}</Text>
               </Pressable>
-              <Pressable style={payStyles.customBtn} onPress={() => setMode("custom")}>
-                <Text style={payStyles.customBtnText}>I PAID A DIFFERENT AMOUNT</Text>
+
+              {/* Custom amount */}
+              <Pressable style={ps.altBtn} onPress={() => setMode("custom")}>
+                <Text style={ps.altText}>PAID A DIFFERENT AMOUNT</Text>
               </Pressable>
             </>
           ) : (
             <>
-              <Text style={payStyles.customLabel}>ACTUAL AMOUNT PAID</Text>
+              <Text style={ps.inputLabel}>ACTUAL AMOUNT PAID</Text>
               <TextInput
-                style={payStyles.customInput}
+                style={ps.input}
                 value={customAmount}
                 onChangeText={setCustomAmount}
                 keyboardType="decimal-pad"
                 autoFocus
                 selectTextOnFocus
               />
-              <View style={payStyles.customActions}>
-                <Pressable style={payStyles.backBtn} onPress={() => setMode("choose")}>
-                  <Text style={payStyles.backBtnText}>BACK</Text>
+              <View style={ps.btnRow}>
+                <Pressable style={ps.backBtn} onPress={() => setMode("choose")}>
+                  <Text style={ps.backText}>BACK</Text>
                 </Pressable>
-                <Pressable style={payStyles.confirmBtn} onPress={() => {
+                <Pressable style={ps.confirmBtn} onPress={() => {
                   const amt = parseFloat(customAmount);
                   if (!isNaN(amt) && amt > 0) onCustomPay(amt);
                 }}>
-                  <Text style={payStyles.confirmBtnText}>CONFIRM</Text>
+                  <Text style={ps.confirmText}>CONFIRM PAID</Text>
                 </Pressable>
               </View>
             </>
@@ -103,40 +112,46 @@ function PayBillModal({ bill, onClose, onQuickPay, onCustomPay }: {
   );
 }
 
-const payStyles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "flex-end" },
+const ps = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "flex-end" },
   sheet: {
-    backgroundColor: "#000",
+    backgroundColor: "#050505",
     borderTopWidth: 2,
     borderTopColor: colors.primary,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
     padding: spacing.lg,
-    paddingBottom: Platform.OS === "web" ? spacing.lg : 48,
-    gap: spacing.md,
+    paddingBottom: Platform.OS === "web" ? spacing.xl : 52,
+    gap: 12,
   },
-  topBar: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
-  topBarEmoji: { fontSize: 22 },
-  topBarName: { color: colors.white, fontSize: 16, fontWeight: "900", letterSpacing: 3, flex: 1 },
-  quickPayBtn: {
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  headerEmoji: { fontSize: 26 },
+  headerName: { color: colors.white, fontSize: 16, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.heading as any },
+  headerSub: { color: colors.textSecondary, fontSize: 10, letterSpacing: 2, marginTop: 2, fontFamily: fonts.mono as any },
+  quickBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     backgroundColor: colors.primary, padding: spacing.lg,
   },
-  quickPayLabel: { color: "#000", fontSize: 16, fontWeight: "900", letterSpacing: 2 },
-  quickPaySub: { color: "rgba(0,0,0,0.6)", fontSize: 11, marginTop: 2 },
-  quickPayAmount: { color: "#000", fontSize: 28, fontWeight: "900" },
-  customBtn: {
-    borderWidth: 1, borderColor: colors.cardBorder, padding: spacing.md, alignItems: "center",
+  quickLeft: { gap: 2 },
+  quickLabel: { color: "#000", fontSize: 15, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.heading as any },
+  quickSub: { color: "rgba(0,0,0,0.55)", fontSize: 11, fontFamily: fonts.mono as any },
+  quickAmt: { color: "#000", fontSize: 30, fontWeight: "900", fontFamily: fonts.mono as any },
+  altBtn: {
+    borderWidth: 1, borderColor: "#1c1c1c", padding: 14, alignItems: "center",
   },
-  customBtnText: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 2 },
-  customLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 2 },
-  customInput: {
-    backgroundColor: "#0a0a0a", borderWidth: 2, borderColor: colors.primary,
-    padding: spacing.md, color: colors.white, fontSize: 32, fontWeight: "900", textAlign: "center",
+  altText: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  inputLabel: { color: colors.textSecondary, fontSize: 10, letterSpacing: 3, fontFamily: fonts.mono as any },
+  input: {
+    backgroundColor: "#000", borderWidth: 2, borderColor: colors.primary,
+    padding: spacing.md, color: colors.white, fontSize: 36, fontWeight: "900",
+    textAlign: "center", fontFamily: fonts.mono as any,
   },
-  customActions: { flexDirection: "row", gap: spacing.sm },
-  backBtn: { flex: 1, borderWidth: 1, borderColor: colors.cardBorder, padding: spacing.md, alignItems: "center" },
-  backBtnText: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 2 },
-  confirmBtn: { flex: 2, backgroundColor: colors.primary, padding: spacing.md, alignItems: "center" },
-  confirmBtnText: { color: "#000", fontSize: 12, fontWeight: "900", letterSpacing: 2 },
+  btnRow: { flexDirection: "row", gap: 8 },
+  backBtn: { flex: 1, borderWidth: 1, borderColor: "#1c1c1c", padding: 14, alignItems: "center" },
+  backText: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  confirmBtn: { flex: 2, backgroundColor: colors.primary, padding: 14, alignItems: "center" },
+  confirmText: { color: "#000", fontSize: 12, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.heading as any },
 });
 
 export default function HomeScreen() {
@@ -147,7 +162,6 @@ export default function HomeScreen() {
   const [payingBill, setPayingBill] = useState<BudgetCategory | null>(null);
 
   const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
-  const weekLabel = formatWeekLabel(currentWeek);
 
   const weekTxns = useMemo(() =>
     transactions.filter((t) => {
@@ -175,11 +189,9 @@ export default function HomeScreen() {
   const paidBillIds = useMemo(() => {
     const ids = new Set<string>();
     expenseTxns.forEach((t) => {
-      if (t.note) {
-        billsDue.forEach((b) => {
-          if (t.note!.toLowerCase().includes(b.name.toLowerCase())) ids.add(b.id);
-        });
-      }
+      if (t.note) billsDue.forEach((b) => {
+        if (t.note!.toLowerCase().includes(b.name.toLowerCase())) ids.add(b.id);
+      });
     });
     return ids;
   }, [expenseTxns, billsDue]);
@@ -206,157 +218,178 @@ export default function HomeScreen() {
     setPayingBill(null);
   };
 
+  const netIsPositive = weekNet >= 0;
+
   return (
     <SafeAreaView style={s.container} edges={["top"]}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
-        {/* TOP BAR */}
-        <View style={s.topBar}>
-          <Text style={s.logo}>STACKD</Text>
-          {isPaycheckWeek && <View style={s.paydayChip}><Text style={s.paydayText}>PAYDAY WEEK</Text></View>}
+        {/* ── MASTHEAD ── */}
+        <View style={s.masthead}>
+          <View>
+            <Text style={s.logo}>STACKD</Text>
+            <Text style={s.logoSub}>HOUSEHOLD BUDGET</Text>
+          </View>
+          {isPaycheckWeek && (
+            <View style={s.paydayChip}>
+              <Text style={s.paydayText}>$ PAYDAY</Text>
+            </View>
+          )}
         </View>
 
-        {/* WEEK NAV */}
-        <View style={s.weekNav}>
-          <Pressable onPress={() => navigate(-1)} hitSlop={16}><ChevronLeft size={20} color={colors.textSecondary} /></Pressable>
-          <Text style={s.weekLabel}>{weekLabel.toUpperCase()}</Text>
-          <Pressable onPress={() => navigate(1)} hitSlop={16}><ChevronRight size={20} color={colors.textSecondary} /></Pressable>
+        {/* ── WEEK NAV ── */}
+        <View style={s.weekRow}>
+          <Pressable onPress={() => navigate(-1)} hitSlop={16} style={s.navArrow}>
+            <ChevronLeft size={18} color={colors.primary} strokeWidth={3} />
+          </Pressable>
+          <Text style={s.weekLabel}>{formatWeekLabel(currentWeek).toUpperCase()}</Text>
+          <Pressable onPress={() => navigate(1)} hitSlop={16} style={s.navArrow}>
+            <ChevronRight size={18} color={colors.primary} strokeWidth={3} />
+          </Pressable>
         </View>
 
-        {/* HERO - BIG NET NUMBER, full-width colored block */}
-        <View style={[s.heroBlock, { backgroundColor: weekNet >= 0 ? colors.primary : colors.red }]}>
-          <Text style={s.heroLabel}>WEEK NET</Text>
-          <Text style={s.heroNumber}>{weekNet >= 0 ? "+" : ""}{formatCurrency(weekNet)}</Text>
-          <View style={s.heroStats}>
+        {/* ── HERO - full bleed ── */}
+        <View style={[s.hero, { backgroundColor: netIsPositive ? colors.primary : colors.red }]}>
+          <Text style={s.heroEyebrow}>WEEK NET</Text>
+          <Text style={s.heroNum}>{netIsPositive ? "+" : ""}{formatCurrency(weekNet)}</Text>
+          {/* Three stats across the bottom */}
+          <View style={s.heroBar}>
             <View style={s.heroStat}>
               <Text style={s.heroStatNum}>{formatCurrency(weekIncome)}</Text>
-              <Text style={s.heroStatLabel}>IN</Text>
+              <Text style={s.heroStatLabel}>INCOME</Text>
             </View>
-            <View style={s.heroVertDivider} />
+            <View style={s.heroBarDivider} />
             <View style={s.heroStat}>
               <Text style={s.heroStatNum}>{formatCurrency(weekExpenses)}</Text>
-              <Text style={s.heroStatLabel}>OUT</Text>
+              <Text style={s.heroStatLabel}>SPENT</Text>
             </View>
-            <View style={s.heroVertDivider} />
+            <View style={s.heroBarDivider} />
             <View style={s.heroStat}>
               <Text style={s.heroStatNum}>{formatCurrency(totalBillsDue)}</Text>
-              <Text style={s.heroStatLabel}>BILLS</Text>
+              <Text style={s.heroStatLabel}>BILLS DUE</Text>
             </View>
           </View>
         </View>
 
-        {/* COMING IN */}
-        <View style={s.blockHeader}>
-          <Text style={s.blockHeaderText}>// COMING IN</Text>
+        {/* ── COMING IN ── */}
+        <View style={s.sectionLabel}>
+          <View style={s.sectionLabelAccent} />
+          <Text style={s.sectionLabelText}>COMING IN</Text>
         </View>
-        <View style={s.block}>
-          {incomeTxns.length === 0 ? (
+        {incomeTxns.length === 0 ? (
+          <View style={s.emptyRow}>
             <Text style={s.emptyText}>No income logged this week</Text>
-          ) : (
-            incomeTxns.map((t) => (
-              <Pressable key={t.id} onPress={() => { setEditingTxn(t); setSheetVisible(true); }} style={s.incomeRow}>
-                <View style={s.rowDot} />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.incomeNote}>{t.note || t.category}</Text>
-                  <Text style={s.rowDate}>{formatShortDate(t.date)}</Text>
+          </View>
+        ) : (
+          incomeTxns.map((t) => (
+            <Pressable key={t.id} onPress={() => { setEditingTxn(t); setSheetVisible(true); }} style={s.incomeRow}>
+              <View style={s.incomeLeft}>
+                <View style={s.greenPip} />
+                <View>
+                  <Text style={s.incomeTitle}>{t.note || t.category}</Text>
+                  <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
                 </View>
-                <Text style={s.incomeAmt}>+{formatCurrency(t.amount)}</Text>
-              </Pressable>
-            ))
-          )}
-        </View>
+              </View>
+              <Text style={s.incomeAmt}>+{formatCurrency(t.amount)}</Text>
+            </Pressable>
+          ))
+        )}
 
-        {/* BILLS DUE */}
+        {/* ── BILLS DUE ── */}
         {billsDue.length > 0 && (
           <>
-            <View style={s.blockHeader}>
-              <Text style={s.blockHeaderText}>// BILLS DUE</Text>
-              <Text style={s.blockHeaderRight}>{formatCurrency(totalBillsDue)}</Text>
+            <View style={s.sectionLabel}>
+              <View style={[s.sectionLabelAccent, { backgroundColor: colors.red }]} />
+              <Text style={s.sectionLabelText}>BILLS DUE</Text>
+              <Text style={s.sectionLabelAmt}>{formatCurrency(totalBillsDue)}</Text>
             </View>
-            <View style={s.block}>
-              {billsDue.map((c) => {
-                const isPaid = paidBillIds.has(c.id);
-                return (
-                  <Pressable
-                    key={c.id}
-                    style={[s.billRow, isPaid && s.billRowPaid]}
-                    onPress={() => { if (!isPaid) { impact("Light"); setPayingBill(c); } }}
-                  >
-                    <Text style={s.billEmoji}>{c.emoji}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.billName, isPaid && s.strikethrough]}>{c.name}</Text>
-                      <Text style={s.rowDate}>Due {c.dueDay}</Text>
+            {billsDue.map((c) => {
+              const isPaid = paidBillIds.has(c.id);
+              const amt = getMonthlyAmount(c.allocated, c.frequency || "monthly");
+              return (
+                <Pressable
+                  key={c.id}
+                  style={[s.billRow, isPaid && s.billRowPaid]}
+                  onPress={() => { if (!isPaid) { impact("Light"); setPayingBill(c); } }}
+                >
+                  <Text style={s.billEmoji}>{c.emoji}</Text>
+                  <View style={s.billMid}>
+                    <Text style={[s.billName, isPaid && s.strike]}>{c.name.toUpperCase()}</Text>
+                    <Text style={s.rowSub}>DUE {c.dueDay} - {isPaid ? "PAID" : "TAP TO PAY"}</Text>
+                  </View>
+                  {isPaid ? (
+                    <View style={s.paidPill}>
+                      <Check size={11} color="#000" strokeWidth={3} />
+                      <Text style={s.paidPillText}>PAID</Text>
                     </View>
-                    {isPaid ? (
-                      <View style={s.paidChip}>
-                        <CheckCircle size={12} color="#000" />
-                        <Text style={s.paidChipText}>PAID</Text>
-                      </View>
-                    ) : (
-                      <View style={s.billAmtBox}>
-                        <Text style={s.billAmt}>{formatCurrency(getMonthlyAmount(c.allocated, c.frequency || "monthly"))}</Text>
-                        <Text style={s.billTap}>TAP TO PAY</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
+                  ) : (
+                    <Text style={s.billAmt}>{formatCurrency(amt)}</Text>
+                  )}
+                </Pressable>
+              );
+            })}
           </>
         )}
 
-        {/* FLEX SPENDING */}
+        {/* ── FLEX SPENDING ── */}
         {flexCategories.length > 0 && (
           <>
-            <View style={s.blockHeader}>
-              <Text style={s.blockHeaderText}>// SPENDING THIS WEEK</Text>
+            <View style={s.sectionLabel}>
+              <View style={[s.sectionLabelAccent, { backgroundColor: colors.yellow }]} />
+              <Text style={s.sectionLabelText}>SPENDING THIS WEEK</Text>
             </View>
-            <View style={s.block}>
-              {flexCategories.map((c) => {
-                const weeklyBudget = getMonthlyAmount(c.allocated, c.frequency || "monthly") / 4.33;
-                const spent = flexSpend[c.name.toLowerCase()] ?? 0;
-                const pct = weeklyBudget > 0 ? Math.min(spent / weeklyBudget, 1) : 0;
-                const isOver = spent > weeklyBudget && weeklyBudget > 0;
-                return (
-                  <View key={c.id} style={s.flexRow}>
-                    <View style={s.flexTop}>
-                      <Text style={s.flexEmoji}>{c.emoji}</Text>
-                      <Text style={s.flexName}>{c.name.toUpperCase()}</Text>
-                      <Text style={[s.flexAmt, isOver && { color: colors.red }]}>
-                        {formatCurrency(spent)}<Text style={s.flexOf}> / {formatCurrency(weeklyBudget)}</Text>
-                      </Text>
-                    </View>
-                    <View style={s.barTrack}>
-                      <View style={[s.barFill, { width: `${pct * 100}%` as any, backgroundColor: isOver ? colors.red : colors.primary }]} />
-                    </View>
-                    {isOver && <Text style={s.overText}>-{formatCurrency(spent - weeklyBudget)} over - earn it back next week</Text>}
+            {flexCategories.map((c) => {
+              const weeklyBudget = getMonthlyAmount(c.allocated, c.frequency || "monthly") / 4.33;
+              const spent = flexSpend[c.name.toLowerCase()] ?? 0;
+              const pct = weeklyBudget > 0 ? Math.min(spent / weeklyBudget, 1) : 0;
+              const isOver = spent > weeklyBudget && weeklyBudget > 0;
+              return (
+                <View key={c.id} style={s.flexRow}>
+                  <View style={s.flexTop}>
+                    <Text style={s.flexEmoji}>{c.emoji}</Text>
+                    <Text style={s.flexName}>{c.name.toUpperCase()}</Text>
+                    <Text style={[s.flexAmt, isOver && { color: colors.red }]}>
+                      {formatCurrency(spent)}
+                      <Text style={s.flexOf}> / {formatCurrency(weeklyBudget)}</Text>
+                    </Text>
                   </View>
-                );
-              })}
-            </View>
+                  <View style={s.barBg}>
+                    <View style={[
+                      s.barFill,
+                      { width: `${pct * 100}%` as any },
+                      { backgroundColor: isOver ? colors.red : pct > 0.8 ? colors.yellow : colors.primary }
+                    ]} />
+                  </View>
+                  {isOver && (
+                    <Text style={s.overMsg}>
+                      {formatCurrency(spent - weeklyBudget)} over budget - make it up next week
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </>
         )}
 
-        {/* RECENT SPENDING LOG */}
+        {/* ── LOGGED TRANSACTIONS ── */}
         {expenseTxns.length > 0 && (
           <>
-            <View style={s.blockHeader}>
-              <Text style={s.blockHeaderText}>// LOGGED</Text>
-              <Text style={s.blockHeaderRight}>{expenseTxns.length} transactions</Text>
+            <View style={s.sectionLabel}>
+              <View style={[s.sectionLabelAccent, { backgroundColor: colors.textSecondary }]} />
+              <Text style={s.sectionLabelText}>LOGGED</Text>
+              <Text style={s.sectionLabelAmt}>{expenseTxns.length} transactions</Text>
             </View>
-            <View style={s.block}>
-              {expenseTxns.map((t) => (
-                <Pressable key={t.id} onPress={() => { setEditingTxn(t); setSheetVisible(true); }} style={s.expenseRow}>
-                  <View style={[s.rowDot, { backgroundColor: colors.red }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.expenseCat}>{t.category.toUpperCase()}</Text>
-                    {t.note && <Text style={s.expenseNote}>{t.note}</Text>}
-                    <Text style={s.rowDate}>{formatShortDate(t.date)}</Text>
-                  </View>
-                  <Text style={s.expenseAmt}>-{formatCurrency(t.amount)}</Text>
-                </Pressable>
-              ))}
-            </View>
+            {expenseTxns.map((t) => (
+              <Pressable key={t.id} onPress={() => { setEditingTxn(t); setSheetVisible(true); }} style={s.expenseRow}>
+                <View style={s.redPip} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.expenseCat}>{t.category.toUpperCase()}</Text>
+                  {t.note ? <Text style={s.expenseNote}>{t.note}</Text> : null}
+                  <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
+                </View>
+                <Text style={s.expenseAmt}>-{formatCurrency(t.amount)}</Text>
+              </Pressable>
+            ))}
           </>
         )}
 
@@ -389,109 +422,142 @@ export default function HomeScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
 
-  topBar: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+  // Masthead
+  masthead: {
+    flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between",
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: "rgba(0,255,204,0.15)",
+    borderBottomWidth: 1, borderBottomColor: "#111",
   },
-  logo: { color: colors.primary, fontSize: 24, fontWeight: "900", letterSpacing: 8 },
-  paydayChip: { backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 5 },
-  paydayText: { color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 2 },
+  logo: {
+    color: colors.primary, fontSize: 28, fontWeight: "900", letterSpacing: 8,
+    fontFamily: fonts.heading as any,
+  },
+  logoSub: {
+    color: colors.textSecondary, fontSize: 9, letterSpacing: 4, marginTop: 1,
+    fontFamily: fonts.mono as any,
+  },
+  paydayChip: {
+    backgroundColor: colors.yellow, paddingHorizontal: 10, paddingVertical: 5,
+  },
+  paydayText: {
+    color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 2,
+    fontFamily: fonts.mono as any,
+  },
 
-  weekNav: {
+  // Week nav
+  weekRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: spacing.lg, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)",
+    paddingHorizontal: spacing.md, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: "#0a0a0a",
   },
-  weekLabel: { color: colors.white, fontSize: 13, fontWeight: "700", letterSpacing: 2 },
+  navArrow: { padding: 4 },
+  weekLabel: {
+    color: colors.white, fontSize: 12, fontWeight: "700", letterSpacing: 2,
+    fontFamily: fonts.mono as any,
+  },
 
-  // HERO - full bleed colored block like shield-scan
-  heroBlock: {
-    paddingVertical: spacing.xl,
+  // Hero
+  hero: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: "center",
-    gap: spacing.sm,
   },
-  heroLabel: { color: "rgba(0,0,0,0.5)", fontSize: 11, fontWeight: "900", letterSpacing: 4 },
-  heroNumber: { color: "#000", fontSize: 64, fontWeight: "900", letterSpacing: -2, lineHeight: 68 },
-  heroStats: {
-    flexDirection: "row", alignItems: "center",
-    marginTop: spacing.sm,
-    borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.15)",
-    paddingTop: spacing.md, gap: 0, width: "100%", justifyContent: "center",
+  heroEyebrow: {
+    color: "rgba(0,0,0,0.45)", fontSize: 10, fontWeight: "900", letterSpacing: 5,
+    fontFamily: fonts.mono as any, marginBottom: 4,
+  },
+  heroNum: {
+    color: "#000", fontSize: 72, fontWeight: "900", letterSpacing: -3, lineHeight: 76,
+    fontFamily: fonts.heading as any,
+  },
+  heroBar: {
+    flexDirection: "row", width: "100%", marginTop: spacing.md,
+    borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.2)", paddingTop: 12,
   },
   heroStat: { flex: 1, alignItems: "center", gap: 2 },
-  heroStatNum: { color: "#000", fontSize: 18, fontWeight: "900" },
-  heroStatLabel: { color: "rgba(0,0,0,0.5)", fontSize: 10, fontWeight: "700", letterSpacing: 2 },
-  heroVertDivider: { width: 1, height: 36, backgroundColor: "rgba(0,0,0,0.2)" },
+  heroStatNum: {
+    color: "#000", fontSize: 17, fontWeight: "900",
+    fontFamily: fonts.mono as any,
+  },
+  heroStatLabel: {
+    color: "rgba(0,0,0,0.45)", fontSize: 8, fontWeight: "900", letterSpacing: 2,
+    fontFamily: fonts.mono as any,
+  },
+  heroBarDivider: { width: 1, backgroundColor: "rgba(0,0,0,0.2)", marginVertical: 2 },
 
-  // Section headers - shield-scan style label bars
-  blockHeader: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+  // Section label bar
+  sectionLabel: {
+    flexDirection: "row", alignItems: "center", gap: 8,
     paddingHorizontal: spacing.lg, paddingVertical: 10,
-    borderTopWidth: 1, borderBottomWidth: 1,
-    borderColor: "rgba(0,255,204,0.15)",
-    backgroundColor: "rgba(0,255,204,0.03)",
-    marginTop: 2,
+    borderTopWidth: 1, borderBottomWidth: 1, borderColor: "#0f0f0f",
+    backgroundColor: "#040404", marginTop: 2,
   },
-  blockHeaderText: { color: colors.primary, fontSize: 11, fontWeight: "700", letterSpacing: 3 },
-  blockHeaderRight: { color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
+  sectionLabelAccent: { width: 3, height: 14, backgroundColor: colors.primary },
+  sectionLabelText: {
+    color: colors.textSecondary, fontSize: 10, fontWeight: "700", letterSpacing: 3, flex: 1,
+    fontFamily: fonts.mono as any,
+  },
+  sectionLabelAmt: {
+    color: colors.textSecondary, fontSize: 12, fontWeight: "700",
+    fontFamily: fonts.mono as any,
+  },
 
-  block: { borderBottomWidth: 1, borderBottomColor: "rgba(0,255,204,0.08)" },
+  emptyRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
+  emptyText: { color: "#333", fontSize: 13, fontStyle: "italic", fontFamily: fonts.mono as any },
 
-  emptyText: { color: colors.textSecondary, fontSize: 13, padding: spacing.lg, fontStyle: "italic" },
-
-  // Income rows
+  // Income
   incomeRow: {
-    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: spacing.lg, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)",
+    borderBottomWidth: 1, borderBottomColor: "#080808",
   },
-  rowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  incomeNote: { color: colors.white, fontSize: 15, fontWeight: "700" },
-  incomeAmt: { color: colors.primary, fontSize: 18, fontWeight: "900" },
-  rowDate: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+  incomeLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  greenPip: { width: 3, height: 32, backgroundColor: colors.primary },
+  incomeTitle: { color: colors.white, fontSize: 15, fontWeight: "700", fontFamily: fonts.body as any },
+  incomeAmt: { color: colors.primary, fontSize: 20, fontWeight: "900", fontFamily: fonts.mono as any },
+  rowSub: { color: colors.textSecondary, fontSize: 10, letterSpacing: 1, marginTop: 2, fontFamily: fonts.mono as any },
 
-  // Bill rows
+  // Bills
   billRow: {
-    flexDirection: "row", alignItems: "center", gap: 10,
+    flexDirection: "row", alignItems: "center", gap: 12,
     paddingHorizontal: spacing.lg, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)",
+    borderBottomWidth: 1, borderBottomColor: "#080808",
   },
-  billRowPaid: { opacity: 0.4 },
-  billEmoji: { fontSize: 18, width: 28 },
-  billName: { color: colors.white, fontSize: 15, fontWeight: "600" },
-  strikethrough: { textDecorationLine: "line-through", color: colors.textSecondary },
-  billAmtBox: { alignItems: "flex-end" },
-  billAmt: { color: colors.red, fontSize: 16, fontWeight: "900" },
-  billTap: { color: colors.textSecondary, fontSize: 9, letterSpacing: 1.5, marginTop: 2 },
-  paidChip: {
+  billRowPaid: { opacity: 0.35 },
+  billEmoji: { fontSize: 20, width: 28, textAlign: "center" },
+  billMid: { flex: 1 },
+  billName: { color: colors.white, fontSize: 14, fontWeight: "800", letterSpacing: 1, fontFamily: fonts.body as any },
+  strike: { textDecorationLine: "line-through", color: colors.textSecondary },
+  billAmt: { color: colors.red, fontSize: 17, fontWeight: "900", fontFamily: fonts.mono as any },
+  paidPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 5,
   },
-  paidChipText: { color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 1.5 },
+  paidPillText: { color: "#000", fontSize: 9, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
 
   // Flex spending
   flexRow: {
     paddingHorizontal: spacing.lg, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)", gap: 8,
+    borderBottomWidth: 1, borderBottomColor: "#080808", gap: 7,
   },
   flexTop: { flexDirection: "row", alignItems: "center", gap: 8 },
   flexEmoji: { fontSize: 14 },
-  flexName: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, flex: 1 },
-  flexAmt: { color: colors.white, fontSize: 14, fontWeight: "800" },
-  flexOf: { color: colors.textSecondary, fontWeight: "400", fontSize: 12 },
-  barTrack: { height: 4, backgroundColor: "rgba(255,255,255,0.08)" },
-  barFill: { height: 4 },
-  overText: { color: colors.red, fontSize: 11, fontStyle: "italic" },
+  flexName: { flex: 1, color: colors.white, fontSize: 11, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
+  flexAmt: { color: colors.white, fontSize: 14, fontWeight: "800", fontFamily: fonts.mono as any },
+  flexOf: { color: colors.textSecondary, fontWeight: "400", fontSize: 11 },
+  barBg: { height: 3, backgroundColor: "#111" },
+  barFill: { height: 3 },
+  overMsg: { color: colors.red, fontSize: 10, fontStyle: "italic", fontFamily: fonts.mono as any },
 
-  // Expense rows
+  // Expenses
   expenseRow: {
-    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    flexDirection: "row", alignItems: "center", gap: 12,
     paddingHorizontal: spacing.lg, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)",
+    borderBottomWidth: 1, borderBottomColor: "#080808",
   },
-  expenseCat: { color: colors.white, fontSize: 13, fontWeight: "800", letterSpacing: 1 },
-  expenseNote: { color: colors.textSecondary, fontSize: 12 },
-  expenseAmt: { color: colors.red, fontSize: 16, fontWeight: "900" },
+  redPip: { width: 3, height: 28, backgroundColor: colors.red },
+  expenseCat: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
+  expenseNote: { color: colors.textSecondary, fontSize: 11, marginTop: 1, fontFamily: fonts.body as any },
+  expenseAmt: { color: colors.red, fontSize: 16, fontWeight: "900", fontFamily: fonts.mono as any },
 });
