@@ -61,16 +61,8 @@ function checkDuplicate(txn: Transaction, existing: Transaction[]): boolean {
   });
 }
 
-function isInternalTransfer(description: string): boolean {
-  const lower = description.toLowerCase();
-  return (
-    lower.includes("online transfer from") ||
-    lower.includes("online transfer to") ||
-    lower.includes("transfer from checking") ||
-    lower.includes("transfer to checking") ||
-    lower.includes("transfer from savings") ||
-    lower.includes("transfer to savings")
-  );
+function isInternalTransfer(txn: Transaction): boolean {
+  return txn.type === "transfer" || txn.category === "transfer";
 }
 
 async function readFileContent(uri: string): Promise<string> {
@@ -86,6 +78,7 @@ export function CSVImportSheet({ visible, onClose, onImport, existingTransaction
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [editingCategory, setEditingCategory] = useState<number | null>(null);
   const [fileName, setFileName] = useState("");
+  const [isBusinessAccount, setIsBusinessAccount] = useState(false);
 
   const handlePickFile = async () => {
     try {
@@ -116,7 +109,7 @@ export function CSVImportSheet({ visible, onClose, onImport, existingTransaction
         content.trimStart().startsWith("OFXHEADER") ||
         content.includes("<OFX>");
 
-      const parsed = isOFX ? parseOFX(content) : parseCSV(content);
+      const parsed = isOFX ? parseOFX(content) : parseCSV(content, { businessAccount: isBusinessAccount });
 
       if (parsed.length === 0) {
         const msg = "No transactions found. Make sure it's a valid bank statement CSV.";
@@ -129,13 +122,13 @@ export function CSVImportSheet({ visible, onClose, onImport, existingTransaction
         return;
       }
 
-      // Build review items with duplicate detection and auto-exclude transfers
+      // Build review items with duplicate detection
+      // Transfers are included but visually tagged - user can toggle them
       const items: ReviewItem[] = parsed.map((txn) => {
         const isDuplicate = checkDuplicate(txn, existingTransactions);
-        const isTransfer = isInternalTransfer(txn.note ?? "");
         return {
           transaction: txn,
-          included: !isDuplicate && !isTransfer,
+          included: !isDuplicate,
           isDuplicate,
         };
       });
@@ -201,16 +194,20 @@ export function CSVImportSheet({ visible, onClose, onImport, existingTransaction
     setReviewItems([]);
     setEditingCategory(null);
     setFileName("");
+    setIsBusinessAccount(false);
     onClose();
   };
 
   const includedCount = reviewItems.filter((r) => r.included).length;
   const duplicateCount = reviewItems.filter((r) => r.isDuplicate).length;
+  const transferCount = reviewItems.filter(
+    (r) => r.included && isInternalTransfer(r.transaction)
+  ).length;
   const totalIncome = reviewItems
-    .filter((r) => r.included && r.transaction.type === "income")
+    .filter((r) => r.included && r.transaction.type === "income" && r.transaction.category !== "transfer")
     .reduce((s, r) => s + r.transaction.amount, 0);
   const totalExpenses = reviewItems
-    .filter((r) => r.included && r.transaction.type === "expense")
+    .filter((r) => r.included && r.transaction.type === "expense" && r.transaction.category !== "transfer")
     .reduce((s, r) => s + r.transaction.amount, 0);
 
   return (
@@ -227,12 +224,21 @@ export function CSVImportSheet({ visible, onClose, onImport, existingTransaction
                 Select a CSV or OFX file from your bank
               </Text>
 
+              <Pressable
+                onPress={() => setIsBusinessAccount((v) => !v)}
+                style={[styles.businessToggle, isBusinessAccount && styles.businessToggleActive]}
+              >
+                <Text style={[styles.businessToggleText, isBusinessAccount && styles.businessToggleTextActive]}>
+                  {isBusinessAccount ? "BUSINESS ACCOUNT - expenses excluded from budget" : "PERSONAL ACCOUNT"}
+                </Text>
+              </Pressable>
+
               <Pressable onPress={handlePickFile} style={styles.pickBtn}>
                 <Text style={styles.pickBtnText}>SELECT FILE</Text>
               </Pressable>
 
               <Text style={styles.supportedText}>
-                Supports Chase, Wells Fargo, Bank of America, and generic CSV formats
+                Supports Chase, US Bank, Bank of America, and generic CSV formats. Transfers auto-detected.
               </Text>
 
               <Pressable onPress={handleClose} style={styles.cancelBtn}>
@@ -272,6 +278,12 @@ export function CSVImportSheet({ visible, onClose, onImport, existingTransaction
                   </Text>
                   <Text style={styles.statLabel}>EXPENSES</Text>
                 </View>
+                {transferCount > 0 && (
+                  <View style={styles.statChip}>
+                    <Text style={styles.statValue}>{transferCount}</Text>
+                    <Text style={styles.statLabel}>TRANSFERS</Text>
+                  </View>
+                )}
               </View>
 
               {duplicateCount > 0 && (
@@ -338,14 +350,16 @@ export function CSVImportSheet({ visible, onClose, onImport, existingTransaction
                           style={[
                             styles.reviewAmount,
                             {
-                              color: item.transaction.type === "income"
-                                ? colors.primary
-                                : colors.red,
+                              color: isInternalTransfer(item.transaction)
+                                ? colors.textSecondary
+                                : item.transaction.type === "income"
+                                  ? colors.primary
+                                  : colors.red,
                             },
                             !item.included && { opacity: 0.4 },
                           ]}
                         >
-                          {item.transaction.type === "income" ? "+" : "-"}
+                          {isInternalTransfer(item.transaction) ? "" : item.transaction.type === "income" ? "+" : "-"}
                           {formatCurrency(item.transaction.amount)}
                         </Text>
                         <Pressable
@@ -685,6 +699,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  businessToggle: {
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  businessToggleActive: {
+    borderColor: '#FF6B35',
+    backgroundColor: '#FF6B3515',
+  },
+  businessToggleText: {
+    color: colors.textSecondary,
+    fontWeight: "700",
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  businessToggleTextActive: {
+    color: '#FF6B35',
   },
   cancelBtn: {
     flex: 1,

@@ -132,7 +132,24 @@ export default function BudgetScreen() {
   const { profile, currentBudget, transactions, currentMonth, setCurrentMonth, saveBudget, addTransaction } =
     useApp();
 
-  const monthlyIncome = profile?.monthlyIncome ?? 0;
+  const profileIncome = profile?.monthlyIncome ?? 0;
+
+  // Auto-calculate actual income from transactions (exclude transfers)
+  const actualMonthlyIncome = useMemo(
+    () =>
+      transactions
+        .filter(
+          (t) =>
+            t.date.startsWith(currentMonth) &&
+            t.type === "income" &&
+            t.category !== "transfer"
+        )
+        .reduce((s, t) => s + t.amount, 0),
+    [transactions, currentMonth]
+  );
+
+  // Use actual if we have transaction data, fall back to profile setting
+  const monthlyIncome = actualMonthlyIncome > 0 ? actualMonthlyIncome : profileIncome;
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editCat, setEditCat] = useState<BudgetCategory | null>(null);
   const [editAmount, setEditAmount] = useState("");

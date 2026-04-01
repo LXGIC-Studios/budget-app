@@ -11,20 +11,33 @@ interface Props {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  food: '#ff0080',
-  shopping: '#8b00ff',
-  bills: '#00ffcc',
-  transport: '#ccff00',
-  transfer: '#00ffff',
-  fun: '#EC4899',
-  health: '#14B8A6',
-  other: '#707070',
+  "eating out": '#ff0080',
+  "groceries": '#00ff88',
+  "shopping": '#8b00ff',
+  "bills": '#00ffcc',
+  "subscriptions": '#EC4899',
+  "gas/transport": '#ccff00',
+  "transfer": '#555555',
+  "health": '#14B8A6',
+  "kids": '#FF9500',
+  "clothing": '#9d50dd',
+  "auto": '#007eb5',
+  "payments": '#FF6B35',
+  "fees": '#666',
+  "salary": '#00ffcc',
+  "other": '#707070',
+  "other_income": '#00ddaa',
+  "laundry": '#888',
 };
 
 function getCategoryEmoji(category: string): string {
+  const lower = category.toLowerCase();
+  if (lower === "transfer") return "🔄";
+  if (lower === "salary") return "💼";
+  if (lower === "other_income") return "💰";
   const found =
-    EXPENSE_CATEGORIES.find((c) => c.id.toLowerCase() === category.toLowerCase()) ||
-    INCOME_CATEGORIES.find((c) => c.id.toLowerCase() === category.toLowerCase());
+    EXPENSE_CATEGORIES.find((c) => c.id.toLowerCase() === lower) ||
+    INCOME_CATEGORIES.find((c) => c.id.toLowerCase() === lower);
   return found?.emoji ?? "📦";
 }
 
@@ -33,13 +46,15 @@ function getCategoryColor(category: string): string {
 }
 
 export function TransactionItem({ transaction, onPress, onLongPress }: Props) {
-  const isExpense = transaction.type === "expense";
+  const isTransfer = transaction.type === "transfer" || transaction.category === "transfer";
+  const isExpense = transaction.type === "expense" && !isTransfer;
   const catColor = getCategoryColor(transaction.category);
 
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={[styles.container, {
       borderLeftWidth: 3,
       borderLeftColor: catColor,
+      opacity: isTransfer ? 0.5 : 1,
     }]}>
       <View style={[styles.emojiBox, { borderColor: catColor + '30' }]}>
         <Text style={styles.emoji}>{getCategoryEmoji(transaction.category)}</Text>
@@ -49,16 +64,16 @@ export function TransactionItem({ transaction, onPress, onLongPress }: Props) {
           {transaction.note || transaction.category}
         </Text>
         <Text style={styles.category}>
-          {transaction.category} · {formatShortDate(transaction.date)}
-          {transaction.userName ? ` · ${transaction.userName}` : ""}
+          {isTransfer ? "transfer" : transaction.category} - {formatShortDate(transaction.date)}
+          {transaction.userName ? ` - ${transaction.userName}` : ""}
         </Text>
       </View>
       <Text
         style={[styles.amount, {
-          color: isExpense ? colors.red : colors.primary,
+          color: isTransfer ? colors.textSecondary : isExpense ? colors.red : colors.primary,
         }]}
       >
-        {isExpense ? "-" : "+"}
+        {isExpense ? "-" : isTransfer ? "" : "+"}
         {formatCurrency(transaction.amount)}
       </Text>
     </Pressable>

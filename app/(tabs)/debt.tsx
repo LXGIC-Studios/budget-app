@@ -82,11 +82,26 @@ export default function DebtScreen() {
   const [debtType, setDebtType] = useState<DebtType>("credit_card");
 
   const babyStep = profile?.babyStep ?? 1;
-  const monthlyIncome = profile?.monthlyIncome ?? 0;
+  const profileIncome = profile?.monthlyIncome ?? 0;
   const emergencyFundCurrent = profile?.emergencyFundCurrent ?? 0;
 
-  // Fixed expenses = sum of all fixed budget categories (converted to monthly).
-  // This gives the real cost of living, so snowball surplus = income - fixed - minimums.
+  // Auto-calculate actual income (exclude transfers)
+  const actualIncome = useMemo(
+    () =>
+      transactions
+        .filter(
+          (t) =>
+            t.date.startsWith(currentMonth) &&
+            t.type === "income" &&
+            t.category !== "transfer"
+        )
+        .reduce((s, t) => s + t.amount, 0),
+    [transactions, currentMonth]
+  );
+  const monthlyIncome = actualIncome > 0 ? actualIncome : profileIncome;
+
+  // Monthly expenses = real spending (exclude transfers).
+  // Use budget fixed categories if set, otherwise actual spending.
   const monthlyExpenses = useMemo(() => {
     if (currentBudget?.categories?.length) {
       return currentBudget.categories
@@ -95,7 +110,10 @@ export default function DebtScreen() {
     }
     return transactions
       .filter(
-        (t) => t.date.startsWith(currentMonth) && t.type === "expense"
+        (t) =>
+          t.date.startsWith(currentMonth) &&
+          t.type === "expense" &&
+          t.category !== "transfer"
       )
       .reduce((s, t) => s + t.amount, 0);
   }, [currentBudget, transactions, currentMonth]);

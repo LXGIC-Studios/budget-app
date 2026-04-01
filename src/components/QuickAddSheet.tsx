@@ -35,6 +35,7 @@ interface Props {
 
 export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode }: Props) {
   const [mode, setMode] = useState<"expense" | "income">(initialMode ?? "expense");
+  // Note: transfers show as expense in the editor (they're just tagged differently in import)
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
   const [note, setNote] = useState("");
@@ -50,7 +51,8 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   // Pre-fill fields when editing or when initialMode changes
   if (visible && !initialized) {
     if (editTransaction) {
-      setMode(editTransaction.type);
+      // Transfers display as expenses in the manual editor
+      setMode(editTransaction.type === "transfer" ? "expense" : editTransaction.type);
       setAmount(String(editTransaction.amount));
       setCategory(editTransaction.category);
       setNote(editTransaction.note ?? "");

@@ -1,6 +1,6 @@
 export interface Transaction {
   id: string;
-  type: "expense" | "income";
+  type: "expense" | "income" | "transfer";
   amount: number;
   category: string;
   note?: string;
@@ -80,19 +80,23 @@ export interface Bill {
 export const EXPENSE_CATEGORIES = [
   { id: "Eating Out", name: "Eating Out", emoji: "🍔" },
   { id: "Groceries", name: "Groceries", emoji: "🛒" },
-  { id: "Household Supplies", name: "Household Supplies", emoji: "🧻" },
-  { id: "Non-Food Monthly", name: "Non-Food Monthly", emoji: "🧴" },
+  { id: "Shopping", name: "Shopping", emoji: "🛍️" },
   { id: "Subscriptions", name: "Subscriptions", emoji: "📺" },
+  { id: "Bills", name: "Bills", emoji: "🏠" },
   { id: "Gas/Transport", name: "Gas/Transport", emoji: "⛽" },
-  { id: "Prescriptions", name: "Prescriptions", emoji: "💊" },
+  { id: "Health", name: "Health", emoji: "💊" },
+  { id: "Kids", name: "Kids", emoji: "👶" },
+  { id: "Clothing", name: "Clothing", emoji: "👕" },
+  { id: "Auto", name: "Auto", emoji: "🚗" },
+  { id: "Payments", name: "Payments", emoji: "💸" },
+  { id: "Fees", name: "Fees", emoji: "🏦" },
   { id: "Other", name: "Other", emoji: "📦" },
 ] as const;
 
 export const INCOME_CATEGORIES = [
-  { id: "salary", name: "Salary", emoji: "\uD83D\uDCBC" },
-  { id: "freelance", name: "Freelance", emoji: "\uD83D\uDCB8" },
-  { id: "transfer", name: "Transfer", emoji: "\uD83C\uDFE6" },
-  { id: "other", name: "Other", emoji: "\uD83D\uDCE6" },
+  { id: "salary", name: "Salary/Payroll", emoji: "💼" },
+  { id: "freelance", name: "Freelance/Business", emoji: "💸" },
+  { id: "other_income", name: "Other Income", emoji: "📦" },
 ] as const;
 
 export const BILL_PRESETS: Bill[] = [

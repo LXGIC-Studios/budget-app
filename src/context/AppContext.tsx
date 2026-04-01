@@ -221,14 +221,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   // Compute rollover balance for the current month.
-  // Starting from DEC_2025_ENDING_BALANCE, sum all income and subtract all
-  // expenses for every month BEFORE currentMonth.
+  // Starting from DEC_2025_ENDING_BALANCE, sum all REAL income and subtract
+  // all REAL expenses for every month BEFORE currentMonth.
+  // Transfers are excluded - they don't change net worth.
   const monthlyRollover = useMemo(() => {
     let balance = DEC_2025_ENDING_BALANCE;
     for (const t of state.transactions) {
       const txnMonth = t.date.substring(0, 7); // "YYYY-MM"
       if (txnMonth < "2026-01") continue; // before our starting point
       if (txnMonth >= state.currentMonth) continue; // not a prior month
+      // Skip transfers - they don't affect net balance
+      if (t.type === "transfer" || t.category === "transfer") continue;
       if (t.type === "income") {
         balance += t.amount;
       } else {

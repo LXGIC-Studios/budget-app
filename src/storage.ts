@@ -107,7 +107,7 @@ export async function getTransactions(): Promise<Transaction[]> {
 
     return data.map((row) => ({
       id: row.id,
-      type: row.type as "expense" | "income",
+      type: row.type as "expense" | "income" | "transfer",
       amount: Number(row.amount),
       category: row.category,
       note: row.note || undefined,
@@ -133,7 +133,7 @@ export async function getTransactions(): Promise<Transaction[]> {
 
   return data.map((row) => ({
     id: row.id,
-    type: row.type as "expense" | "income",
+    type: row.type as "expense" | "income" | "transfer",
     amount: Number(row.amount),
     category: row.category,
     note: row.note || undefined,

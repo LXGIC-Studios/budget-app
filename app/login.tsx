@@ -28,17 +28,27 @@ export default function LoginScreen() {
     setError(null);
     setSubmitting(true);
 
-    const result =
-      mode === "login"
-        ? await signIn(email.trim(), password)
-        : await signUp(email.trim(), password);
-
-    setSubmitting(false);
-
-    if (result.error) {
-      setError(result.error);
-    } else if (mode === "signup") {
-      setError(null);
+    if (mode === "signup") {
+      // Sign up then immediately sign in
+      const result = await signUp(email.trim(), password);
+      if (result.error) {
+        setSubmitting(false);
+        setError(result.error);
+        return;
+      }
+      // Auto sign in after signup
+      const loginResult = await signIn(email.trim(), password);
+      setSubmitting(false);
+      if (loginResult.error) {
+        // Probably needs email confirmation
+        setError("Account created! Check your email to confirm, then log in.");
+      }
+    } else {
+      const result = await signIn(email.trim(), password);
+      setSubmitting(false);
+      if (result.error) {
+        setError(result.error);
+      }
     }
   };
 
@@ -103,7 +113,6 @@ export default function LoginScreen() {
 
           <Pressable
             onPress={handleSubmit}
-            onPressIn={Platform.OS === "web" ? handleSubmit : undefined}
             disabled={submitting}
             style={[styles.btn, submitting && styles.btnDisabled]}
             accessible
