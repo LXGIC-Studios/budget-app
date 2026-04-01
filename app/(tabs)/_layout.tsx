@@ -26,17 +26,17 @@ export default function TabLayout() {
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textSecondary,
           tabBarStyle: {
-            backgroundColor: "#050505",
-            borderTopColor: "rgba(0,255,204,0.2)",
-            borderTopWidth: 1,
+            backgroundColor: "#000",
+            borderTopColor: colors.primary,
+            borderTopWidth: 2,
             height: Platform.OS === "web" ? 60 : 96,
             paddingBottom: Platform.OS === "web" ? 8 : 40,
             paddingTop: 8,
           },
           tabBarLabelStyle: {
             fontSize: 9,
-            fontWeight: "700",
-            letterSpacing: 1.5,
+            fontWeight: "900",
+            letterSpacing: 2,
             textTransform: "uppercase",
           },
         }}
