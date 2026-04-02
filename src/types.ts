@@ -7,6 +7,19 @@ export interface Transaction {
   date: string;
   createdAt: string;
   userName?: string;
+  accountId?: string | null;
+}
+
+export type AccountType = 'checking' | 'savings' | 'credit_card' | 'cash';
+
+export interface Account {
+  id: string;
+  name: string;
+  type: AccountType;
+  icon: string;
+  color: string;
+  balance: number;
+  createdAt: string;
 }
 
 export type BillFrequency = 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'quarterly' | 'yearly';

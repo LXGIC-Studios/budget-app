@@ -7,6 +7,7 @@ import type {
   Debt,
   Household,
   HouseholdMember,
+  Account,
 } from "./types";
 
 // Profile
@@ -114,6 +115,7 @@ export async function getTransactions(): Promise<Transaction[]> {
       date: row.date,
       createdAt: row.created_at,
       userName: nameMap.get(row.user_id),
+      accountId: row.account_id || null,
     }));
   }
 
@@ -139,6 +141,7 @@ export async function getTransactions(): Promise<Transaction[]> {
     note: row.note || undefined,
     date: row.date,
     createdAt: row.created_at,
+    accountId: row.account_id || null,
   }));
 }
 
@@ -157,6 +160,7 @@ export async function addTransaction(txn: Transaction): Promise<void> {
     note: txn.note || null,
     date: txn.date,
     created_at: txn.createdAt,
+    account_id: txn.accountId || null,
   });
 }
 
@@ -175,6 +179,7 @@ export async function addTransactions(txns: Transaction[]): Promise<void> {
     note: txn.note || null,
     date: txn.date,
     created_at: txn.createdAt,
+    account_id: txn.accountId || null,
   }));
 
   await supabase.from("transactions").insert(rows);
@@ -194,6 +199,7 @@ export async function updateTransaction(
   if (updates.category !== undefined) updateData.category = updates.category;
   if (updates.note !== undefined) updateData.note = updates.note;
   if (updates.date !== undefined) updateData.date = updates.date;
+  if (updates.accountId !== undefined) updateData.account_id = updates.accountId;
   await supabase.from("transactions").update(updateData).eq("id", id);
 }
 
@@ -467,6 +473,67 @@ export async function getHouseholdMembers(): Promise<HouseholdMember[]> {
   }));
 }
 
+// Accounts
+export async function getAccounts(): Promise<Account[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("accounts")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true });
+
+  if (!data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    icon: row.icon,
+    color: row.color,
+    balance: Number(row.balance),
+    createdAt: row.created_at,
+  }));
+}
+
+export async function addAccount(account: Account): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("accounts").insert({
+    id: account.id,
+    user_id: user.id,
+    name: account.name,
+    type: account.type,
+    icon: account.icon,
+    color: account.color,
+    balance: account.balance,
+    created_at: account.createdAt,
+  });
+}
+
+export async function updateAccount(
+  id: string,
+  updates: Partial<Omit<Account, "id" | "createdAt">>
+): Promise<void> {
+  const updateData: Record<string, unknown> = {};
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.type !== undefined) updateData.type = updates.type;
+  if (updates.icon !== undefined) updateData.icon = updates.icon;
+  if (updates.color !== undefined) updateData.color = updates.color;
+  if (updates.balance !== undefined) updateData.balance = updates.balance;
+  await supabase.from("accounts").update(updateData).eq("id", id);
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  await supabase.from("accounts").delete().eq("id", id);
+}
+
 // Reset all data
 export async function resetAllData(): Promise<void> {
   const {
@@ -478,6 +545,7 @@ export async function resetAllData(): Promise<void> {
     supabase.from("transactions").delete().eq("user_id", user.id),
     supabase.from("budget_categories").delete().eq("user_id", user.id),
     supabase.from("debts").delete().eq("user_id", user.id),
+    supabase.from("accounts").delete().eq("user_id", user.id),
     supabase
       .from("profiles")
       .update({
