@@ -155,7 +155,7 @@ const ps = StyleSheet.create({
 });
 
 export default function HomeScreen() {
-  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction } = useApp();
+  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction, accounts } = useApp();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
@@ -208,6 +208,12 @@ export default function HomeScreen() {
     });
     return map;
   }, [expenseTxns]);
+
+  const accountMap = useMemo(() => {
+    const map = new Map<string, { name: string; icon: string; color: string }>();
+    accounts.forEach((a) => map.set(a.id, { name: a.name, icon: a.icon, color: a.color }));
+    return map;
+  }, [accounts]);
 
   const isPaycheckWeek = incomeTxns.length > 0;
 
@@ -292,7 +298,14 @@ export default function HomeScreen() {
                 <View style={s.greenPip} />
                 <View>
                   <Text style={s.incomeTitle}>{t.note || t.category}</Text>
-                  <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
+                    {t.accountId && accountMap.has(t.accountId) && (
+                      <View style={[s.acctChip, { borderColor: accountMap.get(t.accountId)!.color + '44' }]}>
+                        <Text style={s.acctChipText}>{accountMap.get(t.accountId)!.icon} {accountMap.get(t.accountId)!.name}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
               <Text style={s.incomeAmt}>+{formatCurrency(t.amount)}</Text>
@@ -390,7 +403,14 @@ export default function HomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={s.expenseCat}>{t.category.toUpperCase()}</Text>
                   {t.note ? <Text style={s.expenseNote}>{t.note}</Text> : null}
-                  <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
+                    {t.accountId && accountMap.has(t.accountId) && (
+                      <View style={[s.acctChip, { borderColor: accountMap.get(t.accountId)!.color + '44' }]}>
+                        <Text style={s.acctChipText}>{accountMap.get(t.accountId)!.icon} {accountMap.get(t.accountId)!.name}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
                 <Text style={s.expenseAmt}>-{formatCurrency(t.amount)}</Text>
               </Pressable>
@@ -410,6 +430,7 @@ export default function HomeScreen() {
         onUpdate={updateTransaction}
         onDelete={(id) => { deleteTransaction(id); setSheetVisible(false); setEditingTxn(undefined); }}
         initialMode={editingTxn ? undefined : "expense"}
+        accounts={accounts}
       />
 
       {payingBill && (
@@ -565,4 +586,12 @@ const s = StyleSheet.create({
   expenseCat: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
   expenseNote: { color: colors.textSecondary, fontSize: 11, marginTop: 1, fontFamily: fonts.body as any },
   expenseAmt: { color: colors.red, fontSize: 16, fontWeight: "900", fontFamily: fonts.mono as any },
+  acctChip: {
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 5, paddingVertical: 1,
+  },
+  acctChipText: {
+    color: colors.textSecondary, fontSize: 8, fontWeight: "700", letterSpacing: 1,
+    fontFamily: fonts.mono as any,
+  },
 });

@@ -33,7 +33,13 @@ function getIcon(category: string): string {
 }
 
 export default function LogScreen() {
-  const { transactions, addTransaction, addTransactions, updateTransaction, deleteTransaction } = useApp();
+  const { transactions, addTransaction, addTransactions, updateTransaction, deleteTransaction, accounts } = useApp();
+
+  const accountMap = useMemo(() => {
+    const map = new Map<string, { name: string; icon: string; color: string }>();
+    accounts.forEach((a) => map.set(a.id, { name: a.name, icon: a.icon, color: a.color }));
+    return map;
+  }, [accounts]);
   const [filter, setFilter] = useState<Filter>("ALL");
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
@@ -145,7 +151,14 @@ export default function LogScreen() {
               <View style={styles.txnMeta}>
                 <Text style={styles.txnCategory}>{t.category}</Text>
                 {t.note && <Text style={styles.txnNote} numberOfLines={1}>{t.note}</Text>}
-                <Text style={styles.txnDate}>{formatShortDate(t.date)}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.txnDate}>{formatShortDate(t.date)}</Text>
+                  {t.accountId && accountMap.has(t.accountId) && (
+                    <View style={[styles.acctChip, { borderColor: accountMap.get(t.accountId)!.color + '44' }]}>
+                      <Text style={styles.acctChipText}>{accountMap.get(t.accountId)!.icon} {accountMap.get(t.accountId)!.name}</Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <Text style={[styles.txnAmount, t.type === "income" ? styles.amountIn : styles.amountOut]}>
                 {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
@@ -163,6 +176,7 @@ export default function LogScreen() {
         onUpdate={updateTransaction}
         onDelete={(id) => { deleteTransaction(id); setSheetVisible(false); setEditingTxn(undefined); }}
         initialMode={sheetInitialMode}
+        accounts={accounts}
       />
 
       <CSVImportSheet
@@ -348,5 +362,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     paddingHorizontal: spacing.xl,
+  },
+  acctChip: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  acctChipText: {
+    color: colors.textSecondary,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
 });

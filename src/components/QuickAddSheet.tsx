@@ -14,7 +14,7 @@ import { notification, impact } from "../lib/haptics";
 import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
-import type { Transaction } from "../types";
+import type { Transaction, Account } from "../types";
 import { generateId, formatShortDate, formatCurrency } from "../utils";
 
 interface SplitRow {
@@ -31,9 +31,10 @@ interface Props {
   onDelete?: (id: string) => void;
   onSplit?: (original: Transaction, splits: { category: string; amount: number }[]) => void;
   initialMode?: "expense" | "income";
+  accounts?: Account[];
 }
 
-export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode }: Props) {
+export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode, accounts }: Props) {
   const [mode, setMode] = useState<"expense" | "income">(initialMode ?? "expense");
   // Note: transfers show as expense in the editor (they're just tagged differently in import)
   const [amount, setAmount] = useState("");
@@ -42,6 +43,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateInput, setDateInput] = useState("");
   const [initialized, setInitialized] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   // Split mode state
   const [splitMode, setSplitMode] = useState(false);
@@ -58,9 +60,11 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
       setNote(editTransaction.note ?? "");
       setSelectedDate(new Date(editTransaction.date));
       setDateInput("");
+      setSelectedAccountId(editTransaction.accountId ?? null);
     } else if (initialMode) {
       setMode(initialMode);
       setCategory(initialMode === "expense" ? "food" : "salary");
+      setSelectedAccountId(null);
     }
     setSplitMode(false);
     setSplitRows([]);
@@ -89,6 +93,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
         category,
         note: note.trim() || undefined,
         date: selectedDate.toISOString(),
+        accountId: selectedAccountId,
       });
     } else {
       const txn: Transaction = {
@@ -99,6 +104,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
         note: note.trim() || undefined,
         date: selectedDate.toISOString(),
         createdAt: new Date().toISOString(),
+        accountId: selectedAccountId,
       };
       onSave(txn);
     }
@@ -488,6 +494,28 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
             returnKeyType="done"
           />
 
+          {/* Account picker */}
+          {accounts && accounts.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
+              <Pressable
+                onPress={() => { setSelectedAccountId(null); impact("Light"); }}
+                style={[styles.accountPill, !selectedAccountId && styles.accountPillActive]}
+              >
+                <Text style={[styles.accountPillText, !selectedAccountId && styles.accountPillTextActive]}>NONE</Text>
+              </Pressable>
+              {accounts.map((a) => (
+                <Pressable
+                  key={a.id}
+                  onPress={() => { setSelectedAccountId(a.id); impact("Light"); }}
+                  style={[styles.accountPill, selectedAccountId === a.id && { borderColor: a.color, backgroundColor: a.color + '18' }]}
+                >
+                  <Text style={styles.accountPillIcon}>{a.icon}</Text>
+                  <Text style={[styles.accountPillText, selectedAccountId === a.id && { color: a.color }]}>{a.name.toUpperCase()}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
           {/* Date */}
           <View style={styles.dateRow}>
             <Pressable
@@ -709,6 +737,37 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 13,
     fontWeight: "600",
+  },
+  accountRow: {
+    gap: 6,
+    paddingVertical: 2,
+  },
+  accountPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.bg,
+    borderRadius: 0,
+  },
+  accountPillActive: {
+    borderColor: colors.primary,
+    backgroundColor: "rgba(0,255,204,0.1)",
+  },
+  accountPillIcon: {
+    fontSize: 12,
+  },
+  accountPillText: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  accountPillTextActive: {
+    color: colors.primary,
   },
   editActions: {
     flexDirection: "row",
