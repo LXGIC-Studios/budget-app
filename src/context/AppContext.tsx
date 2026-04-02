@@ -104,34 +104,99 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addTransaction = useCallback(
     async (txn: Transaction) => {
-      await storage.addTransaction(txn);
-      await reload();
+      // Optimistic: add to local state immediately
+      setState((prev) => ({
+        ...prev,
+        transactions: [txn, ...prev.transactions],
+      }));
+      try {
+        await storage.addTransaction(txn);
+      } catch {
+        // Rollback on failure
+        setState((prev) => ({
+          ...prev,
+          transactions: prev.transactions.filter((t) => t.id !== txn.id),
+        }));
+      }
     },
-    [reload]
+    []
   );
 
   const addTransactions = useCallback(
     async (txns: Transaction[]) => {
-      await storage.addTransactions(txns);
-      await reload();
+      const ids = new Set(txns.map((t) => t.id));
+      // Optimistic: add all to local state
+      setState((prev) => ({
+        ...prev,
+        transactions: [...txns, ...prev.transactions],
+      }));
+      try {
+        await storage.addTransactions(txns);
+      } catch {
+        // Rollback on failure
+        setState((prev) => ({
+          ...prev,
+          transactions: prev.transactions.filter((t) => !ids.has(t.id)),
+        }));
+      }
     },
-    [reload]
+    []
   );
 
   const deleteTransaction = useCallback(
     async (id: string) => {
-      await storage.deleteTransaction(id);
-      await reload();
+      // Save for rollback
+      let removed: Transaction | undefined;
+      setState((prev) => {
+        removed = prev.transactions.find((t) => t.id === id);
+        return {
+          ...prev,
+          transactions: prev.transactions.filter((t) => t.id !== id),
+        };
+      });
+      try {
+        await storage.deleteTransaction(id);
+      } catch {
+        // Rollback on failure
+        if (removed) {
+          setState((prev) => ({
+            ...prev,
+            transactions: [removed!, ...prev.transactions],
+          }));
+        }
+      }
     },
-    [reload]
+    []
   );
 
   const updateTransaction = useCallback(
     async (id: string, updates: Partial<Omit<Transaction, "id" | "createdAt">>) => {
-      await storage.updateTransaction(id, updates);
-      await reload();
+      // Save old version for rollback
+      let original: Transaction | undefined;
+      setState((prev) => {
+        original = prev.transactions.find((t) => t.id === id);
+        return {
+          ...prev,
+          transactions: prev.transactions.map((t) =>
+            t.id === id ? { ...t, ...updates } : t
+          ),
+        };
+      });
+      try {
+        await storage.updateTransaction(id, updates);
+      } catch {
+        // Rollback on failure
+        if (original) {
+          setState((prev) => ({
+            ...prev,
+            transactions: prev.transactions.map((t) =>
+              t.id === id ? original! : t
+            ),
+          }));
+        }
+      }
     },
-    [reload]
+    []
   );
 
   const saveBudget = useCallback(
