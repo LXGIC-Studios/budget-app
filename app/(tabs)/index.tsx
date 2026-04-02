@@ -200,7 +200,12 @@ export default function HomeScreen() {
 
   const flexSpend = useMemo(() => {
     const map: Record<string, number> = {};
-    expenseTxns.forEach((t) => { const k = t.category.toLowerCase(); map[k] = (map[k] ?? 0) + t.amount; });
+    expenseTxns.forEach((t) => {
+      // Exclude fixed bill payments from flex spending calculations
+      if (t.note?.startsWith("Paid:") || t.note?.endsWith("- marked paid") || t.note?.endsWith("- paid")) return;
+      const k = t.category.toLowerCase();
+      map[k] = (map[k] ?? 0) + t.amount;
+    });
     return map;
   }, [expenseTxns]);
 
