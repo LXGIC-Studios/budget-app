@@ -28,7 +28,19 @@ import {
 } from "../../src/utils";
 import type { Transaction, BudgetCategory } from "../../src/types";
 
-function billsDueInWeek(dueDay: number, start: Date, end: Date): boolean {
+function billsDueInWeek(cat: BudgetCategory, start: Date, end: Date): boolean {
+  const freq = cat.frequency || "monthly";
+
+  // Weekly bills are due EVERY week
+  if (freq === "weekly") return true;
+
+  // Biweekly bills are due every other week (approximate: show every week, user marks paid)
+  if (freq === "biweekly") return true;
+
+  // Monthly+ bills: check if dueDay falls within this week
+  const dueDay = cat.dueDay;
+  if (dueDay == null) return false;
+
   const months = start.getMonth() === end.getMonth()
     ? [{ y: start.getFullYear(), m: start.getMonth() }]
     : [{ y: start.getFullYear(), m: start.getMonth() }, { y: end.getFullYear(), m: end.getMonth() }];
@@ -180,7 +192,7 @@ export default function HomeScreen() {
   const billsDue = useMemo(() => {
     if (!currentBudget) return [];
     return currentBudget.categories.filter(
-      (c) => c.type === "fixed" && c.dueDay != null && billsDueInWeek(c.dueDay!, weekRange.start, weekRange.end)
+      (c) => c.type === "fixed" && billsDueInWeek(c, weekRange.start, weekRange.end)
     );
   }, [currentBudget, weekRange]);
 
@@ -200,14 +212,20 @@ export default function HomeScreen() {
 
   const flexSpend = useMemo(() => {
     const map: Record<string, number> = {};
+    const fixedNames = new Set(
+      (currentBudget?.categories ?? []).filter((c) => c.type === "fixed").map((c) => c.name.toLowerCase())
+    );
     expenseTxns.forEach((t) => {
-      // Exclude fixed bill payments from flex spending calculations
+      // Exclude fixed bill payments from flex spending
       if (t.note?.startsWith("Paid:") || t.note?.endsWith("- marked paid") || t.note?.endsWith("- paid")) return;
+      if (t.category.toLowerCase() === "bills") return;
+      // Exclude transactions that match a fixed bill name
+      if (t.note && fixedNames.has(t.note.toLowerCase())) return;
       const k = t.category.toLowerCase();
       map[k] = (map[k] ?? 0) + t.amount;
     });
     return map;
-  }, [expenseTxns]);
+  }, [expenseTxns, currentBudget]);
 
   const accountMap = useMemo(() => {
     const map = new Map<string, { name: string; icon: string; color: string }>();
