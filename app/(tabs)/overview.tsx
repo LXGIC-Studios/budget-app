@@ -1,215 +1,304 @@
 import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Edit3 } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { impact } from "../../src/lib/haptics";
-import { colors, spacing } from "../../src/theme";
+import { colors, spacing, fonts } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { formatCurrency, formatMonthLabel, shiftMonth, getMonthlyAmount } from "../../src/utils";
 
-function calcSnowball(debts: { name: string; balance: number; minimumPayment: number }[], extra: number) {
-  const sorted = [...debts].sort((a, b) => a.balance - b.balance);
-  let months = 0;
-  let remaining = sorted.map((d) => ({ ...d }));
-  while (remaining.length > 0 && months < 120) {
-    months++;
-    let snowball = extra;
-    const next: typeof remaining = [];
-    for (const d of remaining) {
-      const pay = d === remaining[0] ? d.minimumPayment + snowball : d.minimumPayment;
-      d.balance = Math.max(0, d.balance - pay);
-      if (d === remaining[0]) snowball = 0;
-      if (d.balance > 0) next.push(d);
-      else if (d !== remaining[0]) snowball += d.minimumPayment;
-    }
-    remaining = next;
-  }
-  return months;
+// ─── BAR CHART COMPONENT ───────────────────────────────────────────
+function HBar({ label, amount, maxAmount, color, budget }: {
+  label: string; amount: number; maxAmount: number; color: string; budget?: number;
+}) {
+  const pct = maxAmount > 0 ? Math.min(amount / maxAmount, 1) : 0;
+  const isOver = budget != null && budget > 0 && amount > budget;
+  const budgetPct = budget && maxAmount > 0 ? Math.min(budget / maxAmount, 1) : 0;
+  return (
+    <View style={cs.barRow}>
+      <View style={cs.barLabelRow}>
+        <Text style={cs.barLabel}>{label}</Text>
+        <Text style={[cs.barAmt, isOver && { color: colors.red }]}>
+          {formatCurrency(amount)}
+          {budget != null && budget > 0 && (
+            <Text style={cs.barBudget}> / {formatCurrency(budget)}</Text>
+          )}
+        </Text>
+      </View>
+      <View style={cs.barTrack}>
+        {budgetPct > 0 && (
+          <View style={[cs.barBudgetLine, { left: `${budgetPct * 100}%` as any }]} />
+        )}
+        <View style={[cs.barFill, { width: `${pct * 100}%` as any, backgroundColor: isOver ? colors.red : color }]} />
+      </View>
+    </View>
+  );
+}
+
+const cs = StyleSheet.create({
+  barRow: { gap: 4, paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)" },
+  barLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  barLabel: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 1, fontFamily: fonts.mono as any, textTransform: "uppercase" },
+  barAmt: { color: colors.white, fontSize: 13, fontWeight: "800", fontFamily: fonts.mono as any },
+  barBudget: { color: colors.textSecondary, fontWeight: "400", fontSize: 11 },
+  barTrack: { height: 6, backgroundColor: "rgba(255,255,255,0.06)", position: "relative" },
+  barFill: { height: 6, position: "absolute", left: 0, top: 0 },
+  barBudgetLine: { position: "absolute", top: -2, width: 2, height: 10, backgroundColor: "rgba(255,255,255,0.3)", zIndex: 1 },
+});
+
+// ─── COMPARISON BAR ────────────────────────────────────────────────
+function ComparisonBar({ leftLabel, leftAmount, rightLabel, rightAmount, leftColor, rightColor }: {
+  leftLabel: string; leftAmount: number; rightLabel: string; rightAmount: number; leftColor: string; rightColor: string;
+}) {
+  const max = Math.max(leftAmount, rightAmount, 1);
+  const leftPct = leftAmount / max;
+  const rightPct = rightAmount / max;
+  return (
+    <View style={{ paddingHorizontal: spacing.lg, paddingVertical: 14, gap: 10 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <View style={{ alignItems: "flex-start", gap: 2 }}>
+          <Text style={{ color: leftColor, fontSize: 22, fontWeight: "900", fontFamily: fonts.mono as any }}>{formatCurrency(leftAmount)}</Text>
+          <Text style={{ color: leftColor, fontSize: 9, fontWeight: "700", letterSpacing: 2, opacity: 0.7, fontFamily: fonts.mono as any }}>{leftLabel}</Text>
+        </View>
+        <View style={{ alignItems: "flex-end", gap: 2 }}>
+          <Text style={{ color: rightColor, fontSize: 22, fontWeight: "900", fontFamily: fonts.mono as any }}>{formatCurrency(rightAmount)}</Text>
+          <Text style={{ color: rightColor, fontSize: 9, fontWeight: "700", letterSpacing: 2, opacity: 0.7, fontFamily: fonts.mono as any }}>{rightLabel}</Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: "row", gap: 2 }}>
+        <View style={{ flex: leftPct, height: 10, backgroundColor: leftColor }} />
+        <View style={{ flex: rightPct, height: 10, backgroundColor: rightColor }} />
+      </View>
+    </View>
+  );
 }
 
 export default function OverviewScreen() {
-  const { transactions, currentMonth, setCurrentMonth, currentBudget, debts } = useApp();
+  const { transactions, currentMonth, setCurrentMonth, currentBudget, debts, profile } = useApp();
+  const router = useRouter();
 
+  // ─── EXPECTED INCOME (from profile) ──────────────────────────────
+  const expectedIncome = profile?.monthlyIncome ?? 0;
+
+  // ─── EXPECTED FIXED BILLS ────────────────────────────────────────
+  const fixedCats = useMemo(() => currentBudget?.categories.filter((c) => c.type === "fixed") ?? [], [currentBudget]);
+  const totalFixedExpected = fixedCats.reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
+
+  // ─── FLEX BUDGETS ────────────────────────────────────────────────
+  const flexCats = useMemo(() => currentBudget?.categories.filter((c) => c.type === "flexible") ?? [], [currentBudget]);
+  const totalFlexBudget = flexCats.reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
+  const flexBudgets = useMemo(() => {
+    const map: Record<string, number> = {};
+    flexCats.forEach((c) => { map[c.name.toLowerCase()] = getMonthlyAmount(c.allocated, c.frequency || "monthly"); });
+    return map;
+  }, [flexCats]);
+
+  // ─── ACTUAL TRANSACTIONS ─────────────────────────────────────────
   const monthTxns = useMemo(() =>
     transactions.filter((t) => t.date.startsWith(currentMonth) && t.type !== "transfer"),
     [transactions, currentMonth]
   );
 
-  const totalIncome = useMemo(() => monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [monthTxns]);
-  const totalSpent = useMemo(() => monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [monthTxns]);
-  const net = totalIncome - totalSpent;
+  const actualIncome = useMemo(() => monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [monthTxns]);
+  const actualExpenses = useMemo(() => monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [monthTxns]);
+  const netCashFlow = actualIncome - actualExpenses;
 
+  // ─── SPENDING BY CATEGORY (actual, excluding bill payments) ──────
   const catSpend = useMemo(() => {
     const map: Record<string, number> = {};
     monthTxns.filter((t) => t.type === "expense").forEach((t) => {
-      const k = t.category.toLowerCase(); map[k] = (map[k] ?? 0) + t.amount;
+      // Skip Mark Paid entries - they're tracked in fixed bills
+      if (t.note?.startsWith("Paid:") || t.note?.endsWith("- marked paid") || t.note?.endsWith("- paid")) return;
+      if (t.category.toLowerCase() === "bills") return;
+      const k = t.category.toLowerCase();
+      map[k] = (map[k] ?? 0) + t.amount;
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [monthTxns]);
 
-  const flexBudgets = useMemo(() => {
+  const maxCatSpend = catSpend.length > 0 ? catSpend[0][1] : 0;
+
+  // ─── BILLS PAID THIS MONTH ──────────────────────────────────────
+  const billsPaid = useMemo(() => {
     const map: Record<string, number> = {};
-    currentBudget?.categories.filter((c) => c.type === "flexible").forEach((c) => {
-      map[c.name.toLowerCase()] = getMonthlyAmount(c.allocated, c.frequency || "monthly");
+    monthTxns.filter((t) => t.type === "expense").forEach((t) => {
+      if (t.note?.startsWith("Paid:") || t.note?.endsWith("- marked paid") || t.note?.endsWith("- paid") || t.category.toLowerCase() === "bills") {
+        const name = t.note?.replace(/^Paid:\s*/, "").replace(/\s*-\s*(marked paid|paid)$/, "") || t.category;
+        map[name] = (map[name] ?? 0) + t.amount;
+      }
     });
     return map;
-  }, [currentBudget]);
+  }, [monthTxns]);
+  const totalBillsPaid = Object.values(billsPaid).reduce((s, v) => s + v, 0);
 
-  const fixedCats = useMemo(() => currentBudget?.categories.filter((c) => c.type === "fixed") ?? [], [currentBudget]);
-  const totalFixed = fixedCats.reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
-
-  const totalDebt = debts.reduce((s, d) => s + d.balance, 0);
-  const totalMin = debts.reduce((s, d) => s + d.minimumPayment, 0);
-  const extra = Math.max(0, net - totalFixed - 500);
-  const snowballMonths = debts.length > 0 ? calcSnowball(debts.map((d) => ({ name: d.name, balance: d.balance, minimumPayment: d.minimumPayment })), extra) : 0;
-
-  const navigate = (delta: number) => { impact("Light"); setCurrentMonth(shiftMonth(currentMonth, delta)); };
-
+  // ─── INCOME BY SOURCE ───────────────────────────────────────────
   const incomeBySource = useMemo(() => {
     const map: Record<string, number> = {};
     monthTxns.filter((t) => t.type === "income").forEach((t) => {
-      const k = t.note || t.category; map[k] = (map[k] ?? 0) + t.amount;
+      const k = t.note || t.category;
+      map[k] = (map[k] ?? 0) + t.amount;
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [monthTxns]);
+  const maxIncome = incomeBySource.length > 0 ? incomeBySource[0][1] : 0;
+
+  const navigate = (delta: number) => { impact("Light"); setCurrentMonth(shiftMonth(currentMonth, delta)); };
 
   return (
     <SafeAreaView style={s.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
-        {/* TOP BAR */}
+        {/* ── TOP BAR ── */}
         <View style={s.topBar}>
           <Text style={s.logo}>OVERVIEW</Text>
+          <Pressable onPress={() => router.push("/(tabs)/budget")} style={s.editBudgetBtn}>
+            <Edit3 size={14} color="#000" strokeWidth={2.5} />
+            <Text style={s.editBudgetText}>EDIT BUDGET</Text>
+          </Pressable>
         </View>
 
-        {/* Month nav */}
+        {/* ── MONTH NAV ── */}
         <View style={s.monthNav}>
           <Pressable onPress={() => navigate(-1)} hitSlop={16}><ChevronLeft size={20} color={colors.textSecondary} /></Pressable>
           <Text style={s.monthLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
           <Pressable onPress={() => navigate(1)} hitSlop={16}><ChevronRight size={20} color={colors.textSecondary} /></Pressable>
         </View>
 
-        {/* Big 3 stats - shield-scan full bleed style */}
-        <View style={s.statsRow}>
-          <View style={[s.statBlock, { backgroundColor: colors.primary }]}>
-            <Text style={s.statNum}>{formatCurrency(totalIncome)}</Text>
-            <Text style={s.statLabel}>INCOME</Text>
+        {/* ── INCOME vs EXPENSES CHART ── */}
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionHeaderText}>// INCOME vs EXPENSES</Text>
+        </View>
+        <ComparisonBar
+          leftLabel="ACTUAL INCOME"
+          leftAmount={actualIncome}
+          rightLabel="ACTUAL SPENT"
+          rightAmount={actualExpenses}
+          leftColor={colors.primary}
+          rightColor={colors.red}
+        />
+        <View style={s.netRow}>
+          <Text style={s.netLabel}>NET CASH FLOW</Text>
+          <Text style={[s.netValue, { color: netCashFlow >= 0 ? colors.primary : colors.red }]}>
+            {netCashFlow >= 0 ? "+" : ""}{formatCurrency(netCashFlow)}
+          </Text>
+        </View>
+
+        {/* ── EXPECTED vs ACTUAL ── */}
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionHeaderText}>// EXPECTED THIS MONTH</Text>
+          <Text style={s.sectionHeaderRight}>{formatCurrency(expectedIncome)}</Text>
+        </View>
+        <View style={s.expectRow}>
+          <View style={[s.expectBlock, { borderColor: colors.primary }]}>
+            <Text style={s.expectLabel}>EXPECTED IN</Text>
+            <Text style={[s.expectNum, { color: colors.primary }]}>{formatCurrency(expectedIncome)}</Text>
+            <Text style={s.expectSub}>RECEIVED: {formatCurrency(actualIncome)}</Text>
+            <View style={s.expectBar}>
+              <View style={[s.expectBarFill, { width: `${Math.min((actualIncome / Math.max(expectedIncome, 1)) * 100, 100)}%` as any, backgroundColor: colors.primary }]} />
+            </View>
           </View>
-          <View style={[s.statBlock, { backgroundColor: colors.red }]}>
-            <Text style={s.statNum}>{formatCurrency(totalSpent)}</Text>
-            <Text style={s.statLabel}>SPENT</Text>
-          </View>
-          <View style={[s.statBlock, { backgroundColor: net >= 0 ? "#1a1a1a" : colors.red, borderWidth: net >= 0 ? 2 : 0, borderColor: colors.primary }]}>
-            <Text style={[s.statNum, { color: net >= 0 ? colors.primary : "#000" }]}>{formatCurrency(net)}</Text>
-            <Text style={[s.statLabel, { color: net >= 0 ? colors.textSecondary : "rgba(0,0,0,0.6)" }]}>LEFT</Text>
+          <View style={[s.expectBlock, { borderColor: colors.red }]}>
+            <Text style={s.expectLabel}>EXPECTED OUT</Text>
+            <Text style={[s.expectNum, { color: colors.red }]}>{formatCurrency(totalFixedExpected + totalFlexBudget)}</Text>
+            <Text style={s.expectSub}>SPENT: {formatCurrency(actualExpenses)}</Text>
+            <View style={s.expectBar}>
+              <View style={[s.expectBarFill, { width: `${Math.min((actualExpenses / Math.max(totalFixedExpected + totalFlexBudget, 1)) * 100, 100)}%` as any, backgroundColor: colors.red }]} />
+            </View>
           </View>
         </View>
 
-        {/* Fixed bills */}
-        {fixedCats.length > 0 && (
-          <>
-            <View style={s.blockHeader}>
-              <Text style={s.blockHeaderText}>// FIXED BILLS</Text>
-              <Text style={s.blockHeaderRight}>{formatCurrency(totalFixed)}/mo</Text>
-            </View>
-            <View style={s.block}>
-              {fixedCats.map((c) => (
-                <View key={c.id} style={s.row}>
-                  <Text style={s.rowEmoji}>{c.emoji}</Text>
-                  <Text style={s.rowName}>{c.name}</Text>
-                  {c.dueDay && <Text style={s.dueTag}>due {c.dueDay}</Text>}
-                  <Text style={s.rowAmtRed}>{formatCurrency(getMonthlyAmount(c.allocated, c.frequency || "monthly"))}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* Spending breakdown */}
-        {catSpend.length > 0 && (
-          <>
-            <View style={s.blockHeader}>
-              <Text style={s.blockHeaderText}>// SPENDING BREAKDOWN</Text>
-              <Text style={s.blockHeaderRight}>{formatCurrency(totalSpent)}</Text>
-            </View>
-            <View style={s.block}>
-              {catSpend.map(([cat, amt]) => {
-                const budget = flexBudgets[cat] ?? 0;
-                const isOver = budget > 0 && amt > budget;
-                const pct = budget > 0 ? Math.min(amt / budget, 1) : 0;
-                return (
-                  <View key={cat} style={s.catRow}>
-                    <View style={s.catTop}>
-                      <Text style={s.catName}>{cat.toUpperCase()}</Text>
-                      <Text style={[s.catAmt, isOver && { color: colors.red }]}>
-                        {formatCurrency(amt)}{budget > 0 && <Text style={s.catOf}> / {formatCurrency(budget)}</Text>}
-                      </Text>
-                    </View>
-                    {budget > 0 && (
-                      <View style={s.barTrack}>
-                        <View style={[s.barFill, { width: `${pct * 100}%` as any, backgroundColor: isOver ? colors.red : colors.primary }]} />
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          </>
-        )}
-
-        {/* Income sources */}
-        {incomeBySource.length > 0 && (
-          <>
-            <View style={s.blockHeader}>
-              <Text style={s.blockHeaderText}>// INCOME SOURCES</Text>
-              <Text style={s.blockHeaderRight}>{formatCurrency(totalIncome)}</Text>
-            </View>
-            <View style={s.block}>
-              {incomeBySource.map(([label, amt]) => (
-                <View key={label} style={s.row}>
-                  <View style={s.greenDot} />
-                  <Text style={s.rowName}>{label}</Text>
-                  <Text style={s.rowAmtGreen}>+{formatCurrency(amt)}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* Debt snowball */}
-        {debts.length > 0 && (
-          <>
-            <View style={s.blockHeader}>
-              <Text style={s.blockHeaderText}>// DEBT SNOWBALL</Text>
-              <Text style={s.blockHeaderRight}>{formatCurrency(totalDebt)}</Text>
-            </View>
-            <View style={s.block}>
-              {debts.slice().sort((a, b) => a.balance - b.balance).map((d, i) => (
-                <View key={d.id} style={s.debtRow}>
-                  <View style={[s.debtNum, i === 0 && { backgroundColor: colors.primary }]}>
-                    <Text style={[s.debtNumText, i === 0 && { color: "#000" }]}>{i + 1}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.debtName}>{d.name}</Text>
-                    <Text style={s.debtMin}>min ${d.minimumPayment}/mo</Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={s.debtBal}>{formatCurrency(d.balance)}</Text>
-                    {i === 0 && <Text style={s.targetTag}>TARGET</Text>}
-                  </View>
-                </View>
-              ))}
-              <View style={s.row}>
-                <Text style={s.rowName}>MIN PAYMENTS</Text>
-                <Text style={s.rowAmtRed}>{formatCurrency(totalMin)}/mo</Text>
+        {/* ── BILLS STATUS ── */}
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionHeaderText}>// FIXED BILLS</Text>
+          <Text style={s.sectionHeaderRight}>{formatCurrency(totalBillsPaid)} / {formatCurrency(totalFixedExpected)}</Text>
+        </View>
+        <View style={s.billsSummary}>
+          <View style={s.billsBar}>
+            <View style={[s.billsBarFill, { width: `${Math.min((totalBillsPaid / Math.max(totalFixedExpected, 1)) * 100, 100)}%` as any }]} />
+          </View>
+          <Text style={s.billsPct}>
+            {Math.round((totalBillsPaid / Math.max(totalFixedExpected, 1)) * 100)}% PAID
+          </Text>
+        </View>
+        {fixedCats.map((c) => {
+          const expected = getMonthlyAmount(c.allocated, c.frequency || "monthly");
+          const paid = billsPaid[c.name] ?? 0;
+          const isPaid = paid >= expected * 0.95; // 95% threshold
+          return (
+            <View key={c.id} style={[s.billRow, isPaid && s.billRowPaid]}>
+              <Text style={s.billEmoji}>{c.emoji}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.billName, isPaid && s.billStrike]}>{c.name}</Text>
+                {c.dueDay != null && <Text style={s.billDue}>due {c.dueDay}</Text>}
               </View>
-              {snowballMonths > 0 && extra > 0 && (
-                <View style={[s.row, { backgroundColor: "rgba(0,255,204,0.05)" }]}>
-                  <Text style={s.rowName}>DEBT FREE IN</Text>
-                  <Text style={s.rowAmtGreen}>~{snowballMonths} months</Text>
-                </View>
+              {isPaid ? (
+                <Text style={s.billPaidTag}>PAID</Text>
+              ) : (
+                <Text style={s.billAmt}>{formatCurrency(expected)}</Text>
               )}
             </View>
+          );
+        })}
+
+        {/* ── SPENDING CHART ── */}
+        {catSpend.length > 0 && (
+          <>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionHeaderText}>// SPENDING BY CATEGORY</Text>
+              <Text style={s.sectionHeaderRight}>{formatCurrency(catSpend.reduce((s, [, a]) => s + a, 0))}</Text>
+            </View>
+            {catSpend.map(([cat, amt]) => (
+              <HBar
+                key={cat}
+                label={cat}
+                amount={amt}
+                maxAmount={Math.max(maxCatSpend, flexBudgets[cat] ?? 0)}
+                color={colors.yellow}
+                budget={flexBudgets[cat]}
+              />
+            ))}
+          </>
+        )}
+
+        {/* ── INCOME SOURCES CHART ── */}
+        {incomeBySource.length > 0 && (
+          <>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionHeaderText}>// INCOME SOURCES</Text>
+              <Text style={s.sectionHeaderRight}>{formatCurrency(actualIncome)}</Text>
+            </View>
+            {incomeBySource.map(([label, amt]) => (
+              <HBar
+                key={label}
+                label={label}
+                amount={amt}
+                maxAmount={maxIncome}
+                color={colors.primary}
+              />
+            ))}
+          </>
+        )}
+
+        {/* ── DEBT SNAPSHOT ── */}
+        {debts.length > 0 && (
+          <>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionHeaderText}>// DEBT</Text>
+              <Text style={s.sectionHeaderRight}>{formatCurrency(debts.reduce((s, d) => s + d.balance, 0))}</Text>
+            </View>
+            {debts.slice().sort((a, b) => a.balance - b.balance).map((d, i) => (
+              <View key={d.id} style={s.debtRow}>
+                <View style={[s.debtNum, i === 0 && { backgroundColor: colors.primary }]}>
+                  <Text style={[s.debtNumText, i === 0 && { color: "#000" }]}>{i + 1}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.debtName}>{d.name}</Text>
+                  <Text style={s.debtMin}>min ${d.minimumPayment}/mo</Text>
+                </View>
+                <Text style={s.debtBal}>{formatCurrency(d.balance)}</Text>
+              </View>
+            ))}
           </>
         )}
 
@@ -220,51 +309,84 @@ export default function OverviewScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
+
+  // Top bar
   topBar: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
     borderBottomWidth: 1, borderBottomColor: "rgba(0,255,204,0.15)",
   },
-  logo: { color: colors.primary, fontSize: 24, fontWeight: "900", letterSpacing: 8 },
+  logo: { color: colors.primary, fontSize: 24, fontWeight: "900", letterSpacing: 8, fontFamily: fonts.heading as any },
+  editBudgetBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: colors.primary, paddingVertical: 8, paddingHorizontal: 12,
+  },
+  editBudgetText: { color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
+
+  // Month nav
   monthNav: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: spacing.lg, paddingVertical: 14,
     borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)",
   },
-  monthLabel: { color: colors.white, fontSize: 14, fontWeight: "800", letterSpacing: 2 },
-  statsRow: { flexDirection: "row" },
-  statBlock: { flex: 1, padding: spacing.md, alignItems: "center", gap: 4 },
-  statNum: { color: "#000", fontSize: 20, fontWeight: "900" },
-  statLabel: { color: "rgba(0,0,0,0.5)", fontSize: 9, fontWeight: "900", letterSpacing: 2 },
-  blockHeader: {
+  monthLabel: { color: colors.white, fontSize: 14, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
+
+  // Net row
+  netRow: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingHorizontal: spacing.lg, paddingVertical: 12,
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  netLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  netValue: { fontSize: 18, fontWeight: "900", fontFamily: fonts.mono as any },
+
+  // Section headers
+  sectionHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: spacing.lg, paddingVertical: 10,
     borderTopWidth: 1, borderBottomWidth: 1, borderColor: "rgba(0,255,204,0.15)",
     backgroundColor: "rgba(0,255,204,0.03)", marginTop: 2,
   },
-  blockHeaderText: { color: colors.primary, fontSize: 11, fontWeight: "700", letterSpacing: 3 },
-  blockHeaderRight: { color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
-  block: { borderBottomWidth: 1, borderBottomColor: "rgba(0,255,204,0.08)" },
-  row: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingHorizontal: spacing.lg, paddingVertical: 14,
+  sectionHeaderText: { color: colors.primary, fontSize: 11, fontWeight: "700", letterSpacing: 3, fontFamily: fonts.mono as any },
+  sectionHeaderRight: { color: colors.textSecondary, fontSize: 12, fontWeight: "600", fontFamily: fonts.mono as any },
+
+  // Expected blocks
+  expectRow: { flexDirection: "row", gap: 1 },
+  expectBlock: {
+    flex: 1, padding: spacing.md, gap: 6,
+    backgroundColor: "rgba(255,255,255,0.02)", borderBottomWidth: 2,
+  },
+  expectLabel: { color: colors.textSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  expectNum: { fontSize: 20, fontWeight: "900", fontFamily: fonts.mono as any },
+  expectSub: { color: colors.textSecondary, fontSize: 10, fontFamily: fonts.mono as any },
+  expectBar: { height: 4, backgroundColor: "rgba(255,255,255,0.06)" },
+  expectBarFill: { height: 4 },
+
+  // Bills summary
+  billsSummary: {
+    paddingHorizontal: spacing.lg, paddingVertical: 12, gap: 6,
     borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)",
   },
-  rowEmoji: { fontSize: 16, width: 26 },
-  rowName: { flex: 1, color: colors.white, fontSize: 14, fontWeight: "500" },
-  dueTag: { color: colors.textSecondary, fontSize: 11 },
-  rowAmtRed: { color: colors.red, fontSize: 15, fontWeight: "800" },
-  rowAmtGreen: { color: colors.primary, fontSize: 15, fontWeight: "800" },
-  greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  catRow: {
-    paddingHorizontal: spacing.lg, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)", gap: 6,
+  billsBar: { height: 8, backgroundColor: "rgba(255,255,255,0.06)" },
+  billsBarFill: { height: 8, backgroundColor: colors.primary },
+  billsPct: { color: colors.textSecondary, fontSize: 10, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+
+  // Bill rows
+  billRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: spacing.lg, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)",
   },
-  catTop: { flexDirection: "row", alignItems: "center" },
-  catName: { flex: 1, color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 1 },
-  catAmt: { color: colors.white, fontSize: 14, fontWeight: "800" },
-  catOf: { color: colors.textSecondary, fontWeight: "400", fontSize: 12 },
-  barTrack: { height: 4, backgroundColor: "rgba(255,255,255,0.08)" },
-  barFill: { height: 4 },
+  billRowPaid: { opacity: 0.4 },
+  billEmoji: { fontSize: 14, width: 22 },
+  billName: { color: colors.white, fontSize: 13, fontWeight: "600", fontFamily: fonts.body as any },
+  billStrike: { textDecorationLine: "line-through", color: colors.textSecondary },
+  billDue: { color: colors.textSecondary, fontSize: 10, fontFamily: fonts.mono as any },
+  billAmt: { color: colors.red, fontSize: 14, fontWeight: "800", fontFamily: fonts.mono as any },
+  billPaidTag: { color: colors.primary, fontSize: 10, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
+
+  // Debt
   debtRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingHorizontal: spacing.lg, paddingVertical: 14,
@@ -274,9 +396,8 @@ const s = StyleSheet.create({
     width: 28, height: 28, alignItems: "center", justifyContent: "center",
     borderWidth: 1, borderColor: colors.cardBorder,
   },
-  debtNumText: { color: colors.textSecondary, fontSize: 12, fontWeight: "900" },
-  debtName: { color: colors.white, fontSize: 14, fontWeight: "700" },
-  debtMin: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
-  debtBal: { color: colors.red, fontSize: 16, fontWeight: "900" },
-  targetTag: { color: colors.primary, fontSize: 9, fontWeight: "900", letterSpacing: 2, marginTop: 2 },
+  debtNumText: { color: colors.textSecondary, fontSize: 12, fontWeight: "900", fontFamily: fonts.mono as any },
+  debtName: { color: colors.white, fontSize: 14, fontWeight: "700", fontFamily: fonts.body as any },
+  debtMin: { color: colors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: fonts.mono as any },
+  debtBal: { color: colors.red, fontSize: 16, fontWeight: "900", fontFamily: fonts.mono as any },
 });
