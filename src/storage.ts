@@ -150,7 +150,7 @@ export async function addTransaction(txn: Transaction): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  await supabase.from("transactions").insert({
+  const { error } = await supabase.from("transactions").insert({
     id: txn.id,
     user_id: user.id,
     type: txn.type,
@@ -161,6 +161,10 @@ export async function addTransaction(txn: Transaction): Promise<void> {
     created_at: txn.createdAt,
     account_tag: txn.accountTag || null,
   });
+  if (error) {
+    console.error("Supabase insert error:", error);
+    throw error;
+  }
 }
 
 export async function addTransactions(txns: Transaction[]): Promise<void> {

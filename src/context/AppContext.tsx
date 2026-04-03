@@ -127,7 +127,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
       try {
         await storage.addTransaction(txn);
-      } catch {
+      } catch (err) {
+        console.error("addTransaction failed:", err);
         // Rollback on failure
         setState((prev) => ({
           ...prev,
