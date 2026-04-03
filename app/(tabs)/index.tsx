@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, X, Check, Settings } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, X, Check, Settings, ArrowLeftRight } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { impact, notification } from "../../src/lib/haptics";
 import { colors, spacing, fonts } from "../../src/theme";
@@ -200,6 +200,148 @@ const ps = StyleSheet.create({
   acctPillTextActive: { color: colors.primary },
 });
 
+function TransferModal({ visible, onClose, accounts, onTransfer }: {
+  visible: boolean;
+  onClose: () => void;
+  accounts: { id: string; label: string; emoji: string }[];
+  onTransfer: (from: string, to: string, amount: number, note?: string) => void;
+}) {
+  const [from, setFrom] = useState<string | undefined>(undefined);
+  const [to, setTo] = useState<string | undefined>(undefined);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+
+  const handleTransfer = () => {
+    const parsed = parseFloat(amount);
+    if (!from || !to || !parsed || parsed <= 0) return;
+    onTransfer(from, to, parsed, note.trim() || undefined);
+    setFrom(undefined);
+    setTo(undefined);
+    setAmount("");
+    setNote("");
+  };
+
+  const handleClose = () => {
+    setFrom(undefined);
+    setTo(undefined);
+    setAmount("");
+    setNote("");
+    onClose();
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal transparent animationType="slide" onRequestClose={handleClose}>
+      <Pressable style={ts.overlay} onPress={handleClose}>
+        <Pressable style={ts.sheet} onPress={(e) => e.stopPropagation()}>
+          <View style={ts.header}>
+            <ArrowLeftRight size={20} color={colors.primary} />
+            <Text style={ts.title}>TRANSFER</Text>
+            <Pressable onPress={handleClose} hitSlop={12}>
+              <X size={18} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          {/* Amount */}
+          <View style={ts.amountRow}>
+            <Text style={ts.dollar}>$</Text>
+            <TextInput
+              style={ts.amountInput}
+              placeholder="0.00"
+              placeholderTextColor={colors.dimmed}
+              keyboardType="decimal-pad"
+              value={amount}
+              onChangeText={setAmount}
+              autoFocus
+            />
+          </View>
+
+          {/* FROM */}
+          <Text style={ts.label}>FROM</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ts.pillRow}>
+            {accounts.map((a) => (
+              <Pressable
+                key={a.id}
+                onPress={() => { impact("Light"); setFrom(a.id); if (to === a.id) setTo(undefined); }}
+                style={[ts.pill, from === a.id && ts.pillFrom]}
+              >
+                <Text style={ts.pillEmoji}>{a.emoji}</Text>
+                <Text style={[ts.pillText, from === a.id && ts.pillTextFrom]}>{a.label.toUpperCase()}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {/* TO */}
+          <Text style={ts.label}>TO</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ts.pillRow}>
+            {accounts.filter((a) => a.id !== from).map((a) => (
+              <Pressable
+                key={a.id}
+                onPress={() => { impact("Light"); setTo(a.id); }}
+                style={[ts.pill, to === a.id && ts.pillTo]}
+              >
+                <Text style={ts.pillEmoji}>{a.emoji}</Text>
+                <Text style={[ts.pillText, to === a.id && ts.pillTextTo]}>{a.label.toUpperCase()}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {/* Note */}
+          <TextInput
+            style={ts.noteInput}
+            placeholder="What's it for? (optional)"
+            placeholderTextColor={colors.dimmed}
+            value={note}
+            onChangeText={setNote}
+          />
+
+          {/* Transfer button */}
+          <Pressable
+            onPress={handleTransfer}
+            style={[ts.btn, (!from || !to || !amount) && ts.btnDisabled]}
+          >
+            <Text style={ts.btnText}>TRANSFER</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const ts = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: "#050505", borderTopWidth: 2, borderTopColor: "#6366f1",
+    padding: spacing.lg, paddingBottom: Platform.OS === "web" ? spacing.xl : 52, gap: 14,
+  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  title: { flex: 1, color: colors.white, fontSize: 16, fontWeight: "900", letterSpacing: 3, marginLeft: 10, fontFamily: fonts.heading as any },
+  amountRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  dollar: { color: colors.primary, fontSize: 36, fontWeight: "900", fontFamily: fonts.mono as any },
+  amountInput: { flex: 1, color: colors.white, fontSize: 36, fontWeight: "900", fontFamily: fonts.mono as any },
+  label: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 3, fontFamily: fonts.mono as any },
+  pillRow: { gap: 6 },
+  pill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: "#1c1c1c", backgroundColor: "#0a0a0a",
+  },
+  pillFrom: { borderColor: colors.red, backgroundColor: "rgba(255,0,60,0.1)" },
+  pillTo: { borderColor: colors.primary, backgroundColor: "rgba(0,255,204,0.1)" },
+  pillEmoji: { fontSize: 14 },
+  pillText: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1.5, fontFamily: fonts.mono as any },
+  pillTextFrom: { color: colors.red },
+  pillTextTo: { color: colors.primary },
+  noteInput: {
+    backgroundColor: "#0a0a0a", borderWidth: 1, borderColor: "#1c1c1c",
+    padding: spacing.md, color: colors.white, fontSize: 14, fontFamily: fonts.body as any,
+  },
+  btn: { backgroundColor: "#6366f1", paddingVertical: 16, alignItems: "center" },
+  btnDisabled: { opacity: 0.3 },
+  btnText: { color: colors.white, fontSize: 15, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.heading as any },
+});
+
 export default function HomeScreen() {
   const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction, userAccounts } = useApp();
   const router = useRouter();
@@ -208,6 +350,7 @@ export default function HomeScreen() {
   const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
   const [payingBill, setPayingBill] = useState<BudgetCategory | null>(null);
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
+  const [transferVisible, setTransferVisible] = useState(false);
 
   const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
 
@@ -307,6 +450,25 @@ export default function HomeScreen() {
     setPayingBill(null);
   };
 
+  const handleTransfer = async (fromId: string, toId: string, amount: number, transferNote?: string) => {
+    const fromName = userAccounts.find((a) => a.id === fromId)?.label ?? "Account";
+    const toName = userAccounts.find((a) => a.id === toId)?.label ?? "Account";
+    const note = transferNote || `${fromName} → ${toName}`;
+    const amt = Math.round(amount * 100) / 100;
+    const now = new Date().toISOString();
+
+    notification("Success");
+    await addTransaction({
+      id: generateId(), type: "transfer", amount: amt,
+      category: "transfer", note, date: now, createdAt: now, accountTag: fromId,
+    });
+    await addTransaction({
+      id: generateId(), type: "transfer", amount: amt,
+      category: "transfer", note, date: now, createdAt: now, accountTag: toId,
+    });
+    setTransferVisible(false);
+  };
+
   const netIsPositive = weekNet >= 0;
 
   return (
@@ -324,6 +486,11 @@ export default function HomeScreen() {
               <View style={s.paydayChip}>
                 <Text style={s.paydayText}>$ PAYDAY</Text>
               </View>
+            )}
+            {userAccounts.length >= 2 && (
+              <Pressable onPress={() => setTransferVisible(true)} style={s.transferBtn}>
+                <ArrowLeftRight size={16} color="#6366f1" strokeWidth={2.5} />
+              </Pressable>
             )}
             <Pressable onPress={() => router.push("/(tabs)/settings")} style={s.settingsBtn}>
               <Settings size={18} color={colors.primary} strokeWidth={2} />
@@ -545,6 +712,13 @@ export default function HomeScreen() {
           accounts={userAccounts}
         />
       )}
+
+      <TransferModal
+        visible={transferVisible}
+        onClose={() => setTransferVisible(false)}
+        accounts={userAccounts}
+        onTransfer={handleTransfer}
+      />
     </SafeAreaView>
   );
 }
@@ -565,6 +739,10 @@ const s = StyleSheet.create({
   logoSub: {
     color: colors.textSecondary, fontSize: 12, letterSpacing: 4, marginTop: 1,
     fontFamily: fonts.mono as any,
+  },
+  transferBtn: {
+    width: 36, height: 36, alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(99,102,241,0.4)", backgroundColor: "rgba(99,102,241,0.08)",
   },
   settingsBtn: {
     width: 36, height: 36, alignItems: "center", justifyContent: "center",
