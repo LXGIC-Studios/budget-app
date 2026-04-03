@@ -503,6 +503,7 @@ export default function BudgetScreen() {
       {/* Edit modal - full CRUD */}
       <Modal visible={!!editCat} transparent animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={() => setEditCat(null)}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>EDIT CATEGORY</Text>
 
@@ -671,6 +672,7 @@ export default function BudgetScreen() {
               <Text style={styles.deleteBtnText}>DELETE CATEGORY</Text>
             </Pressable>
           </Pressable>
+          </ScrollView>
         </Pressable>
       </Modal>
 
@@ -942,9 +944,13 @@ const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
+  },
+  modalScrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.lg,
+    paddingVertical: 40,
   },
   modalCard: {
     backgroundColor: '#0c0c0c',

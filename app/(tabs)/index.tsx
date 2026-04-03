@@ -26,6 +26,7 @@ import {
   formatShortDate,
   getMonthlyAmount,
   generateId,
+  formatDueDay,
 } from "../../src/utils";
 import type { Transaction, BudgetCategory } from "../../src/types";
 
@@ -74,7 +75,7 @@ function PayBillModal({ bill, onClose, onQuickPay, onCustomPay, accounts }: {
               <Text style={ps.headerEmoji}>{bill.emoji}</Text>
               <View>
                 <Text style={ps.headerName}>{bill.name.toUpperCase()}</Text>
-                <Text style={ps.headerSub}>DUE {bill.dueDay ? `THE ${bill.dueDay}TH` : "THIS WEEK"}</Text>
+                <Text style={ps.headerSub}>{bill.dueDay ? formatDueDay(bill.dueDay).toUpperCase() : "DUE THIS WEEK"}</Text>
               </View>
             </View>
             <Pressable onPress={onClose} hitSlop={12}>
@@ -603,7 +604,7 @@ export default function HomeScreen() {
                   <Text style={s.billEmoji}>{c.emoji}</Text>
                   <View style={s.billMid}>
                     <Text style={[s.billName, isPaid && s.strike]}>{c.name.toUpperCase()}</Text>
-                    <Text style={s.rowSub}>DUE {c.dueDay} - {isPaid ? "PAID" : "TAP TO PAY"}</Text>
+                    <Text style={s.rowSub}>{c.dueDay ? formatDueDay(c.dueDay).toUpperCase() : "DUE THIS WEEK"} - {isPaid ? "PAID" : "TAP TO PAY"}</Text>
                   </View>
                   {isPaid ? (
                     <View style={s.paidPill}>
