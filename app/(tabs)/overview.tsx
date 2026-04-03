@@ -161,21 +161,68 @@ export default function OverviewScreen() {
     [transactions, currentMonth, accountFilter, mode, customStart, customEnd]
   );
 
-  const actualIncome = useMemo(() => filteredTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [filteredTxns]);
-  const actualExpenses = useMemo(() => filteredTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [filteredTxns]);
+  // Only count income/expenses up to TODAY (not future-dated entries)
+  const now = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
+  const pastTxns = useMemo(() => filteredTxns.filter((t) => new Date(t.date) <= todayEnd), [filteredTxns]);
+
+  const actualIncome = useMemo(() => pastTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [pastTxns]);
+  const actualExpenses = useMemo(() => pastTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [pastTxns]);
+
+  // All expense categories (for charts)
+  const allExpenseTxns = useMemo(() => pastTxns.filter((t) => t.type === "expense"), [pastTxns]);
+
+  // Spending by flex category (exclude bill payments)
   const catSpend = useMemo(() => {
     const map: Record<string, number> = {};
-    filteredTxns.filter((t) => t.type === "expense").forEach((t) => {
+    allExpenseTxns.forEach((t) => {
       if (t.note?.startsWith("Paid:") || t.note?.endsWith("- marked paid") || t.note?.endsWith("- paid")) return;
       if (t.category.toLowerCase() === "bills") return;
       const k = t.category.toLowerCase();
       map[k] = (map[k] ?? 0) + t.amount;
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [filteredTxns]);
+  }, [allExpenseTxns]);
 
   const maxCatSpend = catSpend.length > 0 ? Math.max(catSpend[0][1], ...catSpend.map(([k]) => flexBudgets[k] ?? 0)) : 0;
+
+  // ALL spending by category (including bills, for the full breakdown chart)
+  const fullSpend = useMemo(() => {
+    const map: Record<string, number> = {};
+    allExpenseTxns.forEach((t) => {
+      const k = t.note?.startsWith("Paid:") ? t.note.replace("Paid: ", "").toLowerCase() : t.category.toLowerCase();
+      map[k] = (map[k] ?? 0) + t.amount;
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [allExpenseTxns]);
+  const maxFullSpend = fullSpend.length > 0 ? fullSpend[0][1] : 0;
+
+  // Daily spending for the last 7 days (mini trend)
+  const dailySpend = useMemo(() => {
+    const days: { label: string; amount: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+      const total = pastTxns
+        .filter((t) => t.type === "expense" && t.date.startsWith(key))
+        .reduce((s, t) => s + t.amount, 0);
+      days.push({ label: dayLabel, amount: total });
+    }
+    return days;
+  }, [pastTxns]);
+  const maxDaily = Math.max(...dailySpend.map((d) => d.amount), 1);
+
+  // Budget utilization (how much of each flex budget used)
+  const budgetUtil = useMemo(() => {
+    return flexCats.map((c) => {
+      const budget = getMonthlyAmount(c.allocated, c.frequency || "monthly");
+      const spent = catSpend.find(([k]) => k === c.name.toLowerCase())?.[1] ?? 0;
+      return { name: c.name, emoji: c.emoji, budget, spent, pct: budget > 0 ? spent / budget : 0 };
+    }).sort((a, b) => b.pct - a.pct);
+  }, [flexCats, catSpend]);
 
   const navigate = (delta: number) => { impact("Light"); setCurrentMonth(shiftMonth(currentMonth, delta)); };
 
@@ -271,6 +318,66 @@ export default function OverviewScreen() {
                 color={colors.yellow}
                 budget={flexBudgets[cat]}
               />
+            ))}
+          </>
+        )}
+
+        {/* ── 7-DAY SPENDING TREND ── */}
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionText}>// LAST 7 DAYS</Text>
+        </View>
+        <View style={{ flexDirection: "row", paddingHorizontal: spacing.lg, paddingVertical: 14, gap: 4, height: 140, alignItems: "flex-end" }}>
+          {dailySpend.map((day, i) => {
+            const pct = maxDaily > 0 ? (day.amount / maxDaily) * 100 : 0;
+            const isToday = i === 6;
+            return (
+              <View key={i} style={{ flex: 1, alignItems: "center", gap: 4 }}>
+                <Text style={{ color: isToday ? colors.primary : "#bbb", fontSize: 11, fontWeight: "800", fontFamily: fonts.mono as any }}>
+                  {day.amount > 0 ? `$${Math.round(day.amount)}` : ""}
+                </Text>
+                <View style={{ flex: 1, width: "100%", backgroundColor: "#1a1a1a", justifyContent: "flex-end" }}>
+                  <View style={{ height: `${Math.max(pct, 2)}%` as any, backgroundColor: isToday ? colors.primary : colors.yellow }} />
+                </View>
+                <Text style={{ color: isToday ? colors.primary : "#aaa", fontSize: 10, fontWeight: "700", fontFamily: fonts.mono as any }}>{day.label}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* ── WHERE ALL THE MONEY WENT (full breakdown) ── */}
+        {fullSpend.length > 0 && (
+          <>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionText}>// ALL EXPENSES</Text>
+              <Text style={s.sectionRight}>{formatCurrency(actualExpenses)}</Text>
+            </View>
+            {fullSpend.slice(0, 10).map(([cat, amt]) => (
+              <Bar key={cat} label={cat} amount={amt} max={maxFullSpend} color={colors.red} />
+            ))}
+          </>
+        )}
+
+        {/* ── BUDGET UTILIZATION ── */}
+        {budgetUtil.length > 0 && (
+          <>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionText}>// BUDGET HEALTH</Text>
+            </View>
+            {budgetUtil.map((b) => (
+              <View key={b.name} style={{ paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)", gap: 4 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ color: colors.white, fontSize: 14, fontWeight: "800", fontFamily: fonts.mono as any }}>{b.emoji} {b.name.toUpperCase()}</Text>
+                  <Text style={{ color: b.pct > 1 ? colors.red : b.pct > 0.8 ? colors.yellow : colors.primary, fontSize: 15, fontWeight: "900", fontFamily: fonts.mono as any }}>
+                    {Math.round(b.pct * 100)}%
+                  </Text>
+                </View>
+                <View style={{ height: 8, backgroundColor: "#1a1a1a" }}>
+                  <View style={{ height: 8, width: `${Math.min(b.pct * 100, 100)}%` as any, backgroundColor: b.pct > 1 ? colors.red : b.pct > 0.8 ? colors.yellow : colors.primary }} />
+                </View>
+                <Text style={{ color: "#aaa", fontSize: 12, fontFamily: fonts.mono as any }}>
+                  {formatCurrency(b.spent)} / {formatCurrency(b.budget)}
+                </Text>
+              </View>
             ))}
           </>
         )}
