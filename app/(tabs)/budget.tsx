@@ -33,13 +33,13 @@ function CategoryRow({
   spent,
   displayAllocated,
   onPress,
-  onMarkPaid,
+  accountLabel,
 }: {
   cat: BudgetCategory;
   spent: number;
   displayAllocated: number;
   onPress: () => void;
-  onMarkPaid?: () => void;
+  accountLabel?: { emoji: string; label: string } | null;
 }) {
   const pct = displayAllocated > 0 ? Math.min(spent / displayAllocated, 1.5) : 0;
   const isOver = spent > displayAllocated;
@@ -112,24 +112,16 @@ function CategoryRow({
           ]}
         />
       </View>
-      {/* Mark Paid button for fixed bills */}
-      {cat.type === "fixed" && displayAllocated > 0 && (
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation();
-            if (!isPaid && onMarkPaid) {
-              onMarkPaid();
-            }
-          }}
-          style={[
-            styles.markPaidBtn,
-            isPaid && styles.markPaidBtnDone,
-          ]}
-        >
-          <Text style={[styles.markPaidText, isPaid && styles.markPaidTextDone]}>
-            {isPaid ? "PAID ✓" : "MARK PAID"}
-          </Text>
-        </Pressable>
+      {/* Account tag indicator */}
+      {accountLabel && (
+        <View style={styles.acctTagRow}>
+          <Text style={styles.acctTagText}>{accountLabel.emoji} {accountLabel.label.toUpperCase()}</Text>
+        </View>
+      )}
+      {cat.type === "fixed" && !accountLabel && (
+        <View style={styles.acctTagRowEmpty}>
+          <Text style={styles.acctTagTextEmpty}>NO ACCOUNT SET</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -446,6 +438,7 @@ export default function BudgetScreen() {
         {fixedCategories.map((cat) => {
           const catKey = cat.name.toLowerCase();
           const displayAllocated = getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
+          const acctInfo = cat.defaultAccountTag ? userAccounts.find((a) => a.id === cat.defaultAccountTag) : null;
           return (
             <CategoryRow
               key={cat.id}
@@ -453,7 +446,7 @@ export default function BudgetScreen() {
               spent={spentByCategory[catKey] || 0}
               displayAllocated={displayAllocated}
               onPress={() => openEdit(cat)}
-              onMarkPaid={() => handleMarkPaid(cat)}
+              accountLabel={acctInfo ? { emoji: acctInfo.emoji, label: acctInfo.label } : null}
             />
           );
         })}
@@ -1160,27 +1153,37 @@ const styles = StyleSheet.create({
   acctPillTextActive: {
     color: colors.primary,
   },
-  // Mark Paid button
-  markPaidBtn: {
-    paddingVertical: 8,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 204, 0.25)',
-    borderRadius: 2,
-    backgroundColor: 'rgba(0, 255, 204, 0.06)',
+  // Account tag on card
+  acctTagRow: {
     marginTop: 4,
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 204, 0.2)',
+    backgroundColor: 'rgba(0, 255, 204, 0.06)',
   },
-  markPaidBtnDone: {
-    borderColor: 'rgba(0, 255, 204, 0.15)',
-    backgroundColor: 'rgba(0, 255, 204, 0.03)',
-  },
-  markPaidText: {
+  acctTagText: {
     color: colors.primary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
-  markPaidTextDone: {
-    color: colors.textSecondary,
+  acctTagRowEmpty: {
+    marginTop: 4,
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 0, 60, 0.2)',
+    backgroundColor: 'rgba(255, 0, 60, 0.06)',
+    borderStyle: "dashed" as any,
+  },
+  acctTagTextEmpty: {
+    color: colors.red,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    opacity: 0.6,
   },
 });
