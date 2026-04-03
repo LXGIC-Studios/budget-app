@@ -56,7 +56,7 @@ function VerticalBars({ income, expenses }: { income: number; expenses: number }
           <View style={vs.barTrack}>
             <View style={[vs.barFill, { height: `${incPct}%` as any, backgroundColor: colors.primary }]} />
           </View>
-          <Text style={vs.barLabel}>BUDGET</Text>
+          <Text style={vs.barLabel}>INCOME</Text>
         </View>
         <View style={vs.barCol}>
           <Text style={[vs.amt, { color: colors.red }]}>{formatCurrency(expenses)}</Text>
@@ -116,7 +116,7 @@ function formatDateShort(d: Date): string {
 }
 
 export default function OverviewScreen() {
-  const { transactions, currentMonth, setCurrentMonth, currentBudget, profile } = useApp();
+  const { transactions, currentMonth, setCurrentMonth, currentBudget, profile, debts } = useApp();
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [mode, setMode] = useState<"month" | "custom">("month");
   const [startInput, setStartInput] = useState("");
@@ -274,6 +274,95 @@ export default function OverviewScreen() {
             ))}
           </>
         )}
+
+        {/* ── DEBT SNOWBALL ── */}
+        {debts.length > 0 && (() => {
+          const totalDebt = debts.reduce((sum, d) => sum + d.balance, 0);
+          const totalMin = debts.reduce((sum, d) => sum + d.minimumPayment, 0);
+          const sorted = [...debts].sort((a, b) => a.balance - b.balance);
+          // Simple snowball estimate
+          const extra = Math.max(0, actualIncome - actualExpenses - 200);
+          let months = 0;
+          const remaining = sorted.map((d) => ({ ...d }));
+          while (remaining.some((d) => d.balance > 0) && months < 360) {
+            months++;
+            let snowball = extra;
+            for (const d of remaining) {
+              const pay = d === remaining.find((r) => r.balance > 0) ? d.minimumPayment + snowball : d.minimumPayment;
+              d.balance = Math.max(0, d.balance - pay);
+              if (d === remaining.find((r) => r.balance > 0)) snowball = 0;
+            }
+            // Remove paid off, roll their minimums
+            for (let i = 0; i < remaining.length; i++) {
+              if (remaining[i].balance <= 0 && i < remaining.length - 1) {
+                remaining[i + 1].minimumPayment += remaining[i].minimumPayment;
+                remaining[i].minimumPayment = 0;
+              }
+            }
+          }
+          const debtFreeDate = new Date();
+          debtFreeDate.setMonth(debtFreeDate.getMonth() + months);
+
+          return (
+            <>
+              <View style={s.sectionHeader}>
+                <Text style={s.sectionText}>// DEBT SNOWBALL</Text>
+                <Text style={s.sectionRight}>{formatCurrency(totalDebt)}</Text>
+              </View>
+
+              {/* Debt progress bar */}
+              <View style={{ paddingHorizontal: spacing.lg, paddingVertical: 14, gap: 8 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: colors.white, fontSize: 14, fontWeight: "800", fontFamily: fonts.mono as any }}>TOTAL OWED</Text>
+                  <Text style={{ color: colors.red, fontSize: 18, fontWeight: "900", fontFamily: fonts.mono as any }}>{formatCurrency(totalDebt)}</Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: "#bbb", fontSize: 13, fontFamily: fonts.mono as any }}>MIN PAYMENTS</Text>
+                  <Text style={{ color: colors.white, fontSize: 15, fontWeight: "800", fontFamily: fonts.mono as any }}>{formatCurrency(totalMin)}/mo</Text>
+                </View>
+                {months > 0 && months < 360 && (
+                  <View style={{ backgroundColor: "rgba(0,255,204,0.08)", padding: 14, borderWidth: 1, borderColor: "rgba(0,255,204,0.2)", marginTop: 4 }}>
+                    <Text style={{ color: colors.primary, fontSize: 13, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any, textAlign: "center" }}>
+                      DEBT FREE: {debtFreeDate.toLocaleDateString("en-US", { month: "long", year: "numeric" }).toUpperCase()}
+                    </Text>
+                    <Text style={{ color: "#bbb", fontSize: 12, fontFamily: fonts.mono as any, textAlign: "center", marginTop: 4 }}>
+                      ~{months} months from now
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Individual debts */}
+              {sorted.map((d, i) => {
+                const maxBal = sorted[sorted.length - 1].balance || 1;
+                const pct = d.balance / maxBal;
+                const isFocus = i === 0;
+                return (
+                  <View key={d.id} style={{ paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)", gap: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <View style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center", backgroundColor: isFocus ? colors.primary : "#1a1a1a", borderWidth: isFocus ? 0 : 1, borderColor: "#333" }}>
+                        <Text style={{ color: isFocus ? "#000" : "#bbb", fontSize: 13, fontWeight: "900", fontFamily: fonts.mono as any }}>{i + 1}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.white, fontSize: 15, fontWeight: "700", fontFamily: fonts.body as any }}>{d.name}</Text>
+                        <Text style={{ color: "#aaa", fontSize: 12, fontFamily: fonts.mono as any }}>
+                          min ${d.minimumPayment}/mo  {d.interestRate > 0 ? `${d.interestRate}% APR` : ""}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={{ color: colors.red, fontSize: 17, fontWeight: "900", fontFamily: fonts.mono as any }}>{formatCurrency(d.balance)}</Text>
+                        {isFocus && <Text style={{ color: colors.primary, fontSize: 10, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any }}>TARGET</Text>}
+                      </View>
+                    </View>
+                    <View style={{ height: 8, backgroundColor: "#1a1a1a" }}>
+                      <View style={{ height: 8, width: `${pct * 100}%` as any, backgroundColor: isFocus ? colors.primary : colors.red }} />
+                    </View>
+                  </View>
+                );
+              })}
+            </>
+          );
+        })()}
 
       </ScrollView>
     </SafeAreaView>
