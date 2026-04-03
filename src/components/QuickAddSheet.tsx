@@ -35,12 +35,14 @@ interface Props {
 }
 
 export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode }: Props) {
-  const { userAccounts } = useApp();
-  const [mode, setMode] = useState<"expense" | "income">(initialMode ?? "expense");
+  const { userAccounts, addTransaction: addTxn } = useApp();
+  const [mode, setMode] = useState<"expense" | "income" | "transfer">(initialMode ?? "expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
   const [note, setNote] = useState("");
   const [accountTag, setAccountTag] = useState<string | undefined>(undefined);
+  const [transferFrom, setTransferFrom] = useState<string | undefined>(undefined);
+  const [transferTo, setTransferTo] = useState<string | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateInput, setDateInput] = useState("");
   const [initialized, setInitialized] = useState(false);
@@ -54,18 +56,21 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   // Pre-fill fields when editing or when initialMode changes
   if (visible && !initialized) {
     if (editTransaction) {
-      // Transfers display as expenses in the manual editor
-      setMode(editTransaction.type === "transfer" ? "expense" : editTransaction.type);
+      setMode(editTransaction.type);
       setAmount(String(editTransaction.amount));
       setCategory(editTransaction.category);
       setNote(editTransaction.note ?? "");
       setSelectedDate(new Date(editTransaction.date));
       setDateInput("");
       setAccountTag(editTransaction.accountTag ?? undefined);
+      setTransferFrom(undefined);
+      setTransferTo(undefined);
     } else if (initialMode) {
       setMode(initialMode);
       setCategory(initialMode === "expense" ? "food" : "salary");
       setAccountTag(undefined);
+      setTransferFrom(undefined);
+      setTransferTo(undefined);
     }
     setSplitMode(false);
     setSplitRows([]);
@@ -86,6 +91,49 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     if (!parsed || parsed <= 0) return;
 
     notification("Success");
+
+    if (mode === "transfer") {
+      // Create two linked transactions
+      const amt = Math.round(parsed * 100) / 100;
+      const fromName = userAccounts.find((a) => a.id === transferFrom)?.label ?? "Account";
+      const toName = userAccounts.find((a) => a.id === transferTo)?.label ?? "Account";
+      const transferNote = note.trim() || `${fromName} → ${toName}`;
+      const now = selectedDate.toISOString();
+      const createdAt = new Date().toISOString();
+
+      // Expense from source account
+      onSave({
+        id: generateId(),
+        type: "transfer",
+        amount: amt,
+        category: "transfer",
+        note: transferNote,
+        date: now,
+        createdAt,
+        accountTag: transferFrom,
+      });
+
+      // Income to destination account
+      addTxn({
+        id: generateId(),
+        type: "transfer",
+        amount: amt,
+        category: "transfer",
+        note: transferNote,
+        date: now,
+        createdAt,
+        accountTag: transferTo,
+      });
+
+      setAmount("");
+      setNote("");
+      setTransferFrom(undefined);
+      setTransferTo(undefined);
+      setSelectedDate(new Date());
+      setDateInput("");
+      onClose();
+      return;
+    }
 
     if (isEditing && onUpdate) {
       onUpdate(editTransaction.id, {
@@ -183,9 +231,13 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     );
   })();
 
-  const switchMode = (m: "expense" | "income") => {
+  const switchMode = (m: "expense" | "income" | "transfer") => {
     setMode(m);
-    setCategory(m === "expense" ? "food" : "salary");
+    if (m === "transfer") {
+      setCategory("transfer");
+    } else {
+      setCategory(m === "expense" ? "food" : "salary");
+    }
     impact("Light");
   };
 
@@ -457,6 +509,24 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
                 INCOME
               </Text>
             </Pressable>
+            {userAccounts.length >= 2 && (
+              <Pressable
+                onPress={() => switchMode("transfer")}
+                style={[
+                  styles.modeBtn,
+                  mode === "transfer" && styles.modeBtnActiveTransfer,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modeBtnText,
+                    mode === "transfer" && styles.modeBtnTextActiveTransfer,
+                  ]}
+                >
+                  TRANSFER
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {/* Amount */}
@@ -473,49 +543,99 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
             />
           </View>
 
-          {/* Categories - Grid */}
-          <View style={styles.catGrid}>
-            {categories.map((c) => (
-              <CategoryPill
-                key={c.id}
-                emoji={c.emoji}
-                label={c.name}
-                selected={category === c.id}
-                onPress={() => setCategory(c.id)}
+          {mode === "transfer" ? (
+            <>
+              {/* FROM account */}
+              <View>
+                <Text style={styles.transferLabel}>FROM</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
+                  {userAccounts.map((acct) => (
+                    <Pressable
+                      key={acct.id}
+                      onPress={() => { setTransferFrom(acct.id); impact("Light"); }}
+                      style={[styles.accountPill, transferFrom === acct.id && styles.accountPillActiveFrom]}
+                    >
+                      <Text style={styles.accountPillIcon}>{acct.emoji}</Text>
+                      <Text style={[styles.accountPillText, transferFrom === acct.id && styles.accountPillTextActiveFrom]}>{acct.label.toUpperCase()}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* TO account */}
+              <View>
+                <Text style={styles.transferLabel}>TO</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
+                  {userAccounts.filter((a) => a.id !== transferFrom).map((acct) => (
+                    <Pressable
+                      key={acct.id}
+                      onPress={() => { setTransferTo(acct.id); impact("Light"); }}
+                      style={[styles.accountPill, transferTo === acct.id && styles.accountPillActive]}
+                    >
+                      <Text style={styles.accountPillIcon}>{acct.emoji}</Text>
+                      <Text style={[styles.accountPillText, transferTo === acct.id && styles.accountPillTextActive]}>{acct.label.toUpperCase()}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Note */}
+              <TextInput
+                style={styles.noteInput}
+                placeholder="What's the transfer for? (optional)"
+                placeholderTextColor={colors.dimmed}
+                value={note}
+                onChangeText={setNote}
+                returnKeyType="done"
               />
-            ))}
-          </View>
+            </>
+          ) : (
+            <>
+              {/* Categories - Grid */}
+              <View style={styles.catGrid}>
+                {categories.map((c) => (
+                  <CategoryPill
+                    key={c.id}
+                    emoji={c.emoji}
+                    label={c.name}
+                    selected={category === c.id}
+                    onPress={() => setCategory(c.id)}
+                  />
+                ))}
+              </View>
 
-          {/* Note */}
-          <TextInput
-            style={styles.noteInput}
-            placeholder="What was it for? (optional)"
-            placeholderTextColor={colors.dimmed}
-            value={note}
-            onChangeText={setNote}
-            returnKeyType="done"
-          />
+              {/* Note */}
+              <TextInput
+                style={styles.noteInput}
+                placeholder="What was it for? (optional)"
+                placeholderTextColor={colors.dimmed}
+                value={note}
+                onChangeText={setNote}
+                returnKeyType="done"
+              />
 
-          {/* Account tag picker */}
-          {userAccounts.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
-              <Pressable
-                onPress={() => { setAccountTag(undefined); impact("Light"); }}
-                style={[styles.accountPill, !accountTag && styles.accountPillActive]}
-              >
-                <Text style={[styles.accountPillText, !accountTag && styles.accountPillTextActive]}>NONE</Text>
-              </Pressable>
-              {userAccounts.map((acct) => (
-                <Pressable
-                  key={acct.id}
-                  onPress={() => { setAccountTag(acct.id); impact("Light"); }}
-                  style={[styles.accountPill, accountTag === acct.id && styles.accountPillActive]}
-                >
-                  <Text style={styles.accountPillIcon}>{acct.emoji}</Text>
-                  <Text style={[styles.accountPillText, accountTag === acct.id && styles.accountPillTextActive]}>{acct.label.toUpperCase()}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+              {/* Account tag picker */}
+              {userAccounts.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
+                  <Pressable
+                    onPress={() => { setAccountTag(undefined); impact("Light"); }}
+                    style={[styles.accountPill, !accountTag && styles.accountPillActive]}
+                  >
+                    <Text style={[styles.accountPillText, !accountTag && styles.accountPillTextActive]}>NONE</Text>
+                  </Pressable>
+                  {userAccounts.map((acct) => (
+                    <Pressable
+                      key={acct.id}
+                      onPress={() => { setAccountTag(acct.id); impact("Light"); }}
+                      style={[styles.accountPill, accountTag === acct.id && styles.accountPillActive]}
+                    >
+                      <Text style={styles.accountPillIcon}>{acct.emoji}</Text>
+                      <Text style={[styles.accountPillText, accountTag === acct.id && styles.accountPillTextActive]}>{acct.label.toUpperCase()}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+            </>
           )}
 
           {/* Date */}
@@ -577,10 +697,12 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
               onPress={handleSave}
               style={[
                 styles.saveBtn,
-                !amount && styles.saveBtnDisabled,
+                (!amount || (mode === "transfer" && (!transferFrom || !transferTo))) && styles.saveBtnDisabled,
               ]}
             >
-              <Text style={styles.saveBtnText}>{isEditing ? "SAVE CHANGES" : "SAVE"}</Text>
+              <Text style={styles.saveBtnText}>
+                {mode === "transfer" ? "TRANSFER" : isEditing ? "SAVE CHANGES" : "SAVE"}
+              </Text>
             </Pressable>
           )}
 
@@ -662,6 +784,26 @@ const styles = StyleSheet.create({
   },
   modeBtnTextActiveIncome: {
     color: colors.primaryText,
+  },
+  modeBtnActiveTransfer: {
+    backgroundColor: "#6366f1",
+  },
+  modeBtnTextActiveTransfer: {
+    color: colors.white,
+  },
+  transferLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 3,
+    marginBottom: 6,
+  },
+  accountPillActiveFrom: {
+    borderColor: colors.red,
+    backgroundColor: "rgba(255,0,60,0.1)",
+  },
+  accountPillTextActiveFrom: {
+    color: colors.red,
   },
   amountRow: {
     flexDirection: "row",
