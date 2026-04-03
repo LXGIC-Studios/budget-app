@@ -207,11 +207,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const saveBudget = useCallback(
     async (budget: MonthlyBudget) => {
-      await storage.saveBudgetForMonth(budget);
+      // saveBudgetForMonth returns budget with DB-assigned IDs
+      const saved = await storage.saveBudgetForMonth(budget);
       setState((prev) => ({
         ...prev,
         currentBudget:
-          budget.month === prev.currentMonth ? budget : prev.currentBudget,
+          saved.month === prev.currentMonth ? saved : prev.currentBudget,
       }));
     },
     []

@@ -257,11 +257,11 @@ export async function getBudgetForMonth(
 
 export async function saveBudgetForMonth(
   budget: MonthlyBudget
-): Promise<void> {
+): Promise<MonthlyBudget> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return budget;
 
   // Delete existing categories for this month then insert new ones
   await supabase
@@ -282,8 +282,27 @@ export async function saveBudgetForMonth(
   }));
 
   if (rows.length > 0) {
-    await supabase.from("budget_categories").insert(rows);
+    const { data } = await supabase
+      .from("budget_categories")
+      .insert(rows)
+      .select();
+
+    if (data && data.length > 0) {
+      // Return budget with DB-assigned IDs so local state stays in sync
+      const newCategories: BudgetCategory[] = data.map((row) => ({
+        id: row.id,
+        name: row.name,
+        emoji: row.emoji || "",
+        allocated: Number(row.allocated),
+        type: row.type as "fixed" | "flexible",
+        frequency: row.frequency || "monthly",
+        dueDay: row.due_day ? Number(row.due_day) : undefined,
+      }));
+      return { month: budget.month, categories: newCategories };
+    }
   }
+
+  return budget;
 }
 
 // Debts
