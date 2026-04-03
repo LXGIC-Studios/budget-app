@@ -83,16 +83,23 @@ function CategoryRow({
             <Text style={styles.dueDayText}>{formatDueDay(cat.dueDay)}</Text>
           )}
         </View>
-        <Text
-          style={[
-            styles.catSpent,
-            isOver && { color: colors.red, textShadowColor: 'rgba(255, 0, 60, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6 },
-            !isOver && { textShadowColor: 'rgba(0, 255, 204, 0.4)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 4 },
-          ]}
-        >
-          {formatCurrency(spent)}{" "}
-          <Text style={styles.catOf}>/ {formatCurrency(displayAllocated)}</Text>
-        </Text>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text
+            style={[
+              styles.catSpent,
+              isOver && { color: colors.red, textShadowColor: 'rgba(255, 0, 60, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6 },
+              !isOver && { textShadowColor: 'rgba(0, 255, 204, 0.4)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 4 },
+            ]}
+          >
+            {formatCurrency(spent)}{" "}
+            <Text style={styles.catOf}>/ {formatCurrency(displayAllocated)}</Text>
+          </Text>
+          {cat.frequency && cat.frequency !== "monthly" && (
+            <Text style={{ color: colors.textSecondary, fontSize: 10, letterSpacing: 1, marginTop: 1 }}>
+              {formatCurrency(cat.allocated)}/{cat.frequency === "weekly" ? "WK" : cat.frequency === "biweekly" ? "2WK" : cat.frequency === "quarterly" ? "QTR" : "YR"}
+            </Text>
+          )}
+        </View>
       </View>
       <View style={styles.barBg}>
         <View
@@ -157,6 +164,7 @@ export default function BudgetScreen() {
   const [editName, setEditName] = useState("");
   const [editEmoji, setEditEmoji] = useState("");
   const [editType, setEditType] = useState<"fixed" | "flexible">("fixed");
+  const [editFrequency, setEditFrequency] = useState<string>("monthly");
   const [editDefaultAccount, setEditDefaultAccount] = useState<string | undefined>(undefined);
 
   // Add category modal state
@@ -230,7 +238,7 @@ export default function BudgetScreen() {
       ...currentBudget,
       categories: currentBudget.categories.map((c) =>
         c.id === editCat.id
-          ? { ...c, name: trimmedName, emoji: trimmedEmoji, allocated: newAmount, type: editType, dueDay: newDueDay, defaultAccountTag: editDefaultAccount }
+          ? { ...c, name: trimmedName, emoji: trimmedEmoji, allocated: newAmount, type: editType, frequency: editFrequency as any, dueDay: newDueDay, defaultAccountTag: editDefaultAccount }
           : c
       ),
     };
@@ -305,6 +313,7 @@ export default function BudgetScreen() {
     setEditName(cat.name);
     setEditEmoji(cat.emoji);
     setEditType(cat.type);
+    setEditFrequency(cat.frequency || "monthly");
     setEditDefaultAccount(cat.defaultAccountTag);
     // Pre-fill pay amount with remaining balance
     const displayAllocated = getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
@@ -546,9 +555,32 @@ export default function BudgetScreen() {
               </View>
             </View>
 
+            {/* Frequency */}
+            <View>
+              <Text style={styles.modalFieldLabel}>FREQUENCY</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {(["weekly", "biweekly", "monthly", "quarterly", "yearly"] as const).map((f) => (
+                  <Pressable
+                    key={f}
+                    style={[styles.freqPill, editFrequency === f && styles.freqPillActive]}
+                    onPress={() => setEditFrequency(f)}
+                  >
+                    <Text style={[styles.freqPillText, editFrequency === f && styles.freqPillTextActive]}>
+                      {f.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+
             {/* Amount */}
             <View>
-              <Text style={styles.modalFieldLabel}>MONTHLY AMOUNT</Text>
+              <Text style={styles.modalFieldLabel}>
+                {editFrequency === "weekly" ? "WEEKLY AMOUNT" :
+                 editFrequency === "biweekly" ? "BI-WEEKLY AMOUNT" :
+                 editFrequency === "quarterly" ? "QUARTERLY AMOUNT" :
+                 editFrequency === "yearly" ? "YEARLY AMOUNT" : "MONTHLY AMOUNT"}
+              </Text>
               <View style={styles.modalInputRow}>
                 <Text style={styles.modalDollar}>$</Text>
                 <TextInput
@@ -1075,6 +1107,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 2,
+  },
+  // Frequency pills
+  freqPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#1a1a1a',
+    backgroundColor: '#0a0a0a',
+  },
+  freqPillActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(0, 255, 204, 0.1)',
+  },
+  freqPillText: {
+    color: colors.dimmed,
+    fontSize: 11,
+    fontWeight: "700" as const,
+    letterSpacing: 1.5,
+  },
+  freqPillTextActive: {
+    color: colors.primary,
   },
   // Account pills
   acctPill: {
