@@ -10,7 +10,8 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, X, Check } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, X, Check, Settings } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { impact, notification } from "../../src/lib/haptics";
 import { colors, spacing, fonts } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
@@ -169,6 +170,7 @@ const ps = StyleSheet.create({
 
 export default function HomeScreen() {
   const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction } = useApp();
+  const router = useRouter();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
@@ -270,11 +272,16 @@ export default function HomeScreen() {
             <Text style={s.logo}>STACKD</Text>
             <Text style={s.logoSub}>HOUSEHOLD BUDGET</Text>
           </View>
-          {isPaycheckWeek && (
-            <View style={s.paydayChip}>
-              <Text style={s.paydayText}>$ PAYDAY</Text>
-            </View>
-          )}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {isPaycheckWeek && (
+              <View style={s.paydayChip}>
+                <Text style={s.paydayText}>$ PAYDAY</Text>
+              </View>
+            )}
+            <Pressable onPress={() => router.push("/(tabs)/settings")} style={s.settingsBtn}>
+              <Settings size={18} color={colors.primary} strokeWidth={2} />
+            </Pressable>
+          </View>
         </View>
 
         {/* ── WEEK NAV ── */}
@@ -516,6 +523,10 @@ const s = StyleSheet.create({
   logoSub: {
     color: colors.textSecondary, fontSize: 12, letterSpacing: 4, marginTop: 1,
     fontFamily: fonts.mono as any,
+  },
+  settingsBtn: {
+    width: 36, height: 36, alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(0,255,204,0.3)",
   },
   paydayChip: {
     backgroundColor: colors.yellow, paddingHorizontal: 10, paddingVertical: 5,

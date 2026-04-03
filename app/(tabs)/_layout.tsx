@@ -6,48 +6,44 @@ import { colors, fonts } from "../../src/theme";
 function TabIcon({ children, focused, label }: { children: React.ReactNode; focused: boolean; label: string }) {
   return (
     <View style={[
-      tabStyles.iconWrap,
-      focused ? tabStyles.iconWrapActive : tabStyles.iconWrapInactive,
+      tabStyles.block,
+      focused ? tabStyles.blockActive : tabStyles.blockInactive,
     ]}>
       {children}
       <Text style={[
-        tabStyles.iconLabel,
-        focused ? tabStyles.iconLabelActive : tabStyles.iconLabelInactive,
+        tabStyles.blockLabel,
+        focused ? tabStyles.blockLabelActive : tabStyles.blockLabelInactive,
       ]}>{label}</Text>
     </View>
   );
 }
 
 const tabStyles = StyleSheet.create({
-  iconWrap: {
-    width: 72,
-    height: 52,
+  block: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
+    gap: 4,
+    height: "100%",
   },
-  iconWrapActive: {
-    backgroundColor: "rgba(0, 255, 204, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(0, 255, 204, 0.4)",
+  blockActive: {
+    backgroundColor: colors.primary,
   },
-  iconWrapInactive: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+  blockInactive: {
+    backgroundColor: "#0a0a0a",
   },
-  iconLabel: {
+  blockLabel: {
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
     textTransform: "uppercase",
     fontFamily: fonts.mono as any,
   },
-  iconLabelActive: {
-    color: colors.primary,
+  blockLabelActive: {
+    color: "#000",
   },
-  iconLabelInactive: {
-    color: colors.textSecondary,
+  blockLabelInactive: {
+    color: "#aaa",
   },
 });
 
@@ -57,17 +53,21 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textSecondary,
+          tabBarActiveTintColor: "#000",
+          tabBarInactiveTintColor: "#aaa",
           tabBarShowLabel: false,
           tabBarStyle: {
             backgroundColor: "#000",
             borderTopColor: colors.primary,
             borderTopWidth: 2,
-            height: Platform.OS === "web" ? 72 : 100,
-            paddingBottom: Platform.OS === "web" ? 10 : 34,
-            paddingTop: 10,
-            paddingHorizontal: 12,
+            height: Platform.OS === "web" ? 68 : 96,
+            paddingBottom: Platform.OS === "web" ? 0 : 28,
+            paddingTop: 0,
+            paddingHorizontal: 0,
+          },
+          tabBarItemStyle: {
+            padding: 0,
+            margin: 0,
           },
         }}
       >
@@ -76,9 +76,9 @@ export default function TabLayout() {
           name="index"
           options={{
             title: "Home",
-            tabBarIcon: ({ color, focused }) => (
+            tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} label="HOME">
-                <Home size={20} color={color} strokeWidth={focused ? 2.5 : 1.5} />
+                <Home size={22} color={focused ? "#000" : "#aaa"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
@@ -87,9 +87,9 @@ export default function TabLayout() {
           name="log"
           options={{
             title: "Log",
-            tabBarIcon: ({ color, focused }) => (
+            tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} label="LOG">
-                <PlusCircle size={20} color={color} strokeWidth={focused ? 2.5 : 1.5} />
+                <PlusCircle size={22} color={focused ? "#000" : "#aaa"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
@@ -98,9 +98,9 @@ export default function TabLayout() {
           name="overview"
           options={{
             title: "Overview",
-            tabBarIcon: ({ color, focused }) => (
+            tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} label="OVERVIEW">
-                <BarChart3 size={20} color={color} strokeWidth={focused ? 2.5 : 1.5} />
+                <BarChart3 size={22} color={focused ? "#000" : "#aaa"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
