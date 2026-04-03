@@ -24,18 +24,21 @@ const tabStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    height: "100%",
+    height: 56,
+    width: "100%",
   },
   blockActive: {
     backgroundColor: colors.primary,
   },
   blockInactive: {
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "#080808",
+    borderRightWidth: 1,
+    borderRightColor: "#1a1a1a",
   },
   blockLabel: {
     fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 2,
+    letterSpacing: 3,
     textTransform: "uppercase",
     fontFamily: fonts.mono as any,
   },
@@ -43,7 +46,7 @@ const tabStyles = StyleSheet.create({
     color: "#000",
   },
   blockLabelInactive: {
-    color: "#aaa",
+    color: "#bbb",
   },
 });
 
@@ -57,17 +60,20 @@ export default function TabLayout() {
           tabBarInactiveTintColor: "#aaa",
           tabBarShowLabel: false,
           tabBarStyle: {
-            backgroundColor: "#000",
+            backgroundColor: "#080808",
             borderTopColor: colors.primary,
             borderTopWidth: 2,
-            height: Platform.OS === "web" ? 68 : 96,
+            height: Platform.OS === "web" ? 58 : 90,
             paddingBottom: Platform.OS === "web" ? 0 : 28,
             paddingTop: 0,
             paddingHorizontal: 0,
+            flexDirection: "row",
           },
           tabBarItemStyle: {
+            flex: 1,
             padding: 0,
             margin: 0,
+            height: "100%",
           },
         }}
       >
