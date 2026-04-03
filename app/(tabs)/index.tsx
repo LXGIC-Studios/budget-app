@@ -27,6 +27,7 @@ import {
   generateId,
 } from "../../src/utils";
 import type { Transaction, BudgetCategory } from "../../src/types";
+import { ACCOUNT_TAGS } from "../../src/types";
 
 function billsDueInWeek(cat: BudgetCategory, start: Date, end: Date): boolean {
   const freq = cat.frequency || "monthly";
@@ -167,7 +168,7 @@ const ps = StyleSheet.create({
 });
 
 export default function HomeScreen() {
-  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction, accounts } = useApp();
+  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction } = useApp();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
@@ -227,11 +228,11 @@ export default function HomeScreen() {
     return map;
   }, [expenseTxns, currentBudget]);
 
-  const accountMap = useMemo(() => {
-    const map = new Map<string, { name: string; icon: string; color: string }>();
-    accounts.forEach((a) => map.set(a.id, { name: a.name, icon: a.icon, color: a.color }));
-    return map;
-  }, [accounts]);
+  const getTagInfo = (tag?: string) => {
+    if (!tag) return null;
+    const found = ACCOUNT_TAGS.find((t) => t.id === tag);
+    return found ? { label: found.label, emoji: found.emoji } : null;
+  };
 
   const isPaycheckWeek = incomeTxns.length > 0;
 
@@ -318,9 +319,9 @@ export default function HomeScreen() {
                   <Text style={s.incomeTitle}>{t.note || t.category}</Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
-                    {t.accountId && accountMap.has(t.accountId) && (
-                      <View style={[s.acctChip, { borderColor: accountMap.get(t.accountId)!.color + '44' }]}>
-                        <Text style={s.acctChipText}>{accountMap.get(t.accountId)!.icon} {accountMap.get(t.accountId)!.name}</Text>
+                    {getTagInfo(t.accountTag) && (
+                      <View style={s.acctChip}>
+                        <Text style={s.acctChipText}>{getTagInfo(t.accountTag)!.emoji} {getTagInfo(t.accountTag)!.label}</Text>
                       </View>
                     )}
                   </View>
@@ -423,9 +424,9 @@ export default function HomeScreen() {
                   {t.note ? <Text style={s.expenseNote}>{t.note}</Text> : null}
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
-                    {t.accountId && accountMap.has(t.accountId) && (
-                      <View style={[s.acctChip, { borderColor: accountMap.get(t.accountId)!.color + '44' }]}>
-                        <Text style={s.acctChipText}>{accountMap.get(t.accountId)!.icon} {accountMap.get(t.accountId)!.name}</Text>
+                    {getTagInfo(t.accountTag) && (
+                      <View style={s.acctChip}>
+                        <Text style={s.acctChipText}>{getTagInfo(t.accountTag)!.emoji} {getTagInfo(t.accountTag)!.label}</Text>
                       </View>
                     )}
                   </View>
@@ -448,7 +449,7 @@ export default function HomeScreen() {
         onUpdate={updateTransaction}
         onDelete={(id) => { deleteTransaction(id); setSheetVisible(false); setEditingTxn(undefined); }}
         initialMode={editingTxn ? undefined : "expense"}
-        accounts={accounts}
+        
       />
 
       {payingBill && (

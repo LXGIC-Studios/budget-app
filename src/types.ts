@@ -7,20 +7,19 @@ export interface Transaction {
   date: string;
   createdAt: string;
   userName?: string;
-  accountId?: string | null;
+  accountTag?: string;
 }
 
-export type AccountType = 'checking' | 'savings' | 'credit_card' | 'cash';
-
-export interface Account {
-  id: string;
-  name: string;
-  type: AccountType;
-  icon: string;
-  color: string;
-  balance: number;
-  createdAt: string;
-}
+export const ACCOUNT_TAGS = [
+  { id: "checking", label: "Checking", emoji: "🏦" },
+  { id: "savings", label: "Savings", emoji: "💰" },
+  { id: "credit", label: "Credit Card", emoji: "💳" },
+  { id: "cash", label: "Cash", emoji: "💵" },
+  { id: "venmo", label: "Venmo", emoji: "📱" },
+  { id: "cashapp", label: "Cash App", emoji: "📲" },
+  { id: "apple", label: "Apple Card", emoji: "🍎" },
+  { id: "business", label: "Business", emoji: "💼" },
+] as const;
 
 export type BillFrequency = 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'quarterly' | 'yearly';
 

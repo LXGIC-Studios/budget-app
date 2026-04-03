@@ -18,6 +18,7 @@ import { QuickAddSheet } from "../../src/components/QuickAddSheet";
 import { CSVImportSheet } from "../../src/components/CSVImportSheet";
 import { formatCurrency, formatShortDate } from "../../src/utils";
 import type { Transaction } from "../../src/types";
+import { ACCOUNT_TAGS } from "../../src/types";
 
 const FILTER_OPTIONS = ["ALL", "INCOME", "EXPENSES"] as const;
 type Filter = (typeof FILTER_OPTIONS)[number];
@@ -33,13 +34,13 @@ function getIcon(category: string): string {
 }
 
 export default function LogScreen() {
-  const { transactions, addTransaction, addTransactions, updateTransaction, deleteTransaction, accounts } = useApp();
+  const { transactions, addTransaction, addTransactions, updateTransaction, deleteTransaction } = useApp();
 
-  const accountMap = useMemo(() => {
-    const map = new Map<string, { name: string; icon: string; color: string }>();
-    accounts.forEach((a) => map.set(a.id, { name: a.name, icon: a.icon, color: a.color }));
-    return map;
-  }, [accounts]);
+  const getTagInfo = (tag?: string) => {
+    if (!tag) return null;
+    const found = ACCOUNT_TAGS.find((t) => t.id === tag);
+    return found ? { label: found.label, emoji: found.emoji } : null;
+  };
   const [filter, setFilter] = useState<Filter>("ALL");
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
@@ -153,9 +154,9 @@ export default function LogScreen() {
                 {t.note && <Text style={styles.txnNote} numberOfLines={1}>{t.note}</Text>}
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={styles.txnDate}>{formatShortDate(t.date)}</Text>
-                  {t.accountId && accountMap.has(t.accountId) && (
-                    <View style={[styles.acctChip, { borderColor: accountMap.get(t.accountId)!.color + '44' }]}>
-                      <Text style={styles.acctChipText}>{accountMap.get(t.accountId)!.icon} {accountMap.get(t.accountId)!.name}</Text>
+                  {getTagInfo(t.accountTag) && (
+                    <View style={styles.acctChip}>
+                      <Text style={styles.acctChipText}>{getTagInfo(t.accountTag)!.emoji} {getTagInfo(t.accountTag)!.label}</Text>
                     </View>
                   )}
                 </View>
@@ -176,7 +177,7 @@ export default function LogScreen() {
         onUpdate={updateTransaction}
         onDelete={(id) => { deleteTransaction(id); setSheetVisible(false); setEditingTxn(undefined); }}
         initialMode={sheetInitialMode}
-        accounts={accounts}
+        
       />
 
       <CSVImportSheet

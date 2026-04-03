@@ -13,8 +13,8 @@ import {
 import { notification, impact } from "../lib/haptics";
 import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
-import type { Transaction, Account } from "../types";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, ACCOUNT_TAGS } from "../types";
+import type { Transaction } from "../types";
 import { generateId, formatShortDate, formatCurrency } from "../utils";
 
 interface SplitRow {
@@ -31,19 +31,18 @@ interface Props {
   onDelete?: (id: string) => void;
   onSplit?: (original: Transaction, splits: { category: string; amount: number }[]) => void;
   initialMode?: "expense" | "income";
-  accounts?: Account[];
 }
 
-export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode, accounts }: Props) {
+export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode }: Props) {
   const [mode, setMode] = useState<"expense" | "income">(initialMode ?? "expense");
-  // Note: transfers show as expense in the editor (they're just tagged differently in import)
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
   const [note, setNote] = useState("");
+  const [accountTag, setAccountTag] = useState<string | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateInput, setDateInput] = useState("");
   const [initialized, setInitialized] = useState(false);
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  // selectedAccountId removed - using accountTag state above
 
   // Split mode state
   const [splitMode, setSplitMode] = useState(false);
@@ -60,11 +59,11 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
       setNote(editTransaction.note ?? "");
       setSelectedDate(new Date(editTransaction.date));
       setDateInput("");
-      setSelectedAccountId(editTransaction.accountId ?? null);
+      setAccountTag(editTransaction.accountTag ?? undefined);
     } else if (initialMode) {
       setMode(initialMode);
       setCategory(initialMode === "expense" ? "food" : "salary");
-      setSelectedAccountId(null);
+      setAccountTag(undefined);
     }
     setSplitMode(false);
     setSplitRows([]);
@@ -93,7 +92,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
         category,
         note: note.trim() || undefined,
         date: selectedDate.toISOString(),
-        accountId: selectedAccountId,
+        accountTag,
       });
     } else {
       const txn: Transaction = {
@@ -104,7 +103,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
         note: note.trim() || undefined,
         date: selectedDate.toISOString(),
         createdAt: new Date().toISOString(),
-        accountId: selectedAccountId,
+        accountTag,
       };
       onSave(txn);
     }
@@ -112,6 +111,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     setAmount("");
     setCategory(mode === "expense" ? "food" : "salary");
     setNote("");
+    setAccountTag(undefined);
     setSelectedDate(new Date());
     setDateInput("");
     onClose();
@@ -494,27 +494,25 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
             returnKeyType="done"
           />
 
-          {/* Account picker */}
-          {accounts && accounts.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
+          {/* Account tag picker */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
+            <Pressable
+              onPress={() => { setAccountTag(undefined); impact("Light"); }}
+              style={[styles.accountPill, !accountTag && styles.accountPillActive]}
+            >
+              <Text style={[styles.accountPillText, !accountTag && styles.accountPillTextActive]}>NONE</Text>
+            </Pressable>
+            {ACCOUNT_TAGS.map((tag) => (
               <Pressable
-                onPress={() => { setSelectedAccountId(null); impact("Light"); }}
-                style={[styles.accountPill, !selectedAccountId && styles.accountPillActive]}
+                key={tag.id}
+                onPress={() => { setAccountTag(tag.id); impact("Light"); }}
+                style={[styles.accountPill, accountTag === tag.id && styles.accountPillActive]}
               >
-                <Text style={[styles.accountPillText, !selectedAccountId && styles.accountPillTextActive]}>NONE</Text>
+                <Text style={styles.accountPillIcon}>{tag.emoji}</Text>
+                <Text style={[styles.accountPillText, accountTag === tag.id && styles.accountPillTextActive]}>{tag.label.toUpperCase()}</Text>
               </Pressable>
-              {accounts.map((a) => (
-                <Pressable
-                  key={a.id}
-                  onPress={() => { setSelectedAccountId(a.id); impact("Light"); }}
-                  style={[styles.accountPill, selectedAccountId === a.id && { borderColor: a.color, backgroundColor: a.color + '18' }]}
-                >
-                  <Text style={styles.accountPillIcon}>{a.icon}</Text>
-                  <Text style={[styles.accountPillText, selectedAccountId === a.id && { color: a.color }]}>{a.name.toUpperCase()}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
+            ))}
+          </ScrollView>
 
           {/* Date */}
           <View style={styles.dateRow}>

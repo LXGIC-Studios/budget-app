@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember, Account } from "../types";
+import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember } from "../types";
 import * as storage from "../storage";
 import { getMonthKey } from "../utils";
 
@@ -19,7 +19,6 @@ interface AppState {
   currentBudget: MonthlyBudget | null;
   currentMonth: string;
   debts: Debt[];
-  accounts: Account[];
   loading: boolean;
   household: Household | null;
   householdMembers: HouseholdMember[];
@@ -38,9 +37,6 @@ interface AppContextValue extends AppState {
   addDebt: (debt: Debt) => Promise<void>;
   updateDebt: (id: string, updates: Partial<Omit<Debt, "id" | "createdAt">>) => Promise<void>;
   deleteDebt: (id: string) => Promise<void>;
-  addAccount: (account: Account) => Promise<void>;
-  updateAccount: (id: string, updates: Partial<Omit<Account, "id" | "createdAt">>) => Promise<void>;
-  deleteAccount: (id: string) => Promise<void>;
   updateEmergencyFund: (amount: number) => Promise<void>;
   resetAll: () => Promise<void>;
   createHousehold: (name: string) => Promise<boolean>;
@@ -57,7 +53,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     currentBudget: null,
     currentMonth: getMonthKey(),
     debts: [],
-    accounts: [],
     loading: true,
     household: null,
     householdMembers: [],
@@ -65,12 +60,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const loadData = useCallback(async (month?: string) => {
     const targetMonth = month ?? getMonthKey();
-    const [profile, transactions, budget, debts, accounts, household, householdMembers] = await Promise.all([
+    const [profile, transactions, budget, debts, household, householdMembers] = await Promise.all([
       storage.getProfile(),
       storage.getTransactions(),
       storage.getBudgetForMonth(targetMonth),
       storage.getDebts(),
-      storage.getAccounts(),
       storage.getHousehold(),
       storage.getHouseholdMembers(),
     ]);
@@ -81,7 +75,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       currentBudget: budget,
       currentMonth: targetMonth,
       debts,
-      accounts,
       household,
       householdMembers,
       loading: false,
@@ -242,75 +235,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [reload]
   );
 
-  const addAccount = useCallback(
-    async (account: Account) => {
-      setState((prev) => ({
-        ...prev,
-        accounts: [...prev.accounts, account],
-      }));
-      try {
-        await storage.addAccount(account);
-      } catch {
-        setState((prev) => ({
-          ...prev,
-          accounts: prev.accounts.filter((a) => a.id !== account.id),
-        }));
-      }
-    },
-    []
-  );
-
-  const updateAccount = useCallback(
-    async (id: string, updates: Partial<Omit<Account, "id" | "createdAt">>) => {
-      let original: Account | undefined;
-      setState((prev) => {
-        original = prev.accounts.find((a) => a.id === id);
-        return {
-          ...prev,
-          accounts: prev.accounts.map((a) =>
-            a.id === id ? { ...a, ...updates } : a
-          ),
-        };
-      });
-      try {
-        await storage.updateAccount(id, updates);
-      } catch {
-        if (original) {
-          setState((prev) => ({
-            ...prev,
-            accounts: prev.accounts.map((a) =>
-              a.id === id ? original! : a
-            ),
-          }));
-        }
-      }
-    },
-    []
-  );
-
-  const deleteAccount = useCallback(
-    async (id: string) => {
-      let removed: Account | undefined;
-      setState((prev) => {
-        removed = prev.accounts.find((a) => a.id === id);
-        return {
-          ...prev,
-          accounts: prev.accounts.filter((a) => a.id !== id),
-        };
-      });
-      try {
-        await storage.deleteAccount(id);
-      } catch {
-        if (removed) {
-          setState((prev) => ({
-            ...prev,
-            accounts: [removed!, ...prev.accounts],
-          }));
-        }
-      }
-    },
-    []
-  );
+  // Account CRUD removed - using simple accountTag string on transactions
 
   const updateEmergencyFund = useCallback(
     async (amount: number) => {
@@ -391,7 +316,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       currentBudget: null,
       currentMonth: getMonthKey(),
       debts: [],
-      accounts: [],
       loading: false,
       household: null,
       householdMembers: [],
@@ -414,9 +338,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addDebt,
         updateDebt,
         deleteDebt,
-        addAccount,
-        updateAccount,
-        deleteAccount,
         updateEmergencyFund,
         resetAll,
         createHousehold: createHouseholdAction,
@@ -439,7 +360,6 @@ export function useApp(): AppContextValue {
       currentBudget: null,
       currentMonth: getMonthKey(),
       debts: [],
-      accounts: [],
       loading: true,
       household: null,
       householdMembers: [],
@@ -455,9 +375,6 @@ export function useApp(): AppContextValue {
       addDebt: async () => {},
       updateDebt: async () => {},
       deleteDebt: async () => {},
-      addAccount: async () => {},
-      updateAccount: async () => {},
-      deleteAccount: async () => {},
       updateEmergencyFund: async () => {},
       resetAll: async () => {},
       createHousehold: async () => false,
