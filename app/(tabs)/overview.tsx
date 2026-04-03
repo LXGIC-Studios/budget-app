@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { impact } from "../../src/lib/haptics";
@@ -89,10 +89,54 @@ const vs = StyleSheet.create({
   netVal: { fontSize: 24, fontWeight: "900", fontFamily: fonts.mono as any },
 });
 
+function parseInputDate(text: string): Date | null {
+  const digits = text.replace(/\D/g, "");
+  if (digits.length === 8) {
+    const m = parseInt(digits.slice(0, 2), 10);
+    const d = parseInt(digits.slice(2, 4), 10);
+    const y = parseInt(digits.slice(4, 8), 10);
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 2000) {
+      const date = new Date(y, m - 1, d);
+      if (!isNaN(date.getTime())) return date;
+    }
+  }
+  return null;
+}
+
+function formatDateInput(text: string): string {
+  const digits = text.replace(/\D/g, "");
+  let formatted = digits;
+  if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
+  if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4, 8);
+  return formatted;
+}
+
+function formatDateShort(d: Date): string {
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+}
+
 export default function OverviewScreen() {
   const { transactions, currentMonth, setCurrentMonth, currentBudget, profile } = useApp();
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
-  const expectedIncome = profile?.monthlyIncome ?? 0;
+  const [mode, setMode] = useState<"month" | "custom">("month");
+  const [startInput, setStartInput] = useState("");
+  const [endInput, setEndInput] = useState("");
+  const [customStart, setCustomStart] = useState<Date | null>(null);
+  const [customEnd, setCustomEnd] = useState<Date | null>(null);
+
+  const handleStartInput = (text: string) => {
+    const formatted = formatDateInput(text);
+    setStartInput(formatted);
+    const d = parseInputDate(text);
+    if (d) setCustomStart(d);
+  };
+
+  const handleEndInput = (text: string) => {
+    const formatted = formatDateInput(text);
+    setEndInput(formatted);
+    const d = parseInputDate(text);
+    if (d) setCustomEnd(d);
+  };
 
   const flexCats = useMemo(() => currentBudget?.categories.filter((c) => c.type === "flexible") ?? [], [currentBudget]);
   const flexBudgets = useMemo(() => {
@@ -101,38 +145,37 @@ export default function OverviewScreen() {
     return map;
   }, [flexCats]);
 
-  const monthTxns = useMemo(() =>
+  // Filter transactions by month or custom date range
+  const filteredTxns = useMemo(() =>
     transactions.filter((t) => {
-      if (!t.date.startsWith(currentMonth) || t.type === "transfer") return false;
+      if (t.type === "transfer") return false;
       if (accountFilter && t.accountTag !== accountFilter) return false;
-      return true;
+      if (mode === "custom" && customStart && customEnd) {
+        const d = new Date(t.date);
+        const start = new Date(customStart.getFullYear(), customStart.getMonth(), customStart.getDate());
+        const end = new Date(customEnd.getFullYear(), customEnd.getMonth(), customEnd.getDate(), 23, 59, 59);
+        return d >= start && d <= end;
+      }
+      return t.date.startsWith(currentMonth);
     }),
-    [transactions, currentMonth, accountFilter]
+    [transactions, currentMonth, accountFilter, mode, customStart, customEnd]
   );
 
-  const actualIncome = useMemo(() => monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [monthTxns]);
-  const actualExpenses = useMemo(() => monthTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [monthTxns]);
+  const actualIncome = useMemo(() => filteredTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [filteredTxns]);
+  const actualExpenses = useMemo(() => filteredTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [filteredTxns]);
 
-  // Spending by category (exclude bill payments)
   const catSpend = useMemo(() => {
     const map: Record<string, number> = {};
-    monthTxns.filter((t) => t.type === "expense").forEach((t) => {
+    filteredTxns.filter((t) => t.type === "expense").forEach((t) => {
       if (t.note?.startsWith("Paid:") || t.note?.endsWith("- marked paid") || t.note?.endsWith("- paid")) return;
       if (t.category.toLowerCase() === "bills") return;
       const k = t.category.toLowerCase();
       map[k] = (map[k] ?? 0) + t.amount;
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [monthTxns]);
+  }, [filteredTxns]);
 
   const maxCatSpend = catSpend.length > 0 ? Math.max(catSpend[0][1], ...catSpend.map(([k]) => flexBudgets[k] ?? 0)) : 0;
-
-  // Account tags for filter
-  const userAccounts = useMemo(() => {
-    const tags = new Set<string>();
-    transactions.forEach((t) => { if (t.accountTag) tags.add(t.accountTag); });
-    return Array.from(tags);
-  }, [transactions]);
 
   const navigate = (delta: number) => { impact("Light"); setCurrentMonth(shiftMonth(currentMonth, delta)); };
 
@@ -144,20 +187,75 @@ export default function OverviewScreen() {
           <Text style={s.logo}>CHARTS</Text>
         </View>
 
-        {/* Month nav */}
-        <View style={s.monthNav}>
-          <Pressable onPress={() => navigate(-1)} hitSlop={16}><ChevronLeft size={20} color={colors.white} /></Pressable>
-          <Text style={s.monthLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
-          <Pressable onPress={() => navigate(1)} hitSlop={16}><ChevronRight size={20} color={colors.white} /></Pressable>
+        {/* Mode toggle: Month vs Custom */}
+        <View style={s.modeRow}>
+          <Pressable
+            onPress={() => { impact("Light"); setMode("month"); }}
+            style={[s.modeBtn, mode === "month" && s.modeBtnActive]}
+          >
+            <Text style={[s.modeBtnText, mode === "month" && s.modeBtnTextActive]}>MONTH</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { impact("Light"); setMode("custom"); }}
+            style={[s.modeBtn, mode === "custom" && s.modeBtnActive]}
+          >
+            <Text style={[s.modeBtnText, mode === "custom" && s.modeBtnTextActive]}>CUSTOM</Text>
+          </Pressable>
         </View>
 
-        {/* ── CASH FLOW - real income logged vs real spending ── */}
+        {/* Month nav or date range inputs */}
+        {mode === "month" ? (
+          <View style={s.monthNav}>
+            <Pressable onPress={() => navigate(-1)} hitSlop={16}><ChevronLeft size={20} color={colors.white} /></Pressable>
+            <Text style={s.monthLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
+            <Pressable onPress={() => navigate(1)} hitSlop={16}><ChevronRight size={20} color={colors.white} /></Pressable>
+          </View>
+        ) : (
+          <View style={s.dateRangeRow}>
+            <View style={s.dateInputWrap}>
+              <Text style={s.dateInputLabel}>FROM</Text>
+              <TextInput
+                style={s.dateInput}
+                placeholder="MM/DD/YYYY"
+                placeholderTextColor="#666"
+                value={startInput}
+                onChangeText={handleStartInput}
+                keyboardType="number-pad"
+                maxLength={10}
+              />
+            </View>
+            <Text style={s.dateRangeDash}>-</Text>
+            <View style={s.dateInputWrap}>
+              <Text style={s.dateInputLabel}>TO</Text>
+              <TextInput
+                style={s.dateInput}
+                placeholder="MM/DD/YYYY"
+                placeholderTextColor="#666"
+                value={endInput}
+                onChangeText={handleEndInput}
+                keyboardType="number-pad"
+                maxLength={10}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Period label for custom */}
+        {mode === "custom" && customStart && customEnd && (
+          <View style={s.customLabel}>
+            <Text style={s.customLabelText}>
+              {formatDateShort(customStart)} - {formatDateShort(customEnd)}
+            </Text>
+          </View>
+        )}
+
+        {/* ── CASH FLOW ── */}
         <View style={s.sectionHeader}>
           <Text style={s.sectionText}>// CASH FLOW</Text>
         </View>
         <VerticalBars income={actualIncome} expenses={actualExpenses} />
 
-        {/* ── SPENDING BY CATEGORY - HORIZONTAL BAR CHART ── */}
+        {/* ── SPENDING BY CATEGORY ── */}
         {catSpend.length > 0 && (
           <>
             <View style={s.sectionHeader}>
@@ -203,4 +301,47 @@ const s = StyleSheet.create({
   },
   sectionText: { color: colors.primary, fontSize: 13, fontWeight: "700", letterSpacing: 3, fontFamily: fonts.mono as any },
   sectionRight: { color: "#bbb", fontSize: 15, fontWeight: "700", fontFamily: fonts.mono as any },
+
+  // Mode toggle
+  modeRow: {
+    flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)",
+  },
+  modeBtn: {
+    flex: 1, alignItems: "center", paddingVertical: 12, backgroundColor: "#080808",
+  },
+  modeBtnActive: {
+    backgroundColor: colors.primary,
+  },
+  modeBtnText: {
+    color: "#bbb", fontSize: 13, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.mono as any,
+  },
+  modeBtnTextActive: {
+    color: "#000",
+  },
+
+  // Date range
+  dateRangeRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: spacing.lg, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)",
+  },
+  dateInputWrap: { flex: 1, gap: 4 },
+  dateInputLabel: {
+    color: "#bbb", fontSize: 11, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any,
+  },
+  dateInput: {
+    backgroundColor: "#0a0a0a", borderWidth: 1, borderColor: "#1a1a1a",
+    paddingVertical: 10, paddingHorizontal: 12, color: colors.white,
+    fontSize: 16, fontWeight: "700", fontFamily: fonts.mono as any, textAlign: "center",
+  },
+  dateRangeDash: {
+    color: colors.primary, fontSize: 20, fontWeight: "900", marginTop: 18,
+  },
+  customLabel: {
+    alignItems: "center", paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)",
+  },
+  customLabelText: {
+    color: colors.primary, fontSize: 13, fontWeight: "700", letterSpacing: 1, fontFamily: fonts.mono as any,
+  },
 });
