@@ -523,7 +523,30 @@ export async function resetAllData(): Promise<void> {
 export async function getUserAccounts(): Promise<{ id: string; label: string; emoji: string }[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
-  const { data } = await supabase.from("user_accounts").select("*").eq("user_id", user.id).order("created_at");
+
+  // Check if user is in a household - share accounts across members
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("household_id")
+    .eq("id", user.id)
+    .single();
+
+  const householdId = profile?.household_id;
+
+  let query = supabase.from("user_accounts").select("*").order("created_at");
+
+  if (householdId) {
+    const { data: members } = await supabase
+      .from("household_members")
+      .select("user_id")
+      .eq("household_id", householdId);
+    const memberIds = members?.map((m) => m.user_id) ?? [user.id];
+    query = query.in("user_id", memberIds);
+  } else {
+    query = query.eq("user_id", user.id);
+  }
+
+  const { data } = await query;
   if (!data) return [];
   return data.map((r) => ({ id: r.id, label: r.label, emoji: r.emoji || "🏦" }));
 }
