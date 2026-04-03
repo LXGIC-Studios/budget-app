@@ -47,6 +47,7 @@ function VerticalBars({ income, expenses }: { income: number; expenses: number }
   const max = Math.max(income, expenses, 1);
   const incPct = (income / max) * 100;
   const expPct = (expenses / max) * 100;
+  const remaining = income - expenses;
   return (
     <View style={vs.container}>
       <View style={vs.barsRow}>
@@ -55,7 +56,7 @@ function VerticalBars({ income, expenses }: { income: number; expenses: number }
           <View style={vs.barTrack}>
             <View style={[vs.barFill, { height: `${incPct}%` as any, backgroundColor: colors.primary }]} />
           </View>
-          <Text style={vs.barLabel}>INCOME</Text>
+          <Text style={vs.barLabel}>BUDGET</Text>
         </View>
         <View style={vs.barCol}>
           <Text style={[vs.amt, { color: colors.red }]}>{formatCurrency(expenses)}</Text>
@@ -66,9 +67,9 @@ function VerticalBars({ income, expenses }: { income: number; expenses: number }
         </View>
       </View>
       <View style={vs.netRow}>
-        <Text style={vs.netLabel}>NET</Text>
-        <Text style={[vs.netVal, { color: income >= expenses ? colors.primary : colors.red }]}>
-          {income >= expenses ? "+" : ""}{formatCurrency(income - expenses)}
+        <Text style={vs.netLabel}>REMAINING</Text>
+        <Text style={[vs.netVal, { color: remaining >= 0 ? colors.primary : colors.red }]}>
+          {remaining >= 0 ? "+" : ""}{formatCurrency(remaining)}
         </Text>
       </View>
     </View>
@@ -91,6 +92,7 @@ const vs = StyleSheet.create({
 export default function OverviewScreen() {
   const { transactions, currentMonth, setCurrentMonth, currentBudget, profile } = useApp();
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
+  const expectedIncome = profile?.monthlyIncome ?? 0;
 
   const flexCats = useMemo(() => currentBudget?.categories.filter((c) => c.type === "flexible") ?? [], [currentBudget]);
   const flexBudgets = useMemo(() => {
@@ -125,17 +127,6 @@ export default function OverviewScreen() {
 
   const maxCatSpend = catSpend.length > 0 ? Math.max(catSpend[0][1], ...catSpend.map(([k]) => flexBudgets[k] ?? 0)) : 0;
 
-  // Income by source
-  const incomeBySource = useMemo(() => {
-    const map: Record<string, number> = {};
-    monthTxns.filter((t) => t.type === "income").forEach((t) => {
-      const k = t.note || t.category;
-      map[k] = (map[k] ?? 0) + t.amount;
-    });
-    return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [monthTxns]);
-  const maxIncome = incomeBySource.length > 0 ? incomeBySource[0][1] : 0;
-
   // Account tags for filter
   const userAccounts = useMemo(() => {
     const tags = new Set<string>();
@@ -160,11 +151,11 @@ export default function OverviewScreen() {
           <Pressable onPress={() => navigate(1)} hitSlop={16}><ChevronRight size={20} color={colors.white} /></Pressable>
         </View>
 
-        {/* ── INCOME vs EXPENSES - REAL BAR CHART ── */}
+        {/* ── BUDGET vs ACTUAL SPENDING ── */}
         <View style={s.sectionHeader}>
-          <Text style={s.sectionText}>// INCOME vs EXPENSES</Text>
+          <Text style={s.sectionText}>// BUDGET vs ACTUAL</Text>
         </View>
-        <VerticalBars income={actualIncome} expenses={actualExpenses} />
+        <VerticalBars income={expectedIncome} expenses={actualExpenses} />
 
         {/* ── SPENDING BY CATEGORY - HORIZONTAL BAR CHART ── */}
         {catSpend.length > 0 && (
@@ -182,19 +173,6 @@ export default function OverviewScreen() {
                 color={colors.yellow}
                 budget={flexBudgets[cat]}
               />
-            ))}
-          </>
-        )}
-
-        {/* ── INCOME SOURCES - HORIZONTAL BAR CHART ── */}
-        {incomeBySource.length > 0 && (
-          <>
-            <View style={s.sectionHeader}>
-              <Text style={s.sectionText}>// INCOME SOURCES</Text>
-              <Text style={s.sectionRight}>{formatCurrency(actualIncome)}</Text>
-            </View>
-            {incomeBySource.map(([label, amt]) => (
-              <Bar key={label} label={label} amount={amt} max={maxIncome} color={colors.primary} />
             ))}
           </>
         )}
