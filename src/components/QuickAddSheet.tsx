@@ -92,8 +92,8 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
 
     notification("Success");
 
-    if (mode === "transfer") {
-      // Create two linked transactions
+    if (mode === "transfer" && !isEditing) {
+      // Create two linked transactions (new transfer only)
       const amt = Math.round(parsed * 100) / 100;
       const fromName = userAccounts.find((a) => a.id === transferFrom)?.label ?? "Account";
       const toName = userAccounts.find((a) => a.id === transferTo)?.label ?? "Account";
