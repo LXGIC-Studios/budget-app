@@ -296,30 +296,24 @@ export default function HomeScreen() {
         </View>
 
         {/* ── ACCOUNT FILTER ── */}
-        {usedTags.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterBar}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterBar}>
+          <Pressable
+            onPress={() => { impact("Light"); setAccountFilter(null); }}
+            style={[s.filterPill, !accountFilter && s.filterPillActive]}
+          >
+            <Text style={[s.filterPillText, !accountFilter && s.filterPillTextActive]}>ALL</Text>
+          </Pressable>
+          {ACCOUNT_TAGS.map((tag) => (
             <Pressable
-              onPress={() => { impact("Light"); setAccountFilter(null); }}
-              style={[s.filterPill, !accountFilter && s.filterPillActive]}
+              key={tag.id}
+              onPress={() => { impact("Light"); setAccountFilter(accountFilter === tag.id ? null : tag.id); }}
+              style={[s.filterPill, accountFilter === tag.id && s.filterPillActive]}
             >
-              <Text style={[s.filterPillText, !accountFilter && s.filterPillTextActive]}>ALL</Text>
+              <Text style={s.filterPillEmoji}>{tag.emoji}</Text>
+              <Text style={[s.filterPillText, accountFilter === tag.id && s.filterPillTextActive]}>{tag.label.toUpperCase()}</Text>
             </Pressable>
-            {usedTags.map((tag) => {
-              const info = ACCOUNT_TAGS.find((t) => t.id === tag);
-              if (!info) return null;
-              return (
-                <Pressable
-                  key={tag}
-                  onPress={() => { impact("Light"); setAccountFilter(accountFilter === tag ? null : tag); }}
-                  style={[s.filterPill, accountFilter === tag && s.filterPillActive]}
-                >
-                  <Text style={s.filterPillEmoji}>{info.emoji}</Text>
-                  <Text style={[s.filterPillText, accountFilter === tag && s.filterPillTextActive]}>{info.label.toUpperCase()}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
+          ))}
+        </ScrollView>
 
         {/* ── HERO - full bleed ── */}
         <View style={[s.hero, { backgroundColor: netIsPositive ? colors.primary : colors.red }]}>
