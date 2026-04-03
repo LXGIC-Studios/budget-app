@@ -151,11 +151,11 @@ export default function OverviewScreen() {
           <Pressable onPress={() => navigate(1)} hitSlop={16}><ChevronRight size={20} color={colors.white} /></Pressable>
         </View>
 
-        {/* ── BUDGET vs ACTUAL SPENDING ── */}
+        {/* ── CASH FLOW - real income logged vs real spending ── */}
         <View style={s.sectionHeader}>
-          <Text style={s.sectionText}>// BUDGET vs ACTUAL</Text>
+          <Text style={s.sectionText}>// CASH FLOW</Text>
         </View>
-        <VerticalBars income={expectedIncome} expenses={actualExpenses} />
+        <VerticalBars income={actualIncome} expenses={actualExpenses} />
 
         {/* ── SPENDING BY CATEGORY - HORIZONTAL BAR CHART ── */}
         {catSpend.length > 0 && (
