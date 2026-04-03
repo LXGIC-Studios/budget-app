@@ -233,26 +233,75 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addDebt = useCallback(
     async (debt: Debt) => {
-      await storage.addDebt(debt);
-      await reload();
+      // Optimistic: add to local state immediately, sorted by balance
+      setState((prev) => ({
+        ...prev,
+        debts: [...prev.debts, debt].sort((a, b) => a.balance - b.balance),
+      }));
+      try {
+        await storage.addDebt(debt);
+      } catch (err) {
+        console.error("addDebt failed:", err);
+        // Rollback on failure
+        setState((prev) => ({
+          ...prev,
+          debts: prev.debts.filter((d) => d.id !== debt.id),
+        }));
+      }
     },
-    [reload]
+    []
   );
 
   const updateDebt = useCallback(
     async (id: string, updates: Partial<Omit<Debt, "id" | "createdAt">>) => {
-      await storage.updateDebt(id, updates);
-      await reload();
+      let original: Debt | undefined;
+      setState((prev) => {
+        original = prev.debts.find((d) => d.id === id);
+        return {
+          ...prev,
+          debts: prev.debts
+            .map((d) => (d.id === id ? { ...d, ...updates, updatedAt: new Date().toISOString() } : d))
+            .sort((a, b) => a.balance - b.balance),
+        };
+      });
+      try {
+        await storage.updateDebt(id, updates);
+      } catch (err) {
+        console.error("updateDebt failed:", err);
+        if (original) {
+          setState((prev) => ({
+            ...prev,
+            debts: prev.debts.map((d) => (d.id === id ? original! : d)),
+          }));
+        }
+      }
     },
-    [reload]
+    []
   );
 
   const deleteDebt = useCallback(
     async (id: string) => {
-      await storage.deleteDebt(id);
-      await reload();
+      let removed: Debt | undefined;
+      setState((prev) => {
+        removed = prev.debts.find((d) => d.id === id);
+        return {
+          ...prev,
+          debts: prev.debts.filter((d) => d.id !== id),
+        };
+      });
+      try {
+        await storage.deleteDebt(id);
+      } catch (err) {
+        console.error("deleteDebt failed:", err);
+        if (removed) {
+          setState((prev) => ({
+            ...prev,
+            debts: [...prev.debts, removed!].sort((a, b) => a.balance - b.balance),
+          }));
+        }
+      }
     },
-    [reload]
+    []
   );
 
   const addUserAccountAction = useCallback(async (label: string, emoji: string) => {

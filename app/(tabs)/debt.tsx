@@ -102,10 +102,26 @@ export default function DebtScreen() {
 
   // Monthly expenses = real spending (exclude transfers).
   // Use budget fixed categories if set, otherwise actual spending.
+  // Exclude budget categories that are debt payments - the snowball calculator
+  // already accounts for minimum payments separately, so including them here
+  // would double-count.
   const monthlyExpenses = useMemo(() => {
     if (currentBudget?.categories?.length) {
+      const debtNames = debts.map(d => d.name.toLowerCase());
       return currentBudget.categories
         .filter((c) => c.type === "fixed")
+        .filter((c) => {
+          // Exclude budget items that match debt names (case-insensitive, partial match)
+          const lower = c.name.toLowerCase();
+          return !debtNames.some(dn => {
+            // Check if any word (3+ chars) from the debt name appears in the budget name, or vice versa
+            const dnWords = dn.split(/\s+/).filter(w => w.length >= 3);
+            const lowerWords = lower.split(/\s+/).filter(w => w.length >= 3);
+            return lower.includes(dn) || dn.includes(lower) ||
+              dnWords.some(w => lower.includes(w)) ||
+              lowerWords.some(w => dn.includes(w));
+          });
+        })
         .reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
     }
     return transactions
@@ -116,7 +132,7 @@ export default function DebtScreen() {
           t.category !== "transfer"
       )
       .reduce((s, t) => s + t.amount, 0);
-  }, [currentBudget, transactions, currentMonth]);
+  }, [currentBudget, transactions, currentMonth, debts]);
 
   const snowball = useMemo(
     () => calculateSnowball(debts, monthlyIncome, monthlyExpenses),
