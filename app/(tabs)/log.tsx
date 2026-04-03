@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.white,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "900",
     letterSpacing: 6,
   },
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   },
   importBtnText: {
     color: colors.primaryText,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 2,
   },
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     color: colors.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.5,
   },
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   },
   txnDate: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
   },
   txnAmount: {
     fontSize: 15,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   acctChipText: {
     color: colors.textSecondary,
-    fontSize: 8,
+    fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1,
   },

@@ -38,10 +38,10 @@ function HBar({ label, amount, maxAmount, color, budget }: {
 }
 
 const cs = StyleSheet.create({
-  barRow: { gap: 4, paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)" },
+  barRow: { gap: 4, paddingHorizontal: spacing.lg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
   barLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  barLabel: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 1, fontFamily: fonts.mono as any, textTransform: "uppercase" },
-  barAmt: { color: colors.white, fontSize: 13, fontWeight: "800", fontFamily: fonts.mono as any },
+  barLabel: { color: colors.white, fontSize: 13, fontWeight: "800", letterSpacing: 1, fontFamily: fonts.mono as any, textTransform: "uppercase" },
+  barAmt: { color: colors.white, fontSize: 15, fontWeight: "800", fontFamily: fonts.mono as any },
   barBudget: { color: colors.textSecondary, fontWeight: "400", fontSize: 11 },
   barTrack: { height: 6, backgroundColor: "rgba(255,255,255,0.06)", position: "relative" },
   barFill: { height: 6, position: "absolute", left: 0, top: 0 },
@@ -59,12 +59,12 @@ function ComparisonBar({ leftLabel, leftAmount, rightLabel, rightAmount, leftCol
     <View style={{ paddingHorizontal: spacing.lg, paddingVertical: 14, gap: 10 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <View style={{ alignItems: "flex-start", gap: 2 }}>
-          <Text style={{ color: leftColor, fontSize: 22, fontWeight: "900", fontFamily: fonts.mono as any }}>{formatCurrency(leftAmount)}</Text>
-          <Text style={{ color: leftColor, fontSize: 9, fontWeight: "700", letterSpacing: 2, opacity: 0.7, fontFamily: fonts.mono as any }}>{leftLabel}</Text>
+          <Text style={{ color: leftColor, fontSize: 26, fontWeight: "900", fontFamily: fonts.mono as any }}>{formatCurrency(leftAmount)}</Text>
+          <Text style={{ color: leftColor, fontSize: 12, fontWeight: "700", letterSpacing: 2, opacity: 1, fontFamily: fonts.mono as any }}>{leftLabel}</Text>
         </View>
         <View style={{ alignItems: "flex-end", gap: 2 }}>
-          <Text style={{ color: rightColor, fontSize: 22, fontWeight: "900", fontFamily: fonts.mono as any }}>{formatCurrency(rightAmount)}</Text>
-          <Text style={{ color: rightColor, fontSize: 9, fontWeight: "700", letterSpacing: 2, opacity: 0.7, fontFamily: fonts.mono as any }}>{rightLabel}</Text>
+          <Text style={{ color: rightColor, fontSize: 26, fontWeight: "900", fontFamily: fonts.mono as any }}>{formatCurrency(rightAmount)}</Text>
+          <Text style={{ color: rightColor, fontSize: 12, fontWeight: "700", letterSpacing: 2, opacity: 1, fontFamily: fonts.mono as any }}>{rightLabel}</Text>
         </View>
       </View>
       <View style={{ flexDirection: "row", gap: 2 }}>
@@ -360,13 +360,13 @@ const s = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: colors.primary, paddingVertical: 8, paddingHorizontal: 12,
   },
-  editBudgetText: { color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
+  editBudgetText: { color: "#000", fontSize: 12, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
 
   // Month nav
   monthNav: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: spacing.lg, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)",
   },
   monthLabel: { color: colors.white, fontSize: 14, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
 
@@ -375,10 +375,10 @@ const s = StyleSheet.create({
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: spacing.lg, paddingVertical: 12,
     backgroundColor: "rgba(255,255,255,0.02)",
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)",
   },
-  netLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
-  netValue: { fontSize: 18, fontWeight: "900", fontFamily: fonts.mono as any },
+  netLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  netValue: { fontSize: 22, fontWeight: "900", fontFamily: fonts.mono as any },
 
   // Section headers
   sectionHeader: {
@@ -387,8 +387,8 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderBottomWidth: 1, borderColor: "rgba(0,255,204,0.15)",
     backgroundColor: "rgba(0,255,204,0.03)", marginTop: 2,
   },
-  sectionHeaderText: { color: colors.primary, fontSize: 11, fontWeight: "700", letterSpacing: 3, fontFamily: fonts.mono as any },
-  sectionHeaderRight: { color: colors.textSecondary, fontSize: 12, fontWeight: "600", fontFamily: fonts.mono as any },
+  sectionHeaderText: { color: colors.primary, fontSize: 13, fontWeight: "700", letterSpacing: 3, fontFamily: fonts.mono as any },
+  sectionHeaderRight: { color: "#bbb", fontSize: 14, fontWeight: "600", fontFamily: fonts.mono as any },
 
   // Expected blocks
   expectRow: { flexDirection: "row", gap: 1 },
@@ -396,54 +396,54 @@ const s = StyleSheet.create({
     flex: 1, padding: spacing.md, gap: 6,
     backgroundColor: "rgba(255,255,255,0.02)", borderBottomWidth: 2,
   },
-  expectLabel: { color: colors.textSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
-  expectNum: { fontSize: 20, fontWeight: "900", fontFamily: fonts.mono as any },
-  expectSub: { color: colors.textSecondary, fontSize: 10, fontFamily: fonts.mono as any },
+  expectLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  expectNum: { fontSize: 22, fontWeight: "900", fontFamily: fonts.mono as any },
+  expectSub: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.mono as any },
   expectBar: { height: 4, backgroundColor: "rgba(255,255,255,0.06)" },
   expectBarFill: { height: 4 },
 
   // Bills summary
   billsSummary: {
     paddingHorizontal: spacing.lg, paddingVertical: 12, gap: 6,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)",
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)",
   },
   billsBar: { height: 8, backgroundColor: "rgba(255,255,255,0.06)" },
   billsBarFill: { height: 8, backgroundColor: colors.primary },
-  billsPct: { color: colors.textSecondary, fontSize: 10, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  billsPct: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
 
   // Bill rows
   billRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     paddingHorizontal: spacing.lg, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)",
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)",
   },
-  billRowPaid: { opacity: 0.4 },
+  billRowPaid: { opacity: 0.8 },
   billEmoji: { fontSize: 14, width: 22 },
-  billName: { color: colors.white, fontSize: 13, fontWeight: "600", fontFamily: fonts.body as any },
+  billName: { color: colors.white, fontSize: 15, fontWeight: "600", fontFamily: fonts.body as any },
   billStrike: { textDecorationLine: "line-through", color: colors.textSecondary },
-  billDue: { color: colors.textSecondary, fontSize: 10, fontFamily: fonts.mono as any },
-  billAmt: { color: colors.red, fontSize: 14, fontWeight: "800", fontFamily: fonts.mono as any },
-  billPaidTag: { color: colors.primary, fontSize: 10, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
+  billDue: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.mono as any },
+  billAmt: { color: colors.red, fontSize: 16, fontWeight: "800", fontFamily: fonts.mono as any },
+  billPaidTag: { color: colors.primary, fontSize: 12, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
 
   // Debt
   debtRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingHorizontal: spacing.lg, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)",
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)",
   },
   debtNum: {
     width: 28, height: 28, alignItems: "center", justifyContent: "center",
     borderWidth: 1, borderColor: colors.cardBorder,
   },
   debtNumText: { color: colors.textSecondary, fontSize: 12, fontWeight: "900", fontFamily: fonts.mono as any },
-  debtName: { color: colors.white, fontSize: 14, fontWeight: "700", fontFamily: fonts.body as any },
-  debtMin: { color: colors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: fonts.mono as any },
-  debtBal: { color: colors.red, fontSize: 16, fontWeight: "900", fontFamily: fonts.mono as any },
+  debtName: { color: colors.white, fontSize: 16, fontWeight: "700", fontFamily: fonts.body as any },
+  debtMin: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.mono as any },
+  debtBal: { color: colors.red, fontSize: 18, fontWeight: "900", fontFamily: fonts.mono as any },
 
   // Account filter bar
   filterBar: {
     flexDirection: "row", gap: 6, paddingHorizontal: spacing.lg, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)",
   },
   filterPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
@@ -455,7 +455,7 @@ const s = StyleSheet.create({
   },
   filterPillEmoji: { fontSize: 10 },
   filterPillText: {
-    color: colors.textSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 1.5,
+    color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1.5,
     fontFamily: fonts.mono as any,
   },
   filterPillTextActive: { color: colors.primary },

@@ -37,7 +37,7 @@ const tabStyles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.06)",
   },
   iconLabel: {
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
     textTransform: "uppercase",

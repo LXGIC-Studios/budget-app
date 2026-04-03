@@ -141,20 +141,20 @@ const ps = StyleSheet.create({
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   headerEmoji: { fontSize: 26 },
   headerName: { color: colors.white, fontSize: 16, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.heading as any },
-  headerSub: { color: colors.textSecondary, fontSize: 10, letterSpacing: 2, marginTop: 2, fontFamily: fonts.mono as any },
+  headerSub: { color: colors.textSecondary, fontSize: 12, letterSpacing: 2, marginTop: 2, fontFamily: fonts.mono as any },
   quickBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     backgroundColor: colors.primary, padding: spacing.lg,
   },
   quickLeft: { gap: 2 },
   quickLabel: { color: "#000", fontSize: 15, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.heading as any },
-  quickSub: { color: "rgba(0,0,0,0.55)", fontSize: 11, fontFamily: fonts.mono as any },
+  quickSub: { color: "rgba(0,0,0,0.55)", fontSize: 12, fontFamily: fonts.mono as any },
   quickAmt: { color: "#000", fontSize: 30, fontWeight: "900", fontFamily: fonts.mono as any },
   altBtn: {
     borderWidth: 1, borderColor: "#1c1c1c", padding: 14, alignItems: "center",
   },
-  altText: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
-  inputLabel: { color: colors.textSecondary, fontSize: 10, letterSpacing: 3, fontFamily: fonts.mono as any },
+  altText: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  inputLabel: { color: colors.textSecondary, fontSize: 12, letterSpacing: 3, fontFamily: fonts.mono as any },
   input: {
     backgroundColor: "#000", borderWidth: 2, borderColor: colors.primary,
     padding: spacing.md, color: colors.white, fontSize: 36, fontWeight: "900",
@@ -162,7 +162,7 @@ const ps = StyleSheet.create({
   },
   btnRow: { flexDirection: "row", gap: 8 },
   backBtn: { flex: 1, borderWidth: 1, borderColor: "#1c1c1c", padding: 14, alignItems: "center" },
-  backText: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
+  backText: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
   confirmBtn: { flex: 2, backgroundColor: colors.primary, padding: 14, alignItems: "center" },
   confirmText: { color: "#000", fontSize: 12, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.heading as any },
 });
@@ -514,14 +514,14 @@ const s = StyleSheet.create({
     fontFamily: fonts.heading as any,
   },
   logoSub: {
-    color: colors.textSecondary, fontSize: 9, letterSpacing: 4, marginTop: 1,
+    color: colors.textSecondary, fontSize: 12, letterSpacing: 4, marginTop: 1,
     fontFamily: fonts.mono as any,
   },
   paydayChip: {
     backgroundColor: colors.yellow, paddingHorizontal: 10, paddingVertical: 5,
   },
   paydayText: {
-    color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 2,
+    color: "#000", fontSize: 12, fontWeight: "900", letterSpacing: 2,
     fontFamily: fonts.mono as any,
   },
 
@@ -533,7 +533,7 @@ const s = StyleSheet.create({
   },
   navArrow: { padding: 4 },
   weekLabel: {
-    color: colors.white, fontSize: 12, fontWeight: "700", letterSpacing: 2,
+    color: colors.white, fontSize: 14, fontWeight: "700", letterSpacing: 2,
     fontFamily: fonts.mono as any,
   },
 
@@ -545,7 +545,7 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   heroEyebrow: {
-    color: "rgba(0,0,0,0.45)", fontSize: 10, fontWeight: "900", letterSpacing: 5,
+    color: "rgba(0,0,0,0.6)", fontSize: 12, fontWeight: "900", letterSpacing: 5,
     fontFamily: fonts.mono as any, marginBottom: 4,
   },
   heroNum: {
@@ -558,11 +558,11 @@ const s = StyleSheet.create({
   },
   heroStat: { flex: 1, alignItems: "center", gap: 2 },
   heroStatNum: {
-    color: "#000", fontSize: 17, fontWeight: "900",
+    color: "#000", fontSize: 20, fontWeight: "900",
     fontFamily: fonts.mono as any,
   },
   heroStatLabel: {
-    color: "rgba(0,0,0,0.45)", fontSize: 8, fontWeight: "900", letterSpacing: 2,
+    color: "rgba(0,0,0,0.6)", fontSize: 12, fontWeight: "900", letterSpacing: 2,
     fontFamily: fonts.mono as any,
   },
   heroBarDivider: { width: 1, backgroundColor: "rgba(0,0,0,0.2)", marginVertical: 2 },
@@ -576,16 +576,16 @@ const s = StyleSheet.create({
   },
   sectionLabelAccent: { width: 3, height: 14, backgroundColor: colors.primary },
   sectionLabelText: {
-    color: colors.textSecondary, fontSize: 10, fontWeight: "700", letterSpacing: 3, flex: 1,
+    color: "#ccc", fontSize: 12, fontWeight: "700", letterSpacing: 3, flex: 1,
     fontFamily: fonts.mono as any,
   },
   sectionLabelAmt: {
-    color: colors.textSecondary, fontSize: 12, fontWeight: "700",
+    color: "#bbb", fontSize: 13, fontWeight: "700",
     fontFamily: fonts.mono as any,
   },
 
   emptyRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
-  emptyText: { color: "#333", fontSize: 13, fontStyle: "italic", fontFamily: fonts.mono as any },
+  emptyText: { color: colors.textSecondary, fontSize: 13, fontStyle: "italic", fontFamily: fonts.mono as any },
 
   // Income
   incomeRow: {
@@ -595,9 +595,9 @@ const s = StyleSheet.create({
   },
   incomeLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   greenPip: { width: 3, height: 32, backgroundColor: colors.primary },
-  incomeTitle: { color: colors.white, fontSize: 15, fontWeight: "700", fontFamily: fonts.body as any },
-  incomeAmt: { color: colors.primary, fontSize: 20, fontWeight: "900", fontFamily: fonts.mono as any },
-  rowSub: { color: colors.textSecondary, fontSize: 10, letterSpacing: 1, marginTop: 2, fontFamily: fonts.mono as any },
+  incomeTitle: { color: colors.white, fontSize: 17, fontWeight: "700", fontFamily: fonts.body as any },
+  incomeAmt: { color: colors.primary, fontSize: 22, fontWeight: "900", fontFamily: fonts.mono as any },
+  rowSub: { color: "#aaa", fontSize: 12, letterSpacing: 1, marginTop: 2, fontFamily: fonts.mono as any },
 
   // Bills
   billRow: {
@@ -608,14 +608,14 @@ const s = StyleSheet.create({
   billRowPaid: { opacity: 0.35 },
   billEmoji: { fontSize: 20, width: 28, textAlign: "center" },
   billMid: { flex: 1 },
-  billName: { color: colors.white, fontSize: 14, fontWeight: "800", letterSpacing: 1, fontFamily: fonts.body as any },
-  strike: { textDecorationLine: "line-through", color: colors.textSecondary },
-  billAmt: { color: colors.red, fontSize: 17, fontWeight: "900", fontFamily: fonts.mono as any },
+  billName: { color: colors.white, fontSize: 16, fontWeight: "800", letterSpacing: 1, fontFamily: fonts.body as any },
+  strike: { textDecorationLine: "line-through", color: "#888" },
+  billAmt: { color: colors.red, fontSize: 18, fontWeight: "900", fontFamily: fonts.mono as any },
   paidPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 5,
   },
-  paidPillText: { color: "#000", fontSize: 9, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
+  paidPillText: { color: "#000", fontSize: 12, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.mono as any },
 
   // Flex spending
   flexRow: {
@@ -624,12 +624,12 @@ const s = StyleSheet.create({
   },
   flexTop: { flexDirection: "row", alignItems: "center", gap: 8 },
   flexEmoji: { fontSize: 14 },
-  flexName: { flex: 1, color: colors.white, fontSize: 11, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
-  flexAmt: { color: colors.white, fontSize: 14, fontWeight: "800", fontFamily: fonts.mono as any },
-  flexOf: { color: colors.textSecondary, fontWeight: "400", fontSize: 11 },
-  barBg: { height: 3, backgroundColor: "#111" },
-  barFill: { height: 3 },
-  overMsg: { color: colors.red, fontSize: 10, fontStyle: "italic", fontFamily: fonts.mono as any },
+  flexName: { flex: 1, color: colors.white, fontSize: 13, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
+  flexAmt: { color: colors.white, fontSize: 16, fontWeight: "800", fontFamily: fonts.mono as any },
+  flexOf: { color: "#aaa", fontWeight: "400", fontSize: 12 },
+  barBg: { height: 4, backgroundColor: "#1a1a1a" },
+  barFill: { height: 4 },
+  overMsg: { color: colors.red, fontSize: 12, fontStyle: "italic", fontFamily: fonts.mono as any },
 
   // Expenses
   expenseRow: {
@@ -638,15 +638,15 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: "#080808",
   },
   redPip: { width: 3, height: 28, backgroundColor: colors.red },
-  expenseCat: { color: colors.white, fontSize: 12, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
-  expenseNote: { color: colors.textSecondary, fontSize: 11, marginTop: 1, fontFamily: fonts.body as any },
-  expenseAmt: { color: colors.red, fontSize: 16, fontWeight: "900", fontFamily: fonts.mono as any },
+  expenseCat: { color: colors.white, fontSize: 14, fontWeight: "800", letterSpacing: 2, fontFamily: fonts.mono as any },
+  expenseNote: { color: "#bbb", fontSize: 13, marginTop: 1, fontFamily: fonts.body as any },
+  expenseAmt: { color: colors.red, fontSize: 18, fontWeight: "900", fontFamily: fonts.mono as any },
   acctChip: {
     borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 5, paddingVertical: 1,
   },
   acctChipText: {
-    color: colors.textSecondary, fontSize: 8, fontWeight: "700", letterSpacing: 1,
+    color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1,
     fontFamily: fonts.mono as any,
   },
 
@@ -665,7 +665,7 @@ const s = StyleSheet.create({
   },
   filterPillEmoji: { fontSize: 10 },
   filterPillText: {
-    color: colors.textSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 1.5,
+    color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1.5,
     fontFamily: fonts.mono as any,
   },
   filterPillTextActive: { color: colors.primary },
