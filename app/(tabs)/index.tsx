@@ -241,17 +241,31 @@ export default function HomeScreen() {
     );
   }, [currentBudget, weekRange]);
 
-  const totalBillsDue = billsDue.reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
-
   const paidBillIds = useMemo(() => {
     const ids = new Set<string>();
-    expenseTxns.forEach((t) => {
+    // Check ALL expense transactions this week (not filtered by account)
+    const allWeekExpenses = transactions.filter((t) => {
+      const d = new Date(t.date);
+      return d >= weekRange.start && d <= weekRange.end && t.type === "expense";
+    });
+    allWeekExpenses.forEach((t) => {
       if (t.note) billsDue.forEach((b) => {
         if (t.note!.toLowerCase().includes(b.name.toLowerCase())) ids.add(b.id);
       });
     });
     return ids;
-  }, [expenseTxns, billsDue]);
+  }, [transactions, weekRange, billsDue]);
+
+  // Filter bills by account tag when a filter is active
+  const filteredBillsDue = useMemo(() => {
+    if (!accountFilter) return billsDue;
+    return billsDue.filter((b) => b.defaultAccountTag === accountFilter);
+  }, [billsDue, accountFilter]);
+
+  // Only count UNPAID bills in the total
+  const totalBillsDue = filteredBillsDue
+    .filter((c) => !paidBillIds.has(c.id))
+    .reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
 
   const flexCategories = useMemo(() => currentBudget?.categories.filter((c) => c.type === "flexible") ?? [], [currentBudget]);
 
@@ -403,14 +417,14 @@ export default function HomeScreen() {
         )}
 
         {/* ── BILLS DUE ── */}
-        {billsDue.length > 0 && (
+        {filteredBillsDue.length > 0 && (
           <>
             <View style={s.sectionLabel}>
               <View style={[s.sectionLabelAccent, { backgroundColor: colors.red }]} />
               <Text style={s.sectionLabelText}>BILLS DUE</Text>
-              <Text style={s.sectionLabelAmt}>{formatCurrency(totalBillsDue)}</Text>
+              <Text style={s.sectionLabelAmt}>{totalBillsDue > 0 ? formatCurrency(totalBillsDue) : "ALL PAID"}</Text>
             </View>
-            {billsDue.map((c) => {
+            {filteredBillsDue.map((c) => {
               const isPaid = paidBillIds.has(c.id);
               const amt = getMonthlyAmount(c.allocated, c.frequency || "monthly");
               return (
