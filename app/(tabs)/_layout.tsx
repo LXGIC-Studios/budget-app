@@ -6,37 +6,38 @@ import { colors, fonts } from "../../src/theme";
 function TabIcon({ children, focused, label }: { children: React.ReactNode; focused: boolean; label: string }) {
   return (
     <View style={[
-      tabStyles.block,
-      focused ? tabStyles.blockActive : tabStyles.blockInactive,
+      ts.block,
+      focused ? ts.blockActive : ts.blockInactive,
     ]}>
       {children}
       <Text style={[
-        tabStyles.blockLabel,
-        focused ? tabStyles.blockLabelActive : tabStyles.blockLabelInactive,
+        ts.blockLabel,
+        focused ? ts.blockLabelActive : ts.blockLabelInactive,
       ]}>{label}</Text>
     </View>
   );
 }
 
-const tabStyles = StyleSheet.create({
+const ts = StyleSheet.create({
   block: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    height: 56,
-    width: "100%",
+    // Force full width/height of the tab item
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   blockActive: {
     backgroundColor: colors.primary,
   },
   blockInactive: {
     backgroundColor: "#080808",
-    borderRightWidth: 1,
-    borderRightColor: "#1a1a1a",
   },
   blockLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 3,
     textTransform: "uppercase",
@@ -57,23 +58,22 @@ export default function TabLayout() {
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: "#000",
-          tabBarInactiveTintColor: "#aaa",
+          tabBarInactiveTintColor: "#bbb",
           tabBarShowLabel: false,
           tabBarStyle: {
             backgroundColor: "#080808",
             borderTopColor: colors.primary,
             borderTopWidth: 2,
-            height: Platform.OS === "web" ? 58 : 90,
-            paddingBottom: Platform.OS === "web" ? 0 : 28,
+            height: Platform.OS === "web" ? 62 : 90,
+            paddingBottom: 0,
             paddingTop: 0,
             paddingHorizontal: 0,
-            flexDirection: "row",
           },
           tabBarItemStyle: {
             flex: 1,
             padding: 0,
             margin: 0,
-            height: "100%",
+            paddingBottom: Platform.OS === "web" ? 0 : 28,
           },
         }}
       >
@@ -84,7 +84,7 @@ export default function TabLayout() {
             title: "Home",
             tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} label="HOME">
-                <Home size={22} color={focused ? "#000" : "#aaa"} strokeWidth={focused ? 2.5 : 1.5} />
+                <Home size={22} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
@@ -95,7 +95,7 @@ export default function TabLayout() {
             title: "Log",
             tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} label="LOG">
-                <PlusCircle size={22} color={focused ? "#000" : "#aaa"} strokeWidth={focused ? 2.5 : 1.5} />
+                <PlusCircle size={22} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
@@ -106,7 +106,7 @@ export default function TabLayout() {
             title: "Overview",
             tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} label="OVERVIEW">
-                <BarChart3 size={22} color={focused ? "#000" : "#aaa"} strokeWidth={focused ? 2.5 : 1.5} />
+                <BarChart3 size={22} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
