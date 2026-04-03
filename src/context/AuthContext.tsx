@@ -38,7 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error && data.session) {
+      // Manually set session for Safari where onAuthStateChange can lag
+      setSession(data.session);
+    }
     return { error: error?.message ?? null };
   };
 
