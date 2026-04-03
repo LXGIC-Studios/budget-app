@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember, AccountTag } from "../types";
 import * as storage from "../storage";
+import { invalidateAuthCache } from "../storage";
 import { supabase } from "../lib/supabase";
 import { getMonthKey } from "../utils";
 
@@ -94,6 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Re-load data when auth state changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+        invalidateAuthCache();
         loadData();
       }
     });

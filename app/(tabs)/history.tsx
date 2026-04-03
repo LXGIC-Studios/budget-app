@@ -21,7 +21,7 @@ import { QuickAddSheet } from "../../src/components/QuickAddSheet";
 import { formatRelativeDate } from "../../src/utils";
 import type { Transaction } from "../../src/types";
 
-type Filter = "all" | "income" | "expense";
+type Filter = "all" | "income" | "expense" | "transfer";
 
 const MONTHS = [
   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
@@ -143,6 +143,7 @@ export default function HistoryScreen() {
     { label: "ALL", value: "all" },
     { label: "INCOME", value: "income" },
     { label: "EXPENSES", value: "expense" },
+    { label: "TRANSFERS", value: "transfer" },
   ];
 
   return (

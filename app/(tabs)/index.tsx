@@ -365,7 +365,7 @@ export default function HomeScreen() {
   const weekTxns = useMemo(() =>
     transactions.filter((t) => {
       const d = new Date(t.date);
-      if (!(d >= weekRange.start && d <= weekRange.end && t.type !== "transfer")) return false;
+      if (!(d >= weekRange.start && d <= weekRange.end)) return false;
       if (accountFilter && t.accountTag !== accountFilter) return false;
       return true;
     }), [transactions, weekRange, accountFilter]
@@ -377,6 +377,7 @@ export default function HomeScreen() {
 
   const incomeTxns = useMemo(() => weekTxns.filter((t) => t.type === "income").sort((a, b) => a.date.localeCompare(b.date)), [weekTxns]);
   const expenseTxns = useMemo(() => weekTxns.filter((t) => t.type === "expense").sort((a, b) => b.date.localeCompare(a.date)), [weekTxns]);
+  const transferTxns = useMemo(() => weekTxns.filter((t) => t.type === "transfer").sort((a, b) => b.date.localeCompare(a.date)), [weekTxns]);
 
   const billsDue = useMemo(() => {
     if (!currentBudget) return [];
@@ -684,6 +685,35 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <Text style={s.expenseAmt}>-{formatCurrency(t.amount)}</Text>
+              </Pressable>
+            ))}
+          </>
+        )}
+
+        {/* ── TRANSFERS ── */}
+        {transferTxns.length > 0 && (
+          <>
+            <View style={s.sectionLabel}>
+              <View style={[s.sectionLabelAccent, { backgroundColor: colors.textSecondary }]} />
+              <Text style={s.sectionLabelText}>TRANSFERS</Text>
+              <Text style={s.sectionLabelAmt}>{transferTxns.length} movements</Text>
+            </View>
+            {transferTxns.map((t) => (
+              <Pressable key={t.id} onPress={() => { setEditingTxn(t); setSheetVisible(true); }} style={s.expenseRow}>
+                <View style={[s.redPip, { backgroundColor: colors.textSecondary }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.expenseCat}>TRANSFER</Text>
+                  {t.note ? <Text style={s.expenseNote}>{t.note}</Text> : null}
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
+                    {getTagInfo(t.accountTag) && (
+                      <View style={s.acctChip}>
+                        <Text style={s.acctChipText}>{getTagInfo(t.accountTag)!.emoji} {getTagInfo(t.accountTag)!.label}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <Text style={[s.expenseAmt, { color: colors.textSecondary }]}>{formatCurrency(t.amount)}</Text>
               </Pressable>
             ))}
           </>

@@ -20,7 +20,7 @@ import { formatCurrency, formatShortDate } from "../../src/utils";
 import type { Transaction } from "../../src/types";
 
 
-const FILTER_OPTIONS = ["ALL", "INCOME", "EXPENSES"] as const;
+const FILTER_OPTIONS = ["ALL", "INCOME", "EXPENSES", "TRANSFERS"] as const;
 type Filter = (typeof FILTER_OPTIONS)[number];
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -49,9 +49,11 @@ export default function LogScreen() {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
-    let list = transactions.filter((t) => t.type !== "transfer");
+    let list = [...transactions];
+    if (filter === "ALL") list = list.filter((t) => t.type !== "transfer");
     if (filter === "INCOME") list = list.filter((t) => t.type === "income");
     if (filter === "EXPENSES") list = list.filter((t) => t.type === "expense");
+    if (filter === "TRANSFERS") list = list.filter((t) => t.type === "transfer");
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((t) =>
@@ -161,8 +163,8 @@ export default function LogScreen() {
                   )}
                 </View>
               </View>
-              <Text style={[styles.txnAmount, t.type === "income" ? styles.amountIn : styles.amountOut]}>
-                {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+              <Text style={[styles.txnAmount, t.type === "income" ? styles.amountIn : t.type === "transfer" ? styles.amountTransfer : styles.amountOut]}>
+                {t.type === "income" ? "+" : t.type === "transfer" ? "" : "-"}{formatCurrency(t.amount)}
               </Text>
             </Pressable>
           ))
@@ -347,6 +349,9 @@ const styles = StyleSheet.create({
   },
   amountOut: {
     color: colors.red,
+  },
+  amountTransfer: {
+    color: colors.textSecondary,
   },
   empty: {
     alignItems: "center",
