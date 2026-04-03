@@ -129,7 +129,7 @@ function CategoryRow({
 }
 
 export default function BudgetScreen() {
-  const { profile, currentBudget, transactions, currentMonth, setCurrentMonth, saveBudget, addTransaction } =
+  const { profile, currentBudget, transactions, currentMonth, setCurrentMonth, saveBudget, addTransaction, userAccounts } =
     useApp();
 
   const profileIncome = profile?.monthlyIncome ?? 0;
@@ -157,6 +157,7 @@ export default function BudgetScreen() {
   const [editName, setEditName] = useState("");
   const [editEmoji, setEditEmoji] = useState("");
   const [editType, setEditType] = useState<"fixed" | "flexible">("fixed");
+  const [editDefaultAccount, setEditDefaultAccount] = useState<string | undefined>(undefined);
 
   // Add category modal state
   // Pay modal state
@@ -229,7 +230,7 @@ export default function BudgetScreen() {
       ...currentBudget,
       categories: currentBudget.categories.map((c) =>
         c.id === editCat.id
-          ? { ...c, name: trimmedName, emoji: trimmedEmoji, allocated: newAmount, type: editType, dueDay: newDueDay }
+          ? { ...c, name: trimmedName, emoji: trimmedEmoji, allocated: newAmount, type: editType, dueDay: newDueDay, defaultAccountTag: editDefaultAccount }
           : c
       ),
     };
@@ -304,6 +305,7 @@ export default function BudgetScreen() {
     setEditName(cat.name);
     setEditEmoji(cat.emoji);
     setEditType(cat.type);
+    setEditDefaultAccount(cat.defaultAccountTag);
     // Pre-fill pay amount with remaining balance
     const displayAllocated = getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
     const catKey = cat.name.toLowerCase();
@@ -573,6 +575,31 @@ export default function BudgetScreen() {
                     maxLength={2}
                   />
                 </View>
+              </View>
+            )}
+
+            {/* Default account for payments */}
+            {editType === "fixed" && (
+              <View>
+                <Text style={styles.modalFieldLabel}>DEFAULT ACCOUNT</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                  <Pressable
+                    style={[styles.acctPill, !editDefaultAccount && styles.acctPillActive]}
+                    onPress={() => setEditDefaultAccount(undefined)}
+                  >
+                    <Text style={[styles.acctPillText, !editDefaultAccount && styles.acctPillTextActive]}>NONE</Text>
+                  </Pressable>
+                  {userAccounts.map((acct) => (
+                    <Pressable
+                      key={acct.id}
+                      style={[styles.acctPill, editDefaultAccount === acct.id && styles.acctPillActive]}
+                      onPress={() => setEditDefaultAccount(editDefaultAccount === acct.id ? undefined : acct.id)}
+                    >
+                      <Text style={styles.acctPillEmoji}>{acct.emoji}</Text>
+                      <Text style={[styles.acctPillText, editDefaultAccount === acct.id && styles.acctPillTextActive]}>{acct.label.toUpperCase()}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
               </View>
             )}
 
@@ -1048,6 +1075,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 2,
+  },
+  // Account pills
+  acctPill: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#1a1a1a',
+    backgroundColor: '#0a0a0a',
+  },
+  acctPillActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(0, 255, 204, 0.1)',
+  },
+  acctPillEmoji: { fontSize: 12 },
+  acctPillText: {
+    color: colors.dimmed,
+    fontSize: 11,
+    fontWeight: "700" as const,
+    letterSpacing: 1.5,
+  },
+  acctPillTextActive: {
+    color: colors.primary,
   },
   // Mark Paid button
   markPaidBtn: {

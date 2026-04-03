@@ -62,7 +62,7 @@ function PayBillModal({ bill, onClose, onQuickPay, onCustomPay, accounts }: {
   const defaultAmount = getMonthlyAmount(bill.allocated, bill.frequency || "monthly");
   const [customAmount, setCustomAmount] = useState(defaultAmount.toFixed(2));
   const [mode, setMode] = useState<"choose" | "custom">("choose");
-  const [selectedAccount, setSelectedAccount] = useState<string | undefined>(undefined);
+  const [selectedAccount, setSelectedAccount] = useState<string | undefined>(bill.defaultAccountTag);
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>

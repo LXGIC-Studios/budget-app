@@ -37,6 +37,7 @@ export interface BudgetCategory {
   type: "fixed" | "flexible";
   frequency?: BillFrequency;
   dueDay?: number;
+  defaultAccountTag?: string;
 }
 
 export interface UserProfile {

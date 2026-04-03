@@ -250,6 +250,7 @@ export async function getBudgetForMonth(
     type: row.type as "fixed" | "flexible",
     frequency: row.frequency || "monthly",
     dueDay: row.due_day ? Number(row.due_day) : undefined,
+    defaultAccountTag: row.default_account_tag || undefined,
   }));
 
   return { month, categories };
@@ -279,6 +280,7 @@ export async function saveBudgetForMonth(
     month: budget.month,
     frequency: cat.frequency || "monthly",
     due_day: cat.dueDay || null,
+    default_account_tag: cat.defaultAccountTag || null,
   }));
 
   if (rows.length > 0) {
@@ -297,6 +299,7 @@ export async function saveBudgetForMonth(
         type: row.type as "fixed" | "flexible",
         frequency: row.frequency || "monthly",
         dueDay: row.due_day ? Number(row.due_day) : undefined,
+        defaultAccountTag: row.default_account_tag || undefined,
       }));
       return { month: budget.month, categories: newCategories };
     }
