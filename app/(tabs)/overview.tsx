@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Edit3 } from "lucide-react-native";
@@ -7,6 +7,7 @@ import { impact } from "../../src/lib/haptics";
 import { colors, spacing, fonts } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { formatCurrency, formatMonthLabel, shiftMonth, getMonthlyAmount } from "../../src/utils";
+import { ACCOUNT_TAGS } from "../../src/types";
 
 // ─── BAR CHART COMPONENT ───────────────────────────────────────────
 function HBar({ label, amount, maxAmount, color, budget }: {
@@ -77,6 +78,14 @@ function ComparisonBar({ leftLabel, leftAmount, rightLabel, rightAmount, leftCol
 export default function OverviewScreen() {
   const { transactions, currentMonth, setCurrentMonth, currentBudget, debts, profile } = useApp();
   const router = useRouter();
+  const [accountFilter, setAccountFilter] = useState<string | null>(null);
+
+  // ─── ACCOUNT FILTER TAGS ─────────────────────────────────────────
+  const usedTags = useMemo(() => {
+    const tags = new Set<string>();
+    transactions.forEach((t) => { if (t.accountTag) tags.add(t.accountTag); });
+    return Array.from(tags);
+  }, [transactions]);
 
   // ─── EXPECTED INCOME (from profile) ──────────────────────────────
   const expectedIncome = profile?.monthlyIncome ?? 0;
@@ -94,10 +103,14 @@ export default function OverviewScreen() {
     return map;
   }, [flexCats]);
 
-  // ─── ACTUAL TRANSACTIONS ─────────────────────────────────────────
+  // ─── ACTUAL TRANSACTIONS (filtered by account) ──────────────────
   const monthTxns = useMemo(() =>
-    transactions.filter((t) => t.date.startsWith(currentMonth) && t.type !== "transfer"),
-    [transactions, currentMonth]
+    transactions.filter((t) => {
+      if (!t.date.startsWith(currentMonth) || t.type === "transfer") return false;
+      if (accountFilter && t.accountTag !== accountFilter) return false;
+      return true;
+    }),
+    [transactions, currentMonth, accountFilter]
   );
 
   const actualIncome = useMemo(() => monthTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [monthTxns]);
@@ -164,6 +177,32 @@ export default function OverviewScreen() {
           <Text style={s.monthLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
           <Pressable onPress={() => navigate(1)} hitSlop={16}><ChevronRight size={20} color={colors.textSecondary} /></Pressable>
         </View>
+
+        {/* ── ACCOUNT FILTER ── */}
+        {usedTags.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterBar}>
+            <Pressable
+              onPress={() => { impact("Light"); setAccountFilter(null); }}
+              style={[s.filterPill, !accountFilter && s.filterPillActive]}
+            >
+              <Text style={[s.filterPillText, !accountFilter && s.filterPillTextActive]}>ALL</Text>
+            </Pressable>
+            {usedTags.map((tag) => {
+              const info = ACCOUNT_TAGS.find((t) => t.id === tag);
+              if (!info) return null;
+              return (
+                <Pressable
+                  key={tag}
+                  onPress={() => { impact("Light"); setAccountFilter(accountFilter === tag ? null : tag); }}
+                  style={[s.filterPill, accountFilter === tag && s.filterPillActive]}
+                >
+                  <Text style={s.filterPillEmoji}>{info.emoji}</Text>
+                  <Text style={[s.filterPillText, accountFilter === tag && s.filterPillTextActive]}>{info.label.toUpperCase()}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* ── INCOME vs EXPENSES CHART ── */}
         <View style={s.sectionHeader}>
@@ -400,4 +439,24 @@ const s = StyleSheet.create({
   debtName: { color: colors.white, fontSize: 14, fontWeight: "700", fontFamily: fonts.body as any },
   debtMin: { color: colors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: fonts.mono as any },
   debtBal: { color: colors.red, fontSize: 16, fontWeight: "900", fontFamily: fonts.mono as any },
+
+  // Account filter bar
+  filterBar: {
+    flexDirection: "row", gap: 6, paddingHorizontal: spacing.lg, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  filterPill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: "#1c1c1c", backgroundColor: "#050505",
+  },
+  filterPillActive: {
+    borderColor: colors.primary, backgroundColor: "rgba(0,255,204,0.1)",
+  },
+  filterPillEmoji: { fontSize: 10 },
+  filterPillText: {
+    color: colors.textSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 1.5,
+    fontFamily: fonts.mono as any,
+  },
+  filterPillTextActive: { color: colors.primary },
 });

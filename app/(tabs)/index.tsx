@@ -173,14 +173,24 @@ export default function HomeScreen() {
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingTxn, setEditingTxn] = useState<Transaction | undefined>(undefined);
   const [payingBill, setPayingBill] = useState<BudgetCategory | null>(null);
+  const [accountFilter, setAccountFilter] = useState<string | null>(null);
 
   const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
+
+  // Get unique account tags used this week for the filter bar
+  const usedTags = useMemo(() => {
+    const tags = new Set<string>();
+    transactions.forEach((t) => { if (t.accountTag) tags.add(t.accountTag); });
+    return Array.from(tags);
+  }, [transactions]);
 
   const weekTxns = useMemo(() =>
     transactions.filter((t) => {
       const d = new Date(t.date);
-      return d >= weekRange.start && d <= weekRange.end && t.type !== "transfer";
-    }), [transactions, weekRange]
+      if (!(d >= weekRange.start && d <= weekRange.end && t.type !== "transfer")) return false;
+      if (accountFilter && t.accountTag !== accountFilter) return false;
+      return true;
+    }), [transactions, weekRange, accountFilter]
   );
 
   const weekIncome = useMemo(() => weekTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [weekTxns]);
@@ -277,6 +287,32 @@ export default function HomeScreen() {
             <ChevronRight size={18} color={colors.primary} strokeWidth={3} />
           </Pressable>
         </View>
+
+        {/* ── ACCOUNT FILTER ── */}
+        {usedTags.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterBar}>
+            <Pressable
+              onPress={() => { impact("Light"); setAccountFilter(null); }}
+              style={[s.filterPill, !accountFilter && s.filterPillActive]}
+            >
+              <Text style={[s.filterPillText, !accountFilter && s.filterPillTextActive]}>ALL</Text>
+            </Pressable>
+            {usedTags.map((tag) => {
+              const info = ACCOUNT_TAGS.find((t) => t.id === tag);
+              if (!info) return null;
+              return (
+                <Pressable
+                  key={tag}
+                  onPress={() => { impact("Light"); setAccountFilter(accountFilter === tag ? null : tag); }}
+                  style={[s.filterPill, accountFilter === tag && s.filterPillActive]}
+                >
+                  <Text style={s.filterPillEmoji}>{info.emoji}</Text>
+                  <Text style={[s.filterPillText, accountFilter === tag && s.filterPillTextActive]}>{info.label.toUpperCase()}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* ── HERO - full bleed ── */}
         <View style={[s.hero, { backgroundColor: netIsPositive ? colors.primary : colors.red }]}>
@@ -613,4 +649,24 @@ const s = StyleSheet.create({
     color: colors.textSecondary, fontSize: 8, fontWeight: "700", letterSpacing: 1,
     fontFamily: fonts.mono as any,
   },
+
+  // Account filter bar
+  filterBar: {
+    flexDirection: "row", gap: 6, paddingHorizontal: spacing.md, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: "#0a0a0a",
+  },
+  filterPill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: "#1c1c1c", backgroundColor: "#050505",
+  },
+  filterPillActive: {
+    borderColor: colors.primary, backgroundColor: "rgba(0,255,204,0.1)",
+  },
+  filterPillEmoji: { fontSize: 10 },
+  filterPillText: {
+    color: colors.textSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 1.5,
+    fontFamily: fonts.mono as any,
+  },
+  filterPillTextActive: { color: colors.primary },
 });
