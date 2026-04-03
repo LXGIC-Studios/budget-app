@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { Platform, View, Text, StyleSheet } from "react-native";
-import { Home, PlusCircle, BarChart3 } from "lucide-react-native";
+import { Home, PlusCircle, BarChart3, Sliders } from "lucide-react-native";
 import { colors, fonts } from "../../src/theme";
 
 function TabIcon({ children, focused, label }: { children: React.ReactNode; focused: boolean; label: string }) {
@@ -23,7 +23,6 @@ const ts = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    // Force full width/height of the tab item
     position: "absolute",
     top: 0,
     left: 0,
@@ -37,9 +36,9 @@ const ts = StyleSheet.create({
     backgroundColor: "#080808",
   },
   blockLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 3,
+    letterSpacing: 2,
     textTransform: "uppercase",
     fontFamily: fonts.mono as any,
   },
@@ -77,14 +76,13 @@ export default function TabLayout() {
           },
         }}
       >
-        {/* ---- ACTIVE TABS ---- */}
         <Tabs.Screen
           name="index"
           options={{
             title: "Home",
             tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} label="HOME">
-                <Home size={22} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
+                <Home size={20} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
@@ -95,7 +93,7 @@ export default function TabLayout() {
             title: "Log",
             tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} label="LOG">
-                <PlusCircle size={22} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
+                <PlusCircle size={20} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
@@ -103,17 +101,27 @@ export default function TabLayout() {
         <Tabs.Screen
           name="overview"
           options={{
-            title: "Overview",
+            title: "Charts",
             tabBarIcon: ({ focused }) => (
-              <TabIcon focused={focused} label="OVERVIEW">
-                <BarChart3 size={22} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
+              <TabIcon focused={focused} label="CHARTS">
+                <BarChart3 size={20} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
+              </TabIcon>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="budget"
+          options={{
+            title: "Budget",
+            tabBarIcon: ({ focused }) => (
+              <TabIcon focused={focused} label="BUDGET">
+                <Sliders size={20} color={focused ? "#000" : "#bbb"} strokeWidth={focused ? 2.5 : 1.5} />
               </TabIcon>
             ),
           }}
         />
 
         {/* ---- HIDDEN LEGACY TABS ---- */}
-        <Tabs.Screen name="budget"    options={{ href: null }} />
         <Tabs.Screen name="debt"      options={{ href: null }} />
         <Tabs.Screen name="insights"  options={{ href: null }} />
         <Tabs.Screen name="history"   options={{ href: null }} />
