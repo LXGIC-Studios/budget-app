@@ -52,15 +52,17 @@ function billsDueInWeek(cat: BudgetCategory, start: Date, end: Date): boolean {
   });
 }
 
-function PayBillModal({ bill, onClose, onQuickPay, onCustomPay }: {
+function PayBillModal({ bill, onClose, onQuickPay, onCustomPay, accounts }: {
   bill: BudgetCategory;
   onClose: () => void;
-  onQuickPay: (amount: number) => void;
-  onCustomPay: (amount: number) => void;
+  onQuickPay: (amount: number, accountTag?: string) => void;
+  onCustomPay: (amount: number, accountTag?: string) => void;
+  accounts: { id: string; label: string; emoji: string }[];
 }) {
   const defaultAmount = getMonthlyAmount(bill.allocated, bill.frequency || "monthly");
   const [customAmount, setCustomAmount] = useState(defaultAmount.toFixed(2));
   const [mode, setMode] = useState<"choose" | "custom">("choose");
+  const [selectedAccount, setSelectedAccount] = useState<string | undefined>(undefined);
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>
@@ -80,10 +82,29 @@ function PayBillModal({ bill, onClose, onQuickPay, onCustomPay }: {
             </Pressable>
           </View>
 
+          {/* Account selector */}
+          <View>
+            <Text style={ps.acctLabel}>PAID FROM</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ps.acctRow}>
+              {accounts.map((acct) => (
+                <Pressable
+                  key={acct.id}
+                  onPress={() => { impact("Light"); setSelectedAccount(selectedAccount === acct.id ? undefined : acct.id); }}
+                  style={[ps.acctPill, selectedAccount === acct.id && ps.acctPillActive]}
+                >
+                  <Text style={ps.acctPillEmoji}>{acct.emoji}</Text>
+                  <Text style={[ps.acctPillText, selectedAccount === acct.id && ps.acctPillTextActive]}>
+                    {acct.label.toUpperCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+
           {mode === "choose" ? (
             <>
               {/* One-tap pay */}
-              <Pressable style={ps.quickBtn} onPress={() => onQuickPay(defaultAmount)}>
+              <Pressable style={ps.quickBtn} onPress={() => onQuickPay(defaultAmount, selectedAccount)}>
                 <View style={ps.quickLeft}>
                   <Text style={ps.quickLabel}>MARK PAID</Text>
                   <Text style={ps.quickSub}>One tap - exact amount</Text>
@@ -113,7 +134,7 @@ function PayBillModal({ bill, onClose, onQuickPay, onCustomPay }: {
                 </Pressable>
                 <Pressable style={ps.confirmBtn} onPress={() => {
                   const amt = parseFloat(customAmount);
-                  if (!isNaN(amt) && amt > 0) onCustomPay(amt);
+                  if (!isNaN(amt) && amt > 0) onCustomPay(amt, selectedAccount);
                 }}>
                   <Text style={ps.confirmText}>CONFIRM PAID</Text>
                 </Pressable>
@@ -166,6 +187,17 @@ const ps = StyleSheet.create({
   backText: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any },
   confirmBtn: { flex: 2, backgroundColor: colors.primary, padding: 14, alignItems: "center" },
   confirmText: { color: "#000", fontSize: 12, fontWeight: "900", letterSpacing: 2, fontFamily: fonts.heading as any },
+  acctLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 3, fontFamily: fonts.mono as any, marginBottom: 6 },
+  acctRow: { flexDirection: "row" as const, gap: 6 },
+  acctPill: {
+    flexDirection: "row" as const, alignItems: "center" as const, gap: 4,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderWidth: 1, borderColor: "#1c1c1c", backgroundColor: "#050505",
+  },
+  acctPillActive: { borderColor: colors.primary, backgroundColor: "rgba(0,255,204,0.1)" },
+  acctPillEmoji: { fontSize: 12 },
+  acctPillText: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 1.5, fontFamily: fonts.mono as any },
+  acctPillTextActive: { color: colors.primary },
 });
 
 export default function HomeScreen() {
@@ -250,12 +282,13 @@ export default function HomeScreen() {
 
   const navigate = (delta: number) => { impact("Light"); setCurrentWeek(shiftWeek(currentWeek, delta)); };
 
-  const handlePayBill = async (bill: BudgetCategory, amount: number) => {
+  const handlePayBill = async (bill: BudgetCategory, amount: number, accountTag?: string) => {
     notification("Success");
     await addTransaction({
       id: generateId(), type: "expense", amount,
       category: "bills", note: `Paid: ${bill.name}`,
       date: new Date().toISOString(), createdAt: new Date().toISOString(),
+      ...(accountTag ? { accountTag } : {}),
     });
     setPayingBill(null);
   };
@@ -493,8 +526,9 @@ export default function HomeScreen() {
         <PayBillModal
           bill={payingBill}
           onClose={() => setPayingBill(null)}
-          onQuickPay={(amt) => handlePayBill(payingBill, amt)}
-          onCustomPay={(amt) => handlePayBill(payingBill, amt)}
+          onQuickPay={(amt, tag) => handlePayBill(payingBill, amt, tag)}
+          onCustomPay={(amt, tag) => handlePayBill(payingBill, amt, tag)}
+          accounts={userAccounts}
         />
       )}
     </SafeAreaView>
