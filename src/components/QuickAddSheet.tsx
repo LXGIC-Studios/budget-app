@@ -13,8 +13,9 @@ import {
 import { notification, impact } from "../lib/haptics";
 import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, ACCOUNT_TAGS } from "../types";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
 import type { Transaction } from "../types";
+import { useApp } from "../context/AppContext";
 import { generateId, formatShortDate, formatCurrency } from "../utils";
 
 interface SplitRow {
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode }: Props) {
+  const { userAccounts } = useApp();
   const [mode, setMode] = useState<"expense" | "income">(initialMode ?? "expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
@@ -495,24 +497,26 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
           />
 
           {/* Account tag picker */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
-            <Pressable
-              onPress={() => { setAccountTag(undefined); impact("Light"); }}
-              style={[styles.accountPill, !accountTag && styles.accountPillActive]}
-            >
-              <Text style={[styles.accountPillText, !accountTag && styles.accountPillTextActive]}>NONE</Text>
-            </Pressable>
-            {ACCOUNT_TAGS.map((tag) => (
+          {userAccounts.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountRow}>
               <Pressable
-                key={tag.id}
-                onPress={() => { setAccountTag(tag.id); impact("Light"); }}
-                style={[styles.accountPill, accountTag === tag.id && styles.accountPillActive]}
+                onPress={() => { setAccountTag(undefined); impact("Light"); }}
+                style={[styles.accountPill, !accountTag && styles.accountPillActive]}
               >
-                <Text style={styles.accountPillIcon}>{tag.emoji}</Text>
-                <Text style={[styles.accountPillText, accountTag === tag.id && styles.accountPillTextActive]}>{tag.label.toUpperCase()}</Text>
+                <Text style={[styles.accountPillText, !accountTag && styles.accountPillTextActive]}>NONE</Text>
               </Pressable>
-            ))}
-          </ScrollView>
+              {userAccounts.map((acct) => (
+                <Pressable
+                  key={acct.id}
+                  onPress={() => { setAccountTag(acct.id); impact("Light"); }}
+                  style={[styles.accountPill, accountTag === acct.id && styles.accountPillActive]}
+                >
+                  <Text style={styles.accountPillIcon}>{acct.emoji}</Text>
+                  <Text style={[styles.accountPillText, accountTag === acct.id && styles.accountPillTextActive]}>{acct.label.toUpperCase()}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
 
           {/* Date */}
           <View style={styles.dateRow}>

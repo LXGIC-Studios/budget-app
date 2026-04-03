@@ -10,16 +10,22 @@ export interface Transaction {
   accountTag?: string;
 }
 
-export const ACCOUNT_TAGS = [
+// Default account tags - users can add their own via Settings
+export const DEFAULT_ACCOUNT_TAGS = [
   { id: "checking", label: "Checking", emoji: "🏦" },
   { id: "savings", label: "Savings", emoji: "💰" },
   { id: "credit", label: "Credit Card", emoji: "💳" },
   { id: "cash", label: "Cash", emoji: "💵" },
-  { id: "venmo", label: "Venmo", emoji: "📱" },
-  { id: "cashapp", label: "Cash App", emoji: "📲" },
-  { id: "apple", label: "Apple Card", emoji: "🍎" },
-  { id: "business", label: "Business", emoji: "💼" },
 ] as const;
+
+export interface AccountTag {
+  id: string;
+  label: string;
+  emoji: string;
+}
+
+// Keep ACCOUNT_TAGS as alias for backward compat
+export const ACCOUNT_TAGS = DEFAULT_ACCOUNT_TAGS;
 
 export type BillFrequency = 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'quarterly' | 'yearly';
 

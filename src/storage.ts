@@ -496,3 +496,24 @@ export async function resetAllData(): Promise<void> {
       .eq("id", user.id),
   ]);
 }
+
+// User Accounts (custom account tags)
+export async function getUserAccounts(): Promise<{ id: string; label: string; emoji: string }[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase.from("user_accounts").select("*").eq("user_id", user.id).order("created_at");
+  if (!data) return [];
+  return data.map((r) => ({ id: r.id, label: r.label, emoji: r.emoji || "🏦" }));
+}
+
+export async function addUserAccount(label: string, emoji: string): Promise<{ id: string; label: string; emoji: string } | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase.from("user_accounts").insert({ user_id: user.id, label, emoji }).select().single();
+  if (!data) return null;
+  return { id: data.id, label: data.label, emoji: data.emoji };
+}
+
+export async function deleteUserAccount(id: string): Promise<void> {
+  await supabase.from("user_accounts").delete().eq("id", id);
+}

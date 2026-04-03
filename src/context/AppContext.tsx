@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember } from "../types";
+import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember, AccountTag } from "../types";
 import * as storage from "../storage";
 import { getMonthKey } from "../utils";
 
@@ -19,6 +19,7 @@ interface AppState {
   currentBudget: MonthlyBudget | null;
   currentMonth: string;
   debts: Debt[];
+  userAccounts: AccountTag[];
   loading: boolean;
   household: Household | null;
   householdMembers: HouseholdMember[];
@@ -37,6 +38,8 @@ interface AppContextValue extends AppState {
   addDebt: (debt: Debt) => Promise<void>;
   updateDebt: (id: string, updates: Partial<Omit<Debt, "id" | "createdAt">>) => Promise<void>;
   deleteDebt: (id: string) => Promise<void>;
+  addUserAccount: (label: string, emoji: string) => Promise<void>;
+  deleteUserAccount: (id: string) => Promise<void>;
   updateEmergencyFund: (amount: number) => Promise<void>;
   resetAll: () => Promise<void>;
   createHousehold: (name: string) => Promise<boolean>;
@@ -53,6 +56,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     currentBudget: null,
     currentMonth: getMonthKey(),
     debts: [],
+    userAccounts: [],
     loading: true,
     household: null,
     householdMembers: [],
@@ -60,11 +64,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const loadData = useCallback(async (month?: string) => {
     const targetMonth = month ?? getMonthKey();
-    const [profile, transactions, budget, debts, household, householdMembers] = await Promise.all([
+    const [profile, transactions, budget, debts, userAccounts, household, householdMembers] = await Promise.all([
       storage.getProfile(),
       storage.getTransactions(),
       storage.getBudgetForMonth(targetMonth),
       storage.getDebts(),
+      storage.getUserAccounts(),
       storage.getHousehold(),
       storage.getHouseholdMembers(),
     ]);
@@ -75,6 +80,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       currentBudget: budget,
       currentMonth: targetMonth,
       debts,
+      userAccounts,
       household,
       householdMembers,
       loading: false,
@@ -235,7 +241,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [reload]
   );
 
-  // Account CRUD removed - using simple accountTag string on transactions
+  const addUserAccountAction = useCallback(async (label: string, emoji: string) => {
+    const result = await storage.addUserAccount(label, emoji);
+    if (result) setState((prev) => ({ ...prev, userAccounts: [...prev.userAccounts, result] }));
+  }, []);
+
+  const deleteUserAccountAction = useCallback(async (id: string) => {
+    setState((prev) => ({ ...prev, userAccounts: prev.userAccounts.filter((a) => a.id !== id) }));
+    await storage.deleteUserAccount(id);
+  }, []);
 
   const updateEmergencyFund = useCallback(
     async (amount: number) => {
@@ -316,6 +330,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       currentBudget: null,
       currentMonth: getMonthKey(),
       debts: [],
+      userAccounts: [],
       loading: false,
       household: null,
       householdMembers: [],
@@ -338,6 +353,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addDebt,
         updateDebt,
         deleteDebt,
+        addUserAccount: addUserAccountAction,
+        deleteUserAccount: deleteUserAccountAction,
         updateEmergencyFund,
         resetAll,
         createHousehold: createHouseholdAction,
@@ -375,6 +392,8 @@ export function useApp(): AppContextValue {
       addDebt: async () => {},
       updateDebt: async () => {},
       deleteDebt: async () => {},
+      addUserAccount: async () => {},
+      deleteUserAccount: async () => {},
       updateEmergencyFund: async () => {},
       resetAll: async () => {},
       createHousehold: async () => false,

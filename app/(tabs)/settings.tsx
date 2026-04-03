@@ -18,6 +18,8 @@ import {
   LogOut,
   Upload,
   FileText,
+  Plus,
+  Trash2,
 } from "lucide-react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
@@ -81,7 +83,7 @@ function filterDuplicates(
 }
 
 export default function SettingsScreen() {
-  const { profile, saveProfile, resetAll, addTransactions, transactions, currentBudget } =
+  const { profile, saveProfile, resetAll, addTransactions, transactions, currentBudget, userAccounts, addUserAccount, deleteUserAccount } =
     useApp();
   const { user, signOut } = useAuth();
   const [editingIncome, setEditingIncome] = useState(false);
@@ -91,6 +93,8 @@ export default function SettingsScreen() {
   const [previewTxns, setPreviewTxns] = useState<Transaction[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [csvImportVisible, setCsvImportVisible] = useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+  const [newAccountEmoji, setNewAccountEmoji] = useState("🏦");
 
   const handleSaveIncome = () => {
     const parsed = parseFloat(incomeText);
@@ -291,6 +295,48 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>BANK ACCOUNTS</Text>
+          {userAccounts.map((acct) => (
+            <View key={acct.id} style={styles.row}>
+              <View style={styles.rowLeft}>
+                <Text style={{ fontSize: 18 }}>{acct.emoji}</Text>
+                <Text style={styles.rowLabel}>{acct.label}</Text>
+              </View>
+              <Pressable onPress={() => { notification("Warning"); deleteUserAccount(acct.id); }} hitSlop={8}>
+                <Trash2 size={16} color={colors.red} />
+              </Pressable>
+            </View>
+          ))}
+          <View style={styles.addAccountRow}>
+            <TextInput
+              style={styles.addAccountEmoji}
+              value={newAccountEmoji}
+              onChangeText={(t) => setNewAccountEmoji(t.slice(-2) || "🏦")}
+              maxLength={2}
+            />
+            <TextInput
+              style={styles.addAccountInput}
+              placeholder="Account name (e.g. Chase 5343)"
+              placeholderTextColor="#666"
+              value={newAccountName}
+              onChangeText={setNewAccountName}
+            />
+            <Pressable
+              onPress={() => {
+                if (!newAccountName.trim()) return;
+                impact("Medium");
+                addUserAccount(newAccountName.trim(), newAccountEmoji || "🏦");
+                setNewAccountName("");
+                setNewAccountEmoji("🏦");
+              }}
+              style={styles.addAccountBtn}
+            >
+              <Plus size={18} color="#000" strokeWidth={3} />
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>ACCOUNT</Text>
           <SettingRow
             icon={<Info size={20} color={colors.textSecondary} />}
@@ -472,5 +518,41 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     marginTop: spacing.lg,
+  },
+  addAccountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.md,
+    padding: 6,
+  },
+  addAccountEmoji: {
+    fontSize: 22,
+    width: 40,
+    textAlign: "center",
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: 8,
+    color: colors.white,
+  },
+  addAccountInput: {
+    flex: 1,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.sm,
+    color: colors.white,
+    fontSize: 15,
+  },
+  addAccountBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
   },
 });

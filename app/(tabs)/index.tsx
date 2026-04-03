@@ -28,7 +28,7 @@ import {
   generateId,
 } from "../../src/utils";
 import type { Transaction, BudgetCategory } from "../../src/types";
-import { ACCOUNT_TAGS } from "../../src/types";
+
 
 function billsDueInWeek(cat: BudgetCategory, start: Date, end: Date): boolean {
   const freq = cat.frequency || "monthly";
@@ -169,7 +169,7 @@ const ps = StyleSheet.create({
 });
 
 export default function HomeScreen() {
-  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction } = useApp();
+  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction, userAccounts } = useApp();
   const router = useRouter();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -242,7 +242,7 @@ export default function HomeScreen() {
 
   const getTagInfo = (tag?: string) => {
     if (!tag) return null;
-    const found = ACCOUNT_TAGS.find((t) => t.id === tag);
+    const found = userAccounts.find((t) => t.id === tag);
     return found ? { label: found.label, emoji: found.emoji } : null;
   };
 
@@ -303,14 +303,14 @@ export default function HomeScreen() {
           >
             <Text style={[s.filterPillText, !accountFilter && s.filterPillTextActive]}>ALL</Text>
           </Pressable>
-          {ACCOUNT_TAGS.map((tag) => (
+          {userAccounts.map((acct) => (
             <Pressable
-              key={tag.id}
-              onPress={() => { impact("Light"); setAccountFilter(accountFilter === tag.id ? null : tag.id); }}
-              style={[s.filterPill, accountFilter === tag.id && s.filterPillActive]}
+              key={acct.id}
+              onPress={() => { impact("Light"); setAccountFilter(accountFilter === acct.id ? null : acct.id); }}
+              style={[s.filterPill, accountFilter === acct.id && s.filterPillActive]}
             >
-              <Text style={s.filterPillEmoji}>{tag.emoji}</Text>
-              <Text style={[s.filterPillText, accountFilter === tag.id && s.filterPillTextActive]}>{tag.label.toUpperCase()}</Text>
+              <Text style={s.filterPillEmoji}>{acct.emoji}</Text>
+              <Text style={[s.filterPillText, accountFilter === acct.id && s.filterPillTextActive]}>{acct.label.toUpperCase()}</Text>
             </Pressable>
           ))}
         </ScrollView>

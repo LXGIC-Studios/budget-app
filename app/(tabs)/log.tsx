@@ -18,7 +18,7 @@ import { QuickAddSheet } from "../../src/components/QuickAddSheet";
 import { CSVImportSheet } from "../../src/components/CSVImportSheet";
 import { formatCurrency, formatShortDate } from "../../src/utils";
 import type { Transaction } from "../../src/types";
-import { ACCOUNT_TAGS } from "../../src/types";
+
 
 const FILTER_OPTIONS = ["ALL", "INCOME", "EXPENSES"] as const;
 type Filter = (typeof FILTER_OPTIONS)[number];
@@ -34,11 +34,11 @@ function getIcon(category: string): string {
 }
 
 export default function LogScreen() {
-  const { transactions, addTransaction, addTransactions, updateTransaction, deleteTransaction } = useApp();
+  const { transactions, addTransaction, addTransactions, updateTransaction, deleteTransaction, userAccounts } = useApp();
 
   const getTagInfo = (tag?: string) => {
     if (!tag) return null;
-    const found = ACCOUNT_TAGS.find((t) => t.id === tag);
+    const found = userAccounts.find((t) => t.id === tag);
     return found ? { label: found.label, emoji: found.emoji } : null;
   };
   const [filter, setFilter] = useState<Filter>("ALL");
