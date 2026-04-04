@@ -401,11 +401,8 @@ export default function HomeScreen() {
     return ids;
   }, [transactions, weekRange, billsDue]);
 
-  // Filter bills by account tag when a filter is active
-  const filteredBillsDue = useMemo(() => {
-    if (!accountFilter) return billsDue;
-    return billsDue.filter((b) => b.defaultAccountTag === accountFilter);
-  }, [billsDue, accountFilter]);
+  // Bills are ALWAYS global - never filter by account
+  const filteredBillsDue = billsDue;
 
   // Only count UNPAID bills in the total
   const totalBillsDue = filteredBillsDue
@@ -414,12 +411,21 @@ export default function HomeScreen() {
 
   const flexCategories = useMemo(() => currentBudget?.categories.filter((c) => c.type === "flexible") ?? [], [currentBudget]);
 
+  // ALL expense transactions this week (ignoring account filter) for global spending + bills
+  const allWeekExpenseTxns = useMemo(() =>
+    transactions.filter((t) => {
+      const d = new Date(t.date);
+      return d >= weekRange.start && d <= weekRange.end && t.type === "expense";
+    }), [transactions, weekRange]
+  );
+
   const flexSpend = useMemo(() => {
     const map: Record<string, number> = {};
     const fixedNames = new Set(
       (currentBudget?.categories ?? []).filter((c) => c.type === "fixed").map((c) => c.name.toLowerCase())
     );
-    expenseTxns.forEach((t) => {
+    // Use ALL week expenses regardless of account filter - spending is global
+    allWeekExpenseTxns.forEach((t) => {
       // Exclude fixed bill payments from flex spending
       if (t.note?.startsWith("Paid:") || t.note?.endsWith("- marked paid") || t.note?.endsWith("- paid")) return;
       if (t.category.toLowerCase() === "bills") return;
@@ -429,7 +435,7 @@ export default function HomeScreen() {
       map[k] = (map[k] ?? 0) + t.amount;
     });
     return map;
-  }, [expenseTxns, currentBudget]);
+  }, [allWeekExpenseTxns, currentBudget]);
 
   const getTagInfo = (tag?: string) => {
     if (!tag) return null;
