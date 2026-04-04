@@ -442,13 +442,15 @@ export default function HomeScreen() {
   const weekNet = weekIncome - weekExpenses;
 
   // Account balance: startingBalance + all income - all expenses for this account (all time)
+  // Transfers use category="transfer" but type income/expense, so they DO affect balance
   const accountBalance = useMemo(() => {
     if (!accountFilter) return null;
     const starting = accountStartingBalances[accountFilter] ?? 0;
     let net = starting;
     transactions.forEach((t) => {
       if (t.accountTag !== accountFilter) return;
-      if (t.type === "transfer" || t.category === "transfer") return;
+      // Old-style transfers (type="transfer") are neutral - skip them
+      if (t.type === "transfer") return;
       if (t.type === "income") net += t.amount;
       else net -= t.amount;
     });
@@ -523,6 +525,8 @@ export default function HomeScreen() {
     );
     // Use ALL week expenses regardless of account filter - spending is global
     allWeekExpenseTxns.forEach((t) => {
+      // Exclude transfers from flex spending
+      if (t.category.toLowerCase() === "transfer") return;
       // Exclude fixed bill payments from flex spending
       if (t.note?.startsWith("Paid:") || t.note?.endsWith("- marked paid") || t.note?.endsWith("- paid")) return;
       if (t.category.toLowerCase() === "bills") return;
@@ -558,18 +562,22 @@ export default function HomeScreen() {
   const handleTransfer = async (fromId: string, toId: string, amount: number, transferNote?: string) => {
     const fromName = userAccounts.find((a) => a.id === fromId)?.label ?? "Account";
     const toName = userAccounts.find((a) => a.id === toId)?.label ?? "Account";
-    const note = transferNote || `${fromName} → ${toName}`;
     const amt = Math.round(amount * 100) / 100;
     const now = new Date().toISOString();
+    const transferId = generateId();
 
     notification("Success");
+    // Transfer OUT = expense from source account
     await addTransaction({
-      id: generateId(), type: "transfer", amount: amt,
-      category: "transfer", note, date: now, createdAt: now, accountTag: fromId,
+      id: generateId(), type: "expense", amount: amt,
+      category: "transfer", note: transferNote || `Transfer to ${toName}`,
+      date: now, createdAt: now, accountTag: fromId,
     });
+    // Transfer IN = income to destination account
     await addTransaction({
-      id: generateId(), type: "transfer", amount: amt,
-      category: "transfer", note, date: now, createdAt: now, accountTag: toId,
+      id: generateId(), type: "income", amount: amt,
+      category: "transfer", note: transferNote || `Transfer from ${fromName}`,
+      date: now, createdAt: now, accountTag: toId,
     });
     setTransferVisible(false);
   };
@@ -577,10 +585,11 @@ export default function HomeScreen() {
   const handleSetBalance = async (realBalance: number) => {
     if (!accountFilter) return;
     // Back-calculate: startingBalance = realBalance - (income - expenses)
+    // Must match accountBalance calc exactly
     let txnNet = 0;
     transactions.forEach((t) => {
       if (t.accountTag !== accountFilter) return;
-      if (t.type === "transfer" || t.category === "transfer") return;
+      if (t.type === "transfer") return; // old-style transfers only
       if (t.type === "income") txnNet += t.amount;
       else txnNet -= t.amount;
     });
