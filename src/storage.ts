@@ -242,12 +242,21 @@ export async function saveBudgetForMonth(
   const ctx = await getAuthContext();
   if (!ctx) return budget;
 
-  // Delete existing categories for this month then insert new ones
-  await supabase
-    .from("budget_categories")
-    .delete()
-    .eq("user_id", ctx.userId)
-    .eq("month", budget.month);
+  // Delete existing categories for this month for ALL household members
+  // (budget is shared, so we need to clear everyone's rows before re-inserting)
+  if (ctx.memberIds.length > 1) {
+    await supabase
+      .from("budget_categories")
+      .delete()
+      .in("user_id", ctx.memberIds)
+      .eq("month", budget.month);
+  } else {
+    await supabase
+      .from("budget_categories")
+      .delete()
+      .eq("user_id", ctx.userId)
+      .eq("month", budget.month);
+  }
 
   const rows = budget.categories.map((cat) => ({
     user_id: ctx.userId,
