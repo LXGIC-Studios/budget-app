@@ -375,6 +375,20 @@ export default function HomeScreen() {
   const weekExpenses = useMemo(() => weekTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [weekTxns]);
   const weekNet = weekIncome - weekExpenses;
 
+  // Rollover: net of all transactions BEFORE this week (respects account filter, excludes transfers)
+  const weekRollover = useMemo(() => {
+    let balance = 0;
+    transactions.forEach((t) => {
+      if (t.type === "transfer" || t.category === "transfer") return;
+      const d = new Date(t.date);
+      if (d >= weekRange.start) return; // only count prior weeks
+      if (accountFilter && t.accountTag !== accountFilter) return;
+      if (t.type === "income") balance += t.amount;
+      else balance -= t.amount;
+    });
+    return balance;
+  }, [transactions, weekRange, accountFilter]);
+
   const incomeTxns = useMemo(() => weekTxns.filter((t) => t.type === "income").sort((a, b) => a.date.localeCompare(b.date)), [weekTxns]);
   const expenseTxns = useMemo(() => weekTxns.filter((t) => t.type === "expense").sort((a, b) => b.date.localeCompare(a.date)), [weekTxns]);
   const transferTxns = useMemo(() => weekTxns.filter((t) => t.type === "transfer").sort((a, b) => b.date.localeCompare(a.date)), [weekTxns]);
@@ -537,11 +551,21 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* ── ROLLOVER BAR ── */}
+        {weekRollover !== 0 && (
+          <View style={s.rolloverBar}>
+            <Text style={s.rolloverLabel}>ROLLOVER</Text>
+            <Text style={[s.rolloverAmt, { color: weekRollover >= 0 ? colors.primary : colors.red }]}>
+              {weekRollover >= 0 ? "+" : ""}{formatCurrency(weekRollover)}
+            </Text>
+          </View>
+        )}
+
         {/* ── HERO - full bleed ── */}
         <View style={[s.hero, { backgroundColor: netIsPositive ? colors.primary : colors.red }]}>
           <Text style={s.heroEyebrow}>WEEK NET</Text>
           <Text style={s.heroNum}>{netIsPositive ? "+" : ""}{formatCurrency(weekNet)}</Text>
-          {/* Three stats across the bottom */}
+          {/* Four stats across the bottom */}
           <View style={s.heroBar}>
             <View style={s.heroStat}>
               <Text style={s.heroStatNum}>{formatCurrency(weekIncome)}</Text>
@@ -803,6 +827,20 @@ const s = StyleSheet.create({
   weekLabel: {
     color: colors.white, fontSize: 14, fontWeight: "700", letterSpacing: 2,
     fontFamily: fonts.mono as any,
+  },
+
+  // Rollover bar
+  rolloverBar: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: spacing.lg, paddingVertical: 10,
+    backgroundColor: "#060606", borderBottomWidth: 1, borderBottomColor: "#111",
+  },
+  rolloverLabel: {
+    color: colors.textSecondary, fontSize: 12, fontWeight: "900", letterSpacing: 3,
+    fontFamily: fonts.mono as any,
+  },
+  rolloverAmt: {
+    fontSize: 18, fontWeight: "900", fontFamily: fonts.mono as any,
   },
 
   // Hero
