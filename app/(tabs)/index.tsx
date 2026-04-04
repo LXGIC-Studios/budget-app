@@ -769,7 +769,7 @@ export default function HomeScreen() {
         onUpdate={updateTransaction}
         onDelete={(id) => { deleteTransaction(id); setSheetVisible(false); setEditingTxn(undefined); }}
         initialMode={editingTxn ? undefined : "expense"}
-        
+        budgetCategories={currentBudget?.categories}
       />
 
       {payingBill && (

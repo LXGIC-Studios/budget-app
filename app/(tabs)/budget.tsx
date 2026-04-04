@@ -491,6 +491,7 @@ export default function BudgetScreen() {
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
         onSave={addTransaction}
+        budgetCategories={currentBudget?.categories}
       />
 
       {/* Edit modal - full CRUD */}

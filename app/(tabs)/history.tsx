@@ -29,7 +29,7 @@ const MONTHS = [
 ];
 
 export default function HistoryScreen() {
-  const { transactions, deleteTransaction, addTransaction, updateTransaction } = useApp();
+  const { transactions, deleteTransaction, addTransaction, updateTransaction, currentBudget } = useApp();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedMonth, setSelectedMonth] = useState<number | null>(
@@ -334,6 +334,7 @@ export default function HistoryScreen() {
           setSheetVisible(false);
           setEditingTxn(undefined);
         }}
+        budgetCategories={currentBudget?.categories}
       />
     </SafeAreaView>
   );

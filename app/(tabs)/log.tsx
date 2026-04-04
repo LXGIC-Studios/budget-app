@@ -34,7 +34,7 @@ function getIcon(category: string): string {
 }
 
 export default function LogScreen() {
-  const { transactions, addTransaction, addTransactions, updateTransaction, deleteTransaction, userAccounts } = useApp();
+  const { transactions, addTransaction, addTransactions, updateTransaction, deleteTransaction, userAccounts, currentBudget } = useApp();
 
   const getTagInfo = (tag?: string) => {
     if (!tag) return null;
@@ -179,7 +179,7 @@ export default function LogScreen() {
         onUpdate={updateTransaction}
         onDelete={(id) => { deleteTransaction(id); setSheetVisible(false); setEditingTxn(undefined); }}
         initialMode={sheetInitialMode}
-        
+        budgetCategories={currentBudget?.categories}
       />
 
       <CSVImportSheet
