@@ -478,6 +478,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
         <View style={styles.sheet}>
           <View style={styles.handle} />
 
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Mode toggle */}
           <View style={styles.modeToggle}>
             <Pressable
@@ -674,6 +675,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
               </Text>
             )}
           </View>
+          </ScrollView>
 
           {/* Action buttons */}
           {isEditing && onSplit ? (
@@ -748,6 +750,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xl + 16,
     gap: spacing.lg,
+    maxHeight: "85%",
   },
   handle: {
     width: 40,
@@ -832,6 +835,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+    maxHeight: 200,
   },
   noteInput: {
     backgroundColor: colors.inputBg,
