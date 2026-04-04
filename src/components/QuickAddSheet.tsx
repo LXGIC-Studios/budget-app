@@ -14,7 +14,7 @@ import { notification, impact } from "../lib/haptics";
 import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
-import type { Transaction, BudgetCategory } from "../types";
+import type { Transaction } from "../types";
 import { useApp } from "../context/AppContext";
 import { generateId, formatShortDate, formatCurrency } from "../utils";
 
@@ -32,10 +32,9 @@ interface Props {
   onDelete?: (id: string) => void;
   onSplit?: (original: Transaction, splits: { category: string; amount: number }[]) => void;
   initialMode?: "expense" | "income";
-  budgetCategories?: BudgetCategory[];
 }
 
-export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode, budgetCategories }: Props) {
+export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode }: Props) {
   const { userAccounts, addTransaction: addTxn } = useApp();
   const [mode, setMode] = useState<"expense" | "income" | "transfer">(initialMode ?? "expense");
   const [amount, setAmount] = useState("");
@@ -82,10 +81,9 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     setInitialized(false);
   }
 
-  // Use budget categories if available, otherwise fallback to defaults
-  const categories = mode === "expense"
-    ? (budgetCategories?.map(c => ({ id: c.name, name: c.name, emoji: c.emoji || "📦" })) ?? EXPENSE_CATEGORIES)
-    : INCOME_CATEGORIES;
+  // Expenses use fixed broad categories (Groceries, Eating Out, etc)
+  // Budget categories are for fixed bills, not everyday spending
+  const categories = mode === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
   const isEditing = !!editTransaction;
 

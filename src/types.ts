@@ -97,19 +97,15 @@ export interface Bill {
 }
 
 export const EXPENSE_CATEGORIES = [
-  { id: "Eating Out", name: "Eating Out", emoji: "🍔" },
   { id: "Groceries", name: "Groceries", emoji: "🛒" },
+  { id: "Eating Out", name: "Eating Out", emoji: "🍔" },
   { id: "Shopping", name: "Shopping", emoji: "🛍️" },
-  { id: "Subscriptions", name: "Subscriptions", emoji: "📺" },
-  { id: "Bills", name: "Bills", emoji: "🏠" },
+  { id: "Nathan AI Tools", name: "Nathan AI Tools", emoji: "🤖" },
+  { id: "Gaming/Entertainment", name: "Gaming/Entertainment", emoji: "🎮" },
   { id: "Gas/Transport", name: "Gas/Transport", emoji: "⛽" },
-  { id: "Health", name: "Health", emoji: "💊" },
-  { id: "Kids", name: "Kids", emoji: "👶" },
-  { id: "Clothing", name: "Clothing", emoji: "👕" },
-  { id: "Auto", name: "Auto", emoji: "🚗" },
-  { id: "Payments", name: "Payments", emoji: "💸" },
-  { id: "Fees", name: "Fees", emoji: "🏦" },
-  { id: "Other", name: "Other", emoji: "📦" },
+  { id: "Kids/Activities", name: "Kids/Activities", emoji: "👶" },
+  { id: "Health/Beauty", name: "Health/Beauty", emoji: "💊" },
+  { id: "Misc", name: "Misc", emoji: "📦" },
 ] as const;
 
 export const INCOME_CATEGORIES = [
