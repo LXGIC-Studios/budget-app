@@ -835,7 +835,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
-    maxHeight: 200,
   },
   noteInput: {
     backgroundColor: colors.inputBg,
