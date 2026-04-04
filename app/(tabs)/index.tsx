@@ -343,73 +343,8 @@ const ts = StyleSheet.create({
   btnText: { color: colors.white, fontSize: 15, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.heading as any },
 });
 
-function SetBalanceModal({ visible, onClose, onSave, currentBalance }: {
-  visible: boolean;
-  onClose: () => void;
-  onSave: (balance: number) => void;
-  currentBalance: number;
-}) {
-  const [value, setValue] = useState(currentBalance > 0 ? currentBalance.toFixed(2) : "");
-
-  if (!visible) return null;
-
-  return (
-    <Modal transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={sbs.overlay} onPress={onClose}>
-        <Pressable style={sbs.sheet} onPress={(e) => e.stopPropagation()}>
-          <View style={sbs.header}>
-            <Text style={sbs.title}>SET REAL BALANCE</Text>
-            <Pressable onPress={onClose} hitSlop={12}>
-              <X size={18} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-          <Text style={sbs.sub}>What does your bank actually say?</Text>
-          <View style={sbs.inputRow}>
-            <Text style={sbs.dollar}>$</Text>
-            <TextInput
-              style={sbs.input}
-              value={value}
-              onChangeText={setValue}
-              keyboardType="decimal-pad"
-              autoFocus
-              selectTextOnFocus
-              placeholder="0.00"
-              placeholderTextColor={colors.dimmed}
-            />
-          </View>
-          <Pressable
-            style={sbs.btn}
-            onPress={() => {
-              const amt = parseFloat(value);
-              if (!isNaN(amt)) onSave(amt);
-            }}
-          >
-            <Text style={sbs.btnText}>SET BALANCE</Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-const sbs = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "flex-end" },
-  sheet: {
-    backgroundColor: "#050505", borderTopWidth: 2, borderTopColor: colors.primary,
-    padding: spacing.lg, paddingBottom: Platform.OS === "web" ? spacing.xl : 52, gap: 12,
-  },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  title: { color: colors.white, fontSize: 16, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.heading as any },
-  sub: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.mono as any },
-  inputRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  dollar: { color: colors.primary, fontSize: 36, fontWeight: "900", fontFamily: fonts.mono as any },
-  input: { flex: 1, color: colors.white, fontSize: 36, fontWeight: "900", fontFamily: fonts.mono as any },
-  btn: { backgroundColor: colors.primary, paddingVertical: 16, alignItems: "center" },
-  btnText: { color: "#000", fontSize: 15, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.heading as any },
-});
-
 export default function HomeScreen() {
-  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction, userAccounts, accountStartingBalances, setStartingBalance } = useApp();
+  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction, userAccounts } = useApp();
   const router = useRouter();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -417,7 +352,6 @@ export default function HomeScreen() {
   const [payingBill, setPayingBill] = useState<BudgetCategory | null>(null);
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [transferVisible, setTransferVisible] = useState(false);
-  const [setBalanceVisible, setSetBalanceVisible] = useState(false);
 
   const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
 
@@ -440,22 +374,6 @@ export default function HomeScreen() {
   const weekIncome = useMemo(() => weekTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [weekTxns]);
   const weekExpenses = useMemo(() => weekTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [weekTxns]);
   const weekNet = weekIncome - weekExpenses;
-
-  // Account balance: startingBalance + all income - all expenses for this account (all time)
-  // Transfers use category="transfer" but type income/expense, so they DO affect balance
-  const accountBalance = useMemo(() => {
-    if (!accountFilter) return null;
-    const starting = accountStartingBalances[accountFilter] ?? 0;
-    let net = starting;
-    transactions.forEach((t) => {
-      if (t.accountTag !== accountFilter) return;
-      // Old-style transfers (type="transfer") are neutral - skip them
-      if (t.type === "transfer") return;
-      if (t.type === "income") net += t.amount;
-      else net -= t.amount;
-    });
-    return Math.round(net * 100) / 100;
-  }, [accountFilter, accountStartingBalances, transactions]);
 
   // Rollover: net of transactions from PRIOR weeks, but only weeks that start on or after 2026-W14 (Mar 30, 2026)
   // This is the first week accounts/tags were set up - no history before that
@@ -582,23 +500,6 @@ export default function HomeScreen() {
     setTransferVisible(false);
   };
 
-  const handleSetBalance = async (realBalance: number) => {
-    if (!accountFilter) return;
-    // Back-calculate: startingBalance = realBalance - (income - expenses)
-    // Must match accountBalance calc exactly
-    let txnNet = 0;
-    transactions.forEach((t) => {
-      if (t.accountTag !== accountFilter) return;
-      if (t.type === "transfer") return; // old-style transfers only
-      if (t.type === "income") txnNet += t.amount;
-      else txnNet -= t.amount;
-    });
-    const startingBalance = Math.round((realBalance - txnNet) * 100) / 100;
-    await setStartingBalance(accountFilter, startingBalance);
-    notification("Success");
-    setSetBalanceVisible(false);
-  };
-
   const netIsPositive = weekNet >= 0;
 
   return (
@@ -670,57 +571,26 @@ export default function HomeScreen() {
         )}
 
         {/* ── HERO - full bleed ── */}
-        {accountFilter && accountBalance !== null ? (
-          /* Account-specific: show real balance */
-          <Pressable
-            style={[s.hero, { backgroundColor: accountBalance >= 0 ? colors.primary : colors.red }]}
-            onLongPress={() => { impact("Medium"); setSetBalanceVisible(true); }}
-          >
-            <Text style={s.heroEyebrow}>BALANCE</Text>
-            <Text style={s.heroNum}>{formatCurrency(accountBalance)}</Text>
-            <View style={s.heroBar}>
-              <View style={s.heroStat}>
-                <Text style={s.heroStatNum}>{formatCurrency(weekIncome)}</Text>
-                <Text style={s.heroStatLabel}>IN</Text>
-              </View>
-              <View style={s.heroBarDivider} />
-              <View style={s.heroStat}>
-                <Text style={s.heroStatNum}>{formatCurrency(weekExpenses)}</Text>
-                <Text style={s.heroStatLabel}>OUT</Text>
-              </View>
-              <View style={s.heroBarDivider} />
-              <View style={s.heroStat}>
-                <Text style={[s.heroStatNum, { color: weekNet >= 0 ? "rgba(0,0,0,0.8)" : "#000" }]}>
-                  {weekNet >= 0 ? "+" : ""}{formatCurrency(weekNet)}
-                </Text>
-                <Text style={s.heroStatLabel}>THIS WEEK</Text>
-              </View>
+        <View style={[s.hero, { backgroundColor: netIsPositive ? colors.primary : colors.red }]}>
+          <Text style={s.heroEyebrow}>WEEK NET</Text>
+          <Text style={s.heroNum}>{netIsPositive ? "+" : ""}{formatCurrency(weekNet)}</Text>
+          <View style={s.heroBar}>
+            <View style={s.heroStat}>
+              <Text style={s.heroStatNum}>{formatCurrency(weekIncome)}</Text>
+              <Text style={s.heroStatLabel}>INCOME</Text>
             </View>
-            <Text style={s.heroHint}>HOLD TO SET BALANCE</Text>
-          </Pressable>
-        ) : (
-          /* ALL accounts: show week net */
-          <View style={[s.hero, { backgroundColor: netIsPositive ? colors.primary : colors.red }]}>
-            <Text style={s.heroEyebrow}>WEEK NET</Text>
-            <Text style={s.heroNum}>{netIsPositive ? "+" : ""}{formatCurrency(weekNet)}</Text>
-            <View style={s.heroBar}>
-              <View style={s.heroStat}>
-                <Text style={s.heroStatNum}>{formatCurrency(weekIncome)}</Text>
-                <Text style={s.heroStatLabel}>INCOME</Text>
-              </View>
-              <View style={s.heroBarDivider} />
-              <View style={s.heroStat}>
-                <Text style={s.heroStatNum}>{formatCurrency(weekExpenses)}</Text>
-                <Text style={s.heroStatLabel}>SPENT</Text>
-              </View>
-              <View style={s.heroBarDivider} />
-              <View style={s.heroStat}>
-                <Text style={s.heroStatNum}>{formatCurrency(totalBillsDue)}</Text>
-                <Text style={s.heroStatLabel}>BILLS DUE</Text>
-              </View>
+            <View style={s.heroBarDivider} />
+            <View style={s.heroStat}>
+              <Text style={s.heroStatNum}>{formatCurrency(weekExpenses)}</Text>
+              <Text style={s.heroStatLabel}>SPENT</Text>
+            </View>
+            <View style={s.heroBarDivider} />
+            <View style={s.heroStat}>
+              <Text style={s.heroStatNum}>{formatCurrency(totalBillsDue)}</Text>
+              <Text style={s.heroStatLabel}>BILLS DUE</Text>
             </View>
           </View>
-        )}
+        </View>
 
         {/* ── COMING IN ── */}
         <View style={s.sectionLabel}>
@@ -919,12 +789,6 @@ export default function HomeScreen() {
         onTransfer={handleTransfer}
       />
 
-      <SetBalanceModal
-        visible={setBalanceVisible}
-        onClose={() => setSetBalanceVisible(false)}
-        onSave={handleSetBalance}
-        currentBalance={accountBalance ?? 0}
-      />
     </SafeAreaView>
   );
 }
@@ -1017,10 +881,6 @@ const s = StyleSheet.create({
     fontFamily: fonts.mono as any,
   },
   heroBarDivider: { width: 1, backgroundColor: "rgba(0,0,0,0.2)", marginVertical: 2 },
-  heroHint: {
-    color: "rgba(0,0,0,0.35)", fontSize: 10, fontWeight: "700", letterSpacing: 2,
-    fontFamily: fonts.mono as any, marginTop: 8, textAlign: "center",
-  },
 
   // Section label bar
   sectionLabel: {

@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember, AccountTag } from "../types";
 import * as storage from "../storage";
-import { invalidateAuthCache, getAccountStartingBalances, setAccountStartingBalance } from "../storage";
+import { invalidateAuthCache } from "../storage";
 import { supabase } from "../lib/supabase";
 import { getMonthKey } from "../utils";
 
@@ -25,7 +25,6 @@ interface AppState {
   loading: boolean;
   household: Household | null;
   householdMembers: HouseholdMember[];
-  accountStartingBalances: Record<string, number>;
 }
 
 interface AppContextValue extends AppState {
@@ -43,7 +42,6 @@ interface AppContextValue extends AppState {
   deleteDebt: (id: string) => Promise<void>;
   addUserAccount: (label: string, emoji: string) => Promise<void>;
   deleteUserAccount: (id: string) => Promise<void>;
-  setStartingBalance: (accountId: string, balance: number) => Promise<void>;
   updateEmergencyFund: (amount: number) => Promise<void>;
   resetAll: () => Promise<void>;
   createHousehold: (name: string) => Promise<boolean>;
@@ -64,12 +62,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loading: true,
     household: null,
     householdMembers: [],
-    accountStartingBalances: {},
   });
 
   const loadData = useCallback(async (month?: string) => {
     const targetMonth = month ?? getMonthKey();
-    const [profile, transactions, budget, debts, userAccounts, household, householdMembers, accountStartingBalances] = await Promise.all([
+    const [profile, transactions, budget, debts, userAccounts, household, householdMembers] = await Promise.all([
       storage.getProfile(),
       storage.getTransactions(),
       storage.getBudgetForMonth(targetMonth),
@@ -77,7 +74,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       storage.getUserAccounts(),
       storage.getHousehold(),
       storage.getHouseholdMembers(),
-      getAccountStartingBalances(),
     ]);
     setState((prev) => ({
       ...prev,
@@ -89,7 +85,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       userAccounts,
       household,
       householdMembers,
-      accountStartingBalances,
       loading: false,
     }));
   }, []);
@@ -319,13 +314,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await storage.deleteUserAccount(id);
   }, []);
 
-  const setStartingBalanceAction = useCallback(async (accountId: string, balance: number) => {
-    await setAccountStartingBalance(accountId, balance);
-    setState((prev) => ({
-      ...prev,
-      accountStartingBalances: { ...prev.accountStartingBalances, [accountId]: balance },
-    }));
-  }, []);
 
   const updateEmergencyFund = useCallback(
     async (amount: number) => {
@@ -410,7 +398,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       loading: false,
       household: null,
       householdMembers: [],
-      accountStartingBalances: {},
     });
   }, []);
 
@@ -432,7 +419,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteDebt,
         addUserAccount: addUserAccountAction,
         deleteUserAccount: deleteUserAccountAction,
-        setStartingBalance: setStartingBalanceAction,
         updateEmergencyFund,
         resetAll,
         createHousehold: createHouseholdAction,
@@ -472,7 +458,6 @@ export function useApp(): AppContextValue {
       deleteDebt: async () => {},
       addUserAccount: async () => {},
       deleteUserAccount: async () => {},
-      setStartingBalance: async () => {},
       updateEmergencyFund: async () => {},
       resetAll: async () => {},
       createHousehold: async () => false,
