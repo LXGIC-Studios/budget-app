@@ -375,12 +375,15 @@ export default function HomeScreen() {
   const weekExpenses = useMemo(() => weekTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [weekTxns]);
   const weekNet = weekIncome - weekExpenses;
 
-  // Rollover: net of all transactions BEFORE this week (respects account filter, excludes transfers)
+  // Rollover: net of transactions from PRIOR weeks, but only weeks that start on or after 2026-W14 (Mar 30, 2026)
+  // This is the first week accounts/tags were set up - no history before that
+  const ROLLOVER_EPOCH = new Date("2026-03-30T00:00:00");
   const weekRollover = useMemo(() => {
     let balance = 0;
     transactions.forEach((t) => {
       if (t.type === "transfer" || t.category === "transfer") return;
       const d = new Date(t.date);
+      if (d < ROLLOVER_EPOCH) return; // ignore everything before rollover started
       if (d >= weekRange.start) return; // only count prior weeks
       if (accountFilter && t.accountTag !== accountFilter) return;
       if (t.type === "income") balance += t.amount;
