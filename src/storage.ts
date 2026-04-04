@@ -500,3 +500,45 @@ export async function addUserAccount(label: string, emoji: string): Promise<{ id
 export async function deleteUserAccount(id: string): Promise<void> {
   await supabase.from("user_accounts").delete().eq("id", id);
 }
+
+// Account starting balances (stored locally - no DB needed)
+const STARTING_BALANCES_KEY = "stackd_account_starting_balances";
+
+function getLocalStorage() {
+  if (typeof window !== "undefined" && window.localStorage) return window.localStorage;
+  return null;
+}
+
+export async function getAccountStartingBalances(): Promise<Record<string, number>> {
+  try {
+    const { Platform } = require("react-native");
+    if (Platform.OS === "web") {
+      const ls = getLocalStorage();
+      if (!ls) return {};
+      const raw = ls.getItem(STARTING_BALANCES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } else {
+      const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+      const raw = await AsyncStorage.getItem(STARTING_BALANCES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    }
+  } catch {
+    return {};
+  }
+}
+
+export async function setAccountStartingBalance(accountId: string, balance: number): Promise<void> {
+  const balances = await getAccountStartingBalances();
+  balances[accountId] = balance;
+  const json = JSON.stringify(balances);
+  try {
+    const { Platform } = require("react-native");
+    if (Platform.OS === "web") {
+      const ls = getLocalStorage();
+      if (ls) ls.setItem(STARTING_BALANCES_KEY, json);
+    } else {
+      const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+      await AsyncStorage.setItem(STARTING_BALANCES_KEY, json);
+    }
+  } catch {}
+}
