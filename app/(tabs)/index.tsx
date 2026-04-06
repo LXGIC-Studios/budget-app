@@ -500,7 +500,8 @@ export default function HomeScreen() {
     setTransferVisible(false);
   };
 
-  const netIsPositive = weekNet >= 0;
+  const available = weekNet + weekRollover;
+  const netIsPositive = available >= 0;
 
   return (
     <SafeAreaView style={s.container} edges={["top"]}>
@@ -560,29 +561,19 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* ── ROLLOVER BAR ── */}
-        {weekRollover !== 0 && (
-          <View style={s.rolloverBar}>
-            <Text style={s.rolloverLabel}>ROLLOVER</Text>
-            <Text style={[s.rolloverAmt, { color: weekRollover >= 0 ? colors.primary : colors.red }]}>
-              {weekRollover >= 0 ? "+" : ""}{formatCurrency(weekRollover)}
-            </Text>
-          </View>
-        )}
-
         {/* ── HERO - full bleed ── */}
-        <View style={[s.hero, { backgroundColor: netIsPositive ? colors.primary : colors.red }]}>
-          <Text style={s.heroEyebrow}>WEEK NET</Text>
-          <Text style={s.heroNum}>{netIsPositive ? "+" : ""}{formatCurrency(weekNet)}</Text>
+        <View style={[s.hero, { backgroundColor: (weekNet + weekRollover) >= 0 ? colors.primary : colors.red }]}>
+          <Text style={s.heroEyebrow}>AVAILABLE</Text>
+          <Text style={s.heroNum}>{(weekNet + weekRollover) >= 0 ? "+" : ""}{formatCurrency(weekNet + weekRollover)}</Text>
           <View style={s.heroBar}>
             <View style={s.heroStat}>
-              <Text style={s.heroStatNum}>{formatCurrency(weekIncome)}</Text>
-              <Text style={s.heroStatLabel}>INCOME</Text>
+              <Text style={s.heroStatNum}>{formatCurrency(weekNet)}</Text>
+              <Text style={s.heroStatLabel}>WEEK NET</Text>
             </View>
             <View style={s.heroBarDivider} />
             <View style={s.heroStat}>
-              <Text style={s.heroStatNum}>{formatCurrency(weekExpenses)}</Text>
-              <Text style={s.heroStatLabel}>SPENT</Text>
+              <Text style={s.heroStatNum}>{formatCurrency(weekRollover)}</Text>
+              <Text style={s.heroStatLabel}>ROLLOVER</Text>
             </View>
             <View style={s.heroBarDivider} />
             <View style={s.heroStat}>
