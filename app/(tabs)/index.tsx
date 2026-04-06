@@ -371,7 +371,17 @@ export default function HomeScreen() {
     }), [transactions, weekRange, accountFilter]
   );
 
-  const weekIncome = useMemo(() => weekTxns.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0), [weekTxns]);
+  // CURRENT BALANCE only counts RECEIVED income (received: true OR date in past)
+  const today = new Date();
+  today.setHours(23, 59, 59, 999); // End of today
+
+  const weekIncome = useMemo(() =>
+    weekTxns
+      .filter((t) => t.type === "income")
+      .filter((t) => t.received === true || new Date(t.date) <= today)
+      .reduce((s, t) => s + t.amount, 0),
+    [weekTxns, today]
+  );
   const weekExpenses = useMemo(() => weekTxns.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0), [weekTxns]);
   const weekNet = weekIncome - weekExpenses;
 
@@ -386,15 +396,23 @@ export default function HomeScreen() {
       if (d < ROLLOVER_EPOCH) return; // ignore everything before rollover started
       if (d >= weekRange.start) return; // only count prior weeks
       if (accountFilter && t.accountTag !== accountFilter) return;
-      if (t.type === "income") balance += t.amount;
-      else balance -= t.amount;
+      // Only count received income in rollover
+      if (t.type === "income" && (t.received === true || d <= today)) balance += t.amount;
+      else if (t.type === "expense") balance -= t.amount;
     });
     return balance;
-  }, [transactions, weekRange, accountFilter]);
+  }, [transactions, weekRange, accountFilter, today]);
 
   const incomeTxns = useMemo(() => weekTxns.filter((t) => t.type === "income").sort((a, b) => a.date.localeCompare(b.date)), [weekTxns]);
   const expenseTxns = useMemo(() => weekTxns.filter((t) => t.type === "expense").sort((a, b) => b.date.localeCompare(a.date)), [weekTxns]);
   const transferTxns = useMemo(() => weekTxns.filter((t) => t.type === "transfer").sort((a, b) => b.date.localeCompare(a.date)), [weekTxns]);
+
+  // Handler to mark income as received
+  const handleMarkReceived = async (txn: Transaction) => {
+    const now = new Date().toISOString();
+    const updated = { ...txn, received: true, date: now.slice(0, 10) };
+    await updateTransaction(updated);
+  };
 
   const billsDue = useMemo(() => {
     if (!currentBudget) return [];
@@ -593,25 +611,36 @@ export default function HomeScreen() {
             <Text style={s.emptyText}>No income logged this week</Text>
           </View>
         ) : (
-          incomeTxns.map((t) => (
-            <Pressable key={t.id} onPress={() => { setEditingTxn(t); setSheetVisible(true); }} style={s.incomeRow}>
-              <View style={s.incomeLeft}>
-                <View style={s.greenPip} />
-                <View>
-                  <Text style={s.incomeTitle}>{t.note || t.category}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
-                    {getTagInfo(t.accountTag) && (
-                      <View style={s.acctChip}>
-                        <Text style={s.acctChipText}>{getTagInfo(t.accountTag)!.emoji} {getTagInfo(t.accountTag)!.label}</Text>
-                      </View>
-                    )}
+          incomeTxns.map((t) => {
+            const isReceived = t.received === true || new Date(t.date) <= today;
+            const isPending = !isReceived;
+            return (
+              <Pressable key={t.id} onPress={() => { setEditingTxn(t); setSheetVisible(true); }} style={[s.incomeRow, isPending && s.pendingRow]}>
+                <View style={s.incomeLeft}>
+                  <View style={[s.greenPip, isPending && { backgroundColor: colors.textSecondary }]} />
+                  <View>
+                    <Text style={[s.incomeTitle, isPending && s.pendingText]}>{t.note || t.category}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={s.rowSub}>{formatShortDate(t.date)}</Text>
+                      {isPending && <Text style={s.pendingLabel}>PENDING</Text>}
+                      {getTagInfo(t.accountTag) && (
+                        <View style={s.acctChip}>
+                          <Text style={s.acctChipText}>{getTagInfo(t.accountTag)!.emoji} {getTagInfo(t.accountTag)!.label}</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
-              </View>
-              <Text style={s.incomeAmt}>+{formatCurrency(t.amount)}</Text>
-            </Pressable>
-          ))
+                {isPending ? (
+                  <Pressable style={s.markReceivedBtn} onPress={() => { impact("Medium"); handleMarkReceived(t); }}>
+                    <Text style={s.markReceivedText}>MARK RECEIVED</Text>
+                  </Pressable>
+                ) : (
+                  <Text style={s.incomeAmt}>+{formatCurrency(t.amount)}</Text>
+                )}
+              </Pressable>
+            );
+          })
         )}
 
         {/* ── BILLS DUE ── */}
@@ -902,6 +931,18 @@ const s = StyleSheet.create({
   greenPip: { width: 3, height: 32, backgroundColor: colors.primary },
   incomeTitle: { color: colors.white, fontSize: 17, fontWeight: "700", fontFamily: fonts.body as any },
   incomeAmt: { color: colors.primary, fontSize: 22, fontWeight: "900", fontFamily: fonts.mono as any },
+
+  // Pending income
+  pendingRow: { opacity: 0.5 },
+  pendingText: { color: colors.textSecondary },
+  pendingLabel: { color: colors.yellow, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  markReceivedBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 4,
+  },
+  markReceivedText: { color: "#000", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   rowSub: { color: "#aaa", fontSize: 12, letterSpacing: 1, marginTop: 2, fontFamily: fonts.mono as any },
 
   // Bills

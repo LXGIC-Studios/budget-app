@@ -8,6 +8,7 @@ export interface Transaction {
   createdAt: string;
   userName?: string;
   accountTag?: string;
+  received?: boolean; // For income: true = money is in account, false = scheduled/future
 }
 
 // Default account tags - users can add their own via Settings
