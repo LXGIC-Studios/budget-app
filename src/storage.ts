@@ -116,6 +116,7 @@ export async function getTransactions(): Promise<Transaction[]> {
       createdAt: row.created_at,
       userName: nameMap.get(row.user_id),
       accountTag: row.account_tag || undefined,
+      received: row.received ?? undefined,
     }));
   }
 
@@ -138,6 +139,7 @@ export async function getTransactions(): Promise<Transaction[]> {
     date: row.date,
     createdAt: row.created_at,
     accountTag: row.account_tag || undefined,
+    received: row.received ?? undefined,
   }));
 }
 
@@ -155,6 +157,7 @@ export async function addTransaction(txn: Transaction): Promise<void> {
     date: txn.date,
     created_at: txn.createdAt,
     account_tag: txn.accountTag || null,
+    received: txn.received ?? null,
   });
   if (error) {
     console.error("Supabase insert error:", error);
@@ -176,6 +179,7 @@ export async function addTransactions(txns: Transaction[]): Promise<void> {
     date: txn.date,
     created_at: txn.createdAt,
     account_tag: txn.accountTag || null,
+    received: txn.received ?? null,
   }));
 
   await supabase.from("transactions").insert(rows);
@@ -196,6 +200,7 @@ export async function updateTransaction(
   if (updates.note !== undefined) updateData.note = updates.note;
   if (updates.date !== undefined) updateData.date = updates.date;
   if (updates.accountTag !== undefined) updateData.account_tag = updates.accountTag;
+  if (updates.received !== undefined) updateData.received = updates.received;
   await supabase.from("transactions").update(updateData).eq("id", id);
 }
 
