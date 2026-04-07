@@ -60,7 +60,8 @@ function PayBillModal({ bill, onClose, onQuickPay, onCustomPay, accounts }: {
   onCustomPay: (amount: number, accountTag?: string) => void;
   accounts: { id: string; label: string; emoji: string }[];
 }) {
-  const defaultAmount = getMonthlyAmount(bill.allocated, bill.frequency || "monthly");
+  // For weekly bills, show weekly amount (not monthly conversion)
+  const defaultAmount = bill.frequency === "weekly" ? bill.allocated : getMonthlyAmount(bill.allocated, bill.frequency || "monthly");
   const [customAmount, setCustomAmount] = useState(defaultAmount.toFixed(2));
   const [mode, setMode] = useState<"choose" | "custom">("choose");
   const [selectedAccount, setSelectedAccount] = useState<string | undefined>(bill.defaultAccountTag);
@@ -442,7 +443,11 @@ export default function HomeScreen() {
   // Only count UNPAID bills in the total
   const totalBillsDue = filteredBillsDue
     .filter((c) => !paidBillIds.has(c.id))
-    .reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
+    .reduce((s, c) => {
+      // For weekly bills, use weekly amount (not monthly conversion)
+      const amount = c.frequency === "weekly" ? c.allocated : getMonthlyAmount(c.allocated, c.frequency || "monthly");
+      return s + amount;
+    }, 0);
 
   const flexCategories = useMemo(() => currentBudget?.categories.filter((c) => c.type === "flexible") ?? [], [currentBudget]);
 
@@ -653,7 +658,8 @@ export default function HomeScreen() {
             </View>
             {filteredBillsDue.map((c) => {
               const isPaid = paidBillIds.has(c.id);
-              const amt = getMonthlyAmount(c.allocated, c.frequency || "monthly");
+              // For weekly bills, show weekly amount (not monthly conversion)
+              const amt = c.frequency === "weekly" ? c.allocated : getMonthlyAmount(c.allocated, c.frequency || "monthly");
               return (
                 <Pressable
                   key={c.id}
