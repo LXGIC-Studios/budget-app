@@ -669,7 +669,7 @@ export default function HomeScreen() {
                   <Text style={s.billEmoji}>{c.emoji}</Text>
                   <View style={s.billMid}>
                     <Text style={[s.billName, isPaid && s.strike]}>{c.name.toUpperCase()}</Text>
-                    <Text style={s.rowSub}>{c.dueDay ? formatDueDay(c.dueDay).toUpperCase() : "DUE THIS WEEK"} - {isPaid ? "PAID" : "TAP TO PAY"}</Text>
+                    <Text style={s.rowSub}>{c.dueDay ? formatDueDay(c.dueDay, c.frequency).toUpperCase() : "DUE THIS WEEK"} - {isPaid ? "PAID" : "TAP TO PAY"}</Text>
                   </View>
                   {isPaid ? (
                     <View style={s.paidPill}>
