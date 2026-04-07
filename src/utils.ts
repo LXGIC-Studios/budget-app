@@ -70,7 +70,14 @@ export function getMonthlyAmount(allocated: number, frequency: string): number {
   }
 }
 
-export function formatDueDay(day: number): string {
+export function formatDueDay(day: number, frequency?: string): string {
+  // For weekly bills, day is 0-6 (Mon-Sun)
+  if (frequency === "weekly") {
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    return days[day] || "";
+  }
+
+  // For other frequencies, day is 1-31 (day of month)
   const suffix =
     day === 1 || day === 21 || day === 31
       ? "st"

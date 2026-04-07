@@ -80,7 +80,7 @@ function CategoryRow({
             )}
           </View>
           {cat.dueDay != null && (
-            <Text style={styles.dueDayText}>{formatDueDay(cat.dueDay)}</Text>
+            <Text style={styles.dueDayText}>{formatDueDay(cat.dueDay, cat.frequency)}</Text>
           )}
         </View>
         <View style={{ alignItems: "flex-end" }}>
@@ -262,7 +262,9 @@ export default function BudgetScreen() {
   };
 
   const handleMarkPaid = (cat: BudgetCategory) => {
-    const displayAllocated = getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
+    const displayAllocated = cat.type === "fixed" && cat.frequency === "weekly"
+      ? cat.allocated
+      : getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
     const catKey = cat.name.toLowerCase();
     const alreadySpent = spentByCategory[catKey] || 0;
     const remaining = Math.round((displayAllocated - alreadySpent) * 100) / 100;
@@ -308,7 +310,8 @@ export default function BudgetScreen() {
     setEditFrequency(cat.frequency || "monthly");
     setEditDefaultAccount(cat.defaultAccountTag);
     // Pre-fill pay amount with remaining balance
-    const displayAllocated = getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
+    // For weekly bills, use weekly amount (not monthly conversion)
+    const displayAllocated = cat.frequency === "weekly" ? cat.allocated : getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
     const catKey = cat.name.toLowerCase();
     const alreadySpent = spentByCategory[catKey] || 0;
     const remaining = Math.max(0, Math.round((displayAllocated - alreadySpent) * 100) / 100);
@@ -437,7 +440,8 @@ export default function BudgetScreen() {
       <View style={styles.catList}>
         {fixedCategories.map((cat) => {
           const catKey = cat.name.toLowerCase();
-          const displayAllocated = getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
+          // For weekly bills, show weekly amount (not monthly conversion)
+          const displayAllocated = cat.frequency === "weekly" ? cat.allocated : getMonthlyAmount(cat.allocated, cat.frequency || "monthly");
           const acctInfo = cat.defaultAccountTag ? userAccounts.find((a) => a.id === cat.defaultAccountTag) : null;
           return (
             <CategoryRow
@@ -567,6 +571,26 @@ export default function BudgetScreen() {
               </ScrollView>
             </View>
 
+            {/* Day of week - only for weekly */}
+            {editFrequency === "weekly" && (
+              <View>
+                <Text style={styles.modalFieldLabel}>EVERY</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <Pressable
+                      key={day}
+                      style={[styles.freqPill, editDueDay === String(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(day)) && styles.freqPillActive]}
+                      onPress={() => setEditDueDay(String(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(day)))}
+                    >
+                      <Text style={[styles.freqPillText, editDueDay === String(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(day)) && styles.freqPillTextActive]}>
+                        {day.toUpperCase()}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             {/* Amount */}
             <View>
               <Text style={styles.modalFieldLabel}>
@@ -586,8 +610,8 @@ export default function BudgetScreen() {
               </View>
             </View>
 
-            {/* Due day - only for fixed */}
-            {editType === "fixed" && (
+            {/* Due day - only for fixed and non-weekly */}
+            {editType === "fixed" && editFrequency !== "weekly" && (
               <View>
                 <Text style={styles.modalFieldLabel}>DUE DAY (OPTIONAL)</Text>
                 <View style={styles.modalInputRow}>
