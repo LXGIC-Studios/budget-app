@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, X, Calendar } from "lucide-react-native";
 import { impact } from "../../src/lib/haptics";
 import { colors, spacing, fonts } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
-import { formatCurrency, formatMonthLabel, shiftMonth, getMonthlyAmount } from "../../src/utils";
+import { formatCurrency, formatMonthLabel, shiftMonth, getMonthlyAmount, formatDateShort } from "../../src/utils";
 
 // ─── HORIZONTAL BAR ────────────────────────────────────────────────
 function Bar({ label, amount, max, color, budget }: {
@@ -119,23 +119,35 @@ export default function OverviewScreen() {
   const { transactions, currentMonth, setCurrentMonth, currentBudget, profile, debts } = useApp();
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [mode, setMode] = useState<"month" | "custom">("month");
-  const [startInput, setStartInput] = useState("");
-  const [endInput, setEndInput] = useState("");
   const [customStart, setCustomStart] = useState<Date | null>(null);
   const [customEnd, setCustomEnd] = useState<Date | null>(null);
+  const [showStartCal, setShowStartCal] = useState(false);
+  const [showEndCal, setShowEndCal] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
 
-  const handleStartInput = (text: string) => {
-    const formatted = formatDateInput(text);
-    setStartInput(formatted);
-    const d = parseInputDate(text);
-    if (d) setCustomStart(d);
-  };
+  // Generate calendar grid days
+  const getCalendarDays = (month: string) => {
+    const [y, m] = month.split("-").map(Number);
+    const firstDay = new Date(y, m - 1, 1);
+    const lastDay = new Date(y, m, 0);
+    const daysInMonth = lastDay.getDate();
+    const startPadding = firstDay.getDay();
+    const days: { day: number; date: Date | null; isCurrentMonth: boolean }[] = [];
 
-  const handleEndInput = (text: string) => {
-    const formatted = formatDateInput(text);
-    setEndInput(formatted);
-    const d = parseInputDate(text);
-    if (d) setCustomEnd(d);
+    // Padding before month starts
+    for (let i = 0; i < startPadding; i++) {
+      days.push({ day: 0, date: null, isCurrentMonth: false });
+    }
+
+    // Days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({ day: i, date: new Date(y, m - 1, i), isCurrentMonth: true });
+    }
+
+    return days;
   };
 
   const flexCats = useMemo(() => currentBudget?.categories.filter((c) => c.type === "flexible") ?? [], [currentBudget]);
@@ -259,33 +271,131 @@ export default function OverviewScreen() {
           </View>
         ) : (
           <View style={s.dateRangeRow}>
-            <View style={s.dateInputWrap}>
+            <Pressable style={s.dateInputWrap} onPress={() => { impact("Light"); setShowStartCal(true); }}>
               <Text style={s.dateInputLabel}>FROM</Text>
-              <TextInput
-                style={s.dateInput}
-                placeholder="MM/DD/YYYY"
-                placeholderTextColor="#666"
-                value={startInput}
-                onChangeText={handleStartInput}
-                keyboardType="number-pad"
-                maxLength={10}
-              />
-            </View>
+              <View style={s.dateInput}>
+                <Calendar size={16} color={customStart ? colors.primary : "#666"} />
+                <Text style={[s.dateInputText, !customStart && { color: "#666" }]}>
+                  {customStart ? formatDateShort(customStart) : "Select date"}
+                </Text>
+              </View>
+            </Pressable>
             <Text style={s.dateRangeDash}>-</Text>
-            <View style={s.dateInputWrap}>
+            <Pressable style={s.dateInputWrap} onPress={() => { impact("Light"); setShowEndCal(true); }}>
               <Text style={s.dateInputLabel}>TO</Text>
-              <TextInput
-                style={s.dateInput}
-                placeholder="MM/DD/YYYY"
-                placeholderTextColor="#666"
-                value={endInput}
-                onChangeText={handleEndInput}
-                keyboardType="number-pad"
-                maxLength={10}
-              />
-            </View>
+              <View style={s.dateInput}>
+                <Calendar size={16} color={customEnd ? colors.primary : "#666"} />
+                <Text style={[s.dateInputText, !customEnd && { color: "#666" }]}>
+                  {customEnd ? formatDateShort(customEnd) : "Select date"}
+                </Text>
+              </View>
+            </Pressable>
           </View>
         )}
+
+        {/* Calendar Modal for Start Date */}
+        <Modal visible={showStartCal} transparent animationType="slide" onRequestClose={() => setShowStartCal(false)}>
+          <Pressable style={cal.overlay} onPress={() => setShowStartCal(false)}>
+            <Pressable style={cal.sheet} onPress={(e) => e.stopPropagation()}>
+              <View style={cal.header}>
+                <Pressable onPress={() => setCalendarMonth(prev => shiftMonth(prev, -1))}>
+                  <ChevronLeft size={24} color={colors.white} />
+                </Pressable>
+                <Text style={cal.monthLabel}>{formatMonthLabel(calendarMonth).toUpperCase()}</Text>
+                <Pressable onPress={() => setCalendarMonth(prev => shiftMonth(prev, 1))}>
+                  <ChevronRight size={24} color={colors.white} />
+                </Pressable>
+              </View>
+              <View style={cal.weekDays}>
+                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                  <Text key={i} style={cal.weekDay}>{d}</Text>
+                ))}
+              </View>
+              <View style={cal.grid}>
+                {getCalendarDays(calendarMonth).map((day, i) => (
+                  <Pressable
+                    key={i}
+                    style={[
+                      cal.dayBtn,
+                      day.isCurrentMonth && cal.dayBtnActive,
+                      customStart && day.date && day.date.toDateString() === customStart.toDateString() && cal.dayBtnSelected,
+                    ]}
+                    onPress={() => {
+                      if (day.date) {
+                        setCustomStart(day.date);
+                        setShowStartCal(false);
+                      }
+                    }}
+                    disabled={!day.isCurrentMonth}
+                  >
+                    <Text style={[
+                      cal.dayText,
+                      !day.isCurrentMonth && { color: "#333" },
+                      customStart && day.date && day.date.toDateString() === customStart.toDateString() && cal.dayTextSelected,
+                    ]}>
+                      {day.day || ""}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable style={cal.closeBtn} onPress={() => setShowStartCal(false)}>
+                <Text style={cal.closeBtnText}>CANCEL</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Calendar Modal for End Date */}
+        <Modal visible={showEndCal} transparent animationType="slide" onRequestClose={() => setShowEndCal(false)}>
+          <Pressable style={cal.overlay} onPress={() => setShowEndCal(false)}>
+            <Pressable style={cal.sheet} onPress={(e) => e.stopPropagation()}>
+              <View style={cal.header}>
+                <Pressable onPress={() => setCalendarMonth(prev => shiftMonth(prev, -1))}>
+                  <ChevronLeft size={24} color={colors.white} />
+                </Pressable>
+                <Text style={cal.monthLabel}>{formatMonthLabel(calendarMonth).toUpperCase()}</Text>
+                <Pressable onPress={() => setCalendarMonth(prev => shiftMonth(prev, 1))}>
+                  <ChevronRight size={24} color={colors.white} />
+                </Pressable>
+              </View>
+              <View style={cal.weekDays}>
+                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                  <Text key={i} style={cal.weekDay}>{d}</Text>
+                ))}
+              </View>
+              <View style={cal.grid}>
+                {getCalendarDays(calendarMonth).map((day, i) => (
+                  <Pressable
+                    key={i}
+                    style={[
+                      cal.dayBtn,
+                      day.isCurrentMonth && cal.dayBtnActive,
+                      customEnd && day.date && day.date.toDateString() === customEnd.toDateString() && cal.dayBtnSelected,
+                    ]}
+                    onPress={() => {
+                      if (day.date) {
+                        setCustomEnd(day.date);
+                        setShowEndCal(false);
+                      }
+                    }}
+                    disabled={!day.isCurrentMonth}
+                  >
+                    <Text style={[
+                      cal.dayText,
+                      !day.isCurrentMonth && { color: "#333" },
+                      customEnd && day.date && day.date.toDateString() === customEnd.toDateString() && cal.dayTextSelected,
+                    ]}>
+                      {day.day || ""}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable style={cal.closeBtn} onPress={() => setShowEndCal(false)}>
+                <Text style={cal.closeBtnText}>CANCEL</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         {/* Period label for custom */}
         {mode === "custom" && customStart && customEnd && (
@@ -526,9 +636,12 @@ const s = StyleSheet.create({
     color: "#bbb", fontSize: 11, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any,
   },
   dateInput: {
+    flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "#0a0a0a", borderWidth: 1, borderColor: "#1a1a1a",
-    paddingVertical: 10, paddingHorizontal: 12, color: colors.white,
-    fontSize: 16, fontWeight: "700", fontFamily: fonts.mono as any, textAlign: "center",
+    paddingVertical: 10, paddingHorizontal: 12,
+  },
+  dateInputText: {
+    color: colors.white, fontSize: 16, fontWeight: "700", fontFamily: fonts.mono as any,
   },
   dateRangeDash: {
     color: colors.primary, fontSize: 20, fontWeight: "900", marginTop: 18,
@@ -540,4 +653,57 @@ const s = StyleSheet.create({
   customLabelText: {
     color: colors.primary, fontSize: 13, fontWeight: "700", letterSpacing: 1, fontFamily: fonts.mono as any,
   },
+
+  // Date input with calendar icon
+  dateInputText: {
+    color: colors.white, fontSize: 16, fontWeight: "700", fontFamily: fonts.mono as any,
+  },
+});
+
+// Calendar modal styles
+const cal = StyleSheet.create({
+  overlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: "#050505", borderTopWidth: 2, borderTopColor: colors.primary,
+    padding: spacing.lg, paddingBottom: 52, gap: 12,
+  },
+  header: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8,
+  },
+  monthLabel: {
+    color: colors.white, fontSize: 18, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.heading as any,
+  },
+  weekDays: {
+    flexDirection: "row", justifyContent: "space-around", marginBottom: 4,
+  },
+  weekDay: {
+    color: "#666", fontSize: 12, fontWeight: "700", width: 40, textAlign: "center", fontFamily: fonts.mono as any,
+  },
+  grid: {
+    flexDirection: "row", flexWrap: "wrap", gap: 4,
+  },
+  dayBtn: {
+    width: 40, height: 40, alignItems: "center", justifyContent: "center",
+  },
+  dayBtnActive: {
+    backgroundColor: "transparent",
+  },
+  dayBtnSelected: {
+    backgroundColor: colors.primary, borderRadius: 4,
+  },
+  dayText: {
+    color: "#666", fontSize: 16, fontWeight: "700", fontFamily: fonts.mono as any,
+  },
+  dayTextSelected: {
+    color: "#000",
+  },
+  closeBtn: {
+    backgroundColor: "#1a1a1a", padding: 14, alignItems: "center", marginTop: 8,
+  },
+  closeBtnText: {
+    color: "#888", fontSize: 14, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any,
+  },
+});
 });
