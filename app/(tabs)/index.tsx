@@ -397,8 +397,8 @@ export default function HomeScreen() {
       if (d < ROLLOVER_EPOCH) return; // ignore everything before rollover started
       if (d >= weekRange.start) return; // only count prior weeks
       if (accountFilter && t.accountTag !== accountFilter) return;
-      // Only count received income in rollover
-      if (t.type === "income" && (t.received === true || d <= today)) balance += t.amount;
+      // Prior weeks are settled - count all income regardless of received/date
+      if (t.type === "income") balance += t.amount;
       else if (t.type === "expense") balance -= t.amount;
     });
     return balance;
