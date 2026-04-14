@@ -706,4 +706,3 @@ const cal = StyleSheet.create({
     color: "#888", fontSize: 14, fontWeight: "700", letterSpacing: 2, fontFamily: fonts.mono as any,
   },
 });
-});
