@@ -111,10 +111,6 @@ function formatDateInput(text: string): string {
   return formatted;
 }
 
-function formatDateShort(d: Date): string {
-  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
-}
-
 export default function OverviewScreen() {
   const { transactions, currentMonth, setCurrentMonth, currentBudget, profile, debts } = useApp();
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
