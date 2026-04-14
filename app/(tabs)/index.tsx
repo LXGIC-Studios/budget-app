@@ -392,9 +392,15 @@ export default function HomeScreen() {
   const weekRollover = useMemo(() => {
     let balance = 0;
     transactions.forEach((t) => {
-      if (t.type === "transfer" || t.category === "transfer") return;
+      if (t.type === "transfer" || t.category === "transfer") {
+        // Skip transfers for ALL view (they cancel out)
+        // But count them for individual account views (the account actually received/spent the money)
+        if (!accountFilter) return;
+        // For individual accounts, only count the transaction if it belongs to this account
+        if (t.accountTag !== accountFilter) return;
+      }
       const d = new Date(t.date);
-      if (d < ROLLOVER_EPOCH) return; // ignore everything before rollover started
+      if (d < ROLLOVER_EPOCH) return;
       if (d >= weekRange.start) return; // only count prior weeks
       if (accountFilter && t.accountTag !== accountFilter) return;
       // Prior weeks are settled - count all income regardless of received/date
@@ -402,7 +408,7 @@ export default function HomeScreen() {
       else if (t.type === "expense") balance -= t.amount;
     });
     return balance;
-  }, [transactions, weekRange, accountFilter, today]);
+  }, [transactions, weekRange, accountFilter]);
 
   const incomeTxns = useMemo(() => weekTxns.filter((t) => t.type === "income").sort((a, b) => a.date.localeCompare(b.date)), [weekTxns]);
   const expenseTxns = useMemo(() => weekTxns.filter((t) => t.type === "expense").sort((a, b) => b.date.localeCompare(a.date)), [weekTxns]);
