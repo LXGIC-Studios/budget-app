@@ -410,8 +410,9 @@ export default function HomeScreen() {
 
   // Handler to mark income as received
   const handleMarkReceived = async (txn: Transaction) => {
-    const now = new Date().toISOString();
-    const updated = { ...txn, received: true, date: now.slice(0, 10) };
+    // Only flip the received flag - do NOT change the date
+    // Changing the date would move the transaction between weeks and corrupt rollover
+    const updated = { ...txn, received: true };
     await updateTransaction(updated);
   };
 
