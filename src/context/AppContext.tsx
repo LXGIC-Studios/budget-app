@@ -1,3 +1,4 @@
+import { AppState } from 'react-native';
 import React, {
   createContext,
   useContext,
@@ -93,14 +94,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadData();
 
     // Re-load data when auth state changes (login/logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
         invalidateAuthCache();
         loadData();
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Re-load data when app comes back to foreground
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        loadData();
+      }
+    });
+
+    return () => {
+      appStateSub.remove();
+      authSub.unsubscribe();
+    };
   }, [loadData]);
 
   const setCurrentMonth = useCallback(
