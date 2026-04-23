@@ -1,6 +1,6 @@
 import type { Transaction } from "../types";
 import { generateId } from "../utils";
-import { categorizeDescription } from "./categorize";
+import { classifyTransaction } from "./categorize";
 
 function extractTag(block: string, tag: string): string {
   // OFX uses <TAG>value (no closing tag) or <TAG>value</TAG>
@@ -34,14 +34,31 @@ export function parseOFX(text: string): Transaction[] {
       const rawAmount = parseFloat(amountStr);
       if (isNaN(rawAmount) || rawAmount === 0) return null;
 
-      const type: "expense" | "income" = rawAmount < 0 ? "expense" : "income";
       const amount = Math.round(Math.abs(rawAmount) * 100) / 100;
+
+      // Use the same smart classifier as the CSV parser
+      const { category, isTransfer } = classifyTransaction(name, rawAmount);
+
+      let type: "expense" | "income" | "transfer";
+      if (isTransfer) {
+        type = "transfer";
+      } else if (rawAmount > 0) {
+        type = "income";
+      } else {
+        type = "expense";
+      }
+
+      // For income with generic category, default to salary/other_income
+      let finalCategory = category;
+      if (type === "income" && finalCategory === "Other") {
+        finalCategory = "other_income";
+      }
 
       return {
         id: generateId(),
         type,
         amount,
-        category: type === "income" ? "salary" : categorizeDescription(name),
+        category: finalCategory,
         note: name,
         date: parseOFXDate(dateStr),
         createdAt: new Date().toISOString(),

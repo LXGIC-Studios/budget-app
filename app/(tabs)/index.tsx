@@ -512,19 +512,18 @@ export default function HomeScreen() {
     const toName = userAccounts.find((a) => a.id === toId)?.label ?? "Account";
     const amt = Math.round(amount * 100) / 100;
     const now = new Date().toISOString();
-    const transferId = generateId();
 
     notification("Success");
-    // Transfer OUT = expense from source account
+    // Transfer OUT from source account
     await addTransaction({
-      id: generateId(), type: "expense", amount: amt,
-      category: "transfer", note: transferNote || `Transfer to ${toName}`,
+      id: generateId(), type: "transfer", amount: amt,
+      category: "transfer", note: transferNote || `${fromName} \u2192 ${toName}`,
       date: now, createdAt: now, accountTag: fromId,
     });
-    // Transfer IN = income to destination account
+    // Transfer IN to destination account
     await addTransaction({
-      id: generateId(), type: "income", amount: amt,
-      category: "transfer", note: transferNote || `Transfer from ${fromName}`,
+      id: generateId(), type: "transfer", amount: amt,
+      category: "transfer", note: transferNote || `${fromName} \u2192 ${toName}`,
       date: now, createdAt: now, accountTag: toId,
     });
     setTransferVisible(false);

@@ -1033,7 +1033,7 @@ export default function InsightsScreen() {
     () =>
       transactions.filter((t) => {
         const normalized = normalizeDate(t.date);
-        return normalized.startsWith(activeMonth) && t.type === "expense";
+        return normalized.startsWith(activeMonth) && t.type === "expense" && t.type !== "transfer" && t.category !== "transfer";
       }),
     [transactions, activeMonth]
   );
@@ -1042,7 +1042,7 @@ export default function InsightsScreen() {
     () =>
       transactions.filter((t) => {
         const normalized = normalizeDate(t.date);
-        return normalized.startsWith(activeMonth) && t.type === "income";
+        return normalized.startsWith(activeMonth) && t.type === "income" && t.type !== "transfer" && t.category !== "transfer";
       }),
     [transactions, activeMonth]
   );
@@ -1052,7 +1052,7 @@ export default function InsightsScreen() {
   const prevMonthExpenseTotal = useMemo(
     () =>
       transactions
-        .filter((t) => normalizeDate(t.date).startsWith(prevMonth) && t.type === "expense")
+        .filter((t) => normalizeDate(t.date).startsWith(prevMonth) && t.type === "expense" && t.category !== "transfer")
         .reduce((s, t) => s + t.amount, 0),
     [transactions, prevMonth]
   );
@@ -1278,7 +1278,7 @@ export default function InsightsScreen() {
       const total = transactions
         .filter((t) => {
           const normalized = normalizeDate(t.date);
-          return normalized.startsWith(mk) && t.type === "expense";
+          return normalized.startsWith(mk) && t.type === "expense" && t.category !== "transfer";
         })
         .reduce((s, t) => s + t.amount, 0);
       const label = formatMonthLabel(mk).split(" ")[0];
@@ -1298,13 +1298,13 @@ export default function InsightsScreen() {
       const income = transactions
         .filter((t) => {
           const n = normalizeDate(t.date);
-          return n.startsWith(mk) && t.type === "income";
+          return n.startsWith(mk) && t.type === "income" && t.category !== "transfer";
         })
         .reduce((s, t) => s + t.amount, 0);
       const expenses = transactions
         .filter((t) => {
           const n = normalizeDate(t.date);
-          return n.startsWith(mk) && t.type === "expense";
+          return n.startsWith(mk) && t.type === "expense" && t.category !== "transfer";
         })
         .reduce((s, t) => s + t.amount, 0);
       const label = formatMonthLabel(mk).split(" ")[0];
@@ -1358,9 +1358,9 @@ export default function InsightsScreen() {
 
   // Weekly Income breakdown - uses REAL income transactions, not averages
   const weeklyStats = useMemo(() => {
-    // Get all income transactions for this month
+    // Get all income transactions for this month (exclude transfers)
     const monthIncome = transactions
-      .filter((t) => t.type === "income" && normalizeDate(t.date).startsWith(activeMonth))
+      .filter((t) => t.type === "income" && t.category !== "transfer" && normalizeDate(t.date).startsWith(activeMonth))
       .reduce((s, t) => s + t.amount, 0);
 
     // Current week spending & income (Mon-Sun containing today)

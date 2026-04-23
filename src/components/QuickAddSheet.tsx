@@ -14,7 +14,7 @@ import { notification, impact } from "../lib/haptics";
 import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
-import type { Transaction } from "../types";
+import type { Transaction, ScheduledTransaction } from "../types";
 import { useApp } from "../context/AppContext";
 import { generateId, formatShortDate, formatCurrency } from "../utils";
 
@@ -35,7 +35,7 @@ interface Props {
 }
 
 export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpdate, onDelete, onSplit, initialMode }: Props) {
-  const { userAccounts, addTransaction: addTxn } = useApp();
+  const { userAccounts, addTransaction: addTxn, addScheduledTransaction } = useApp();
   const [mode, setMode] = useState<"expense" | "income" | "transfer">(initialMode ?? "expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("food");
@@ -47,6 +47,10 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   const [dateInput, setDateInput] = useState("");
   const [initialized, setInitialized] = useState(false);
   // selectedAccountId removed - using accountTag state above
+
+  // Recurring transaction state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringDay, setRecurringDay] = useState("1");
 
   // Split mode state
   const [splitMode, setSplitMode] = useState(false);
@@ -75,6 +79,8 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     setSplitMode(false);
     setSplitRows([]);
     setEditingSplitCategory(null);
+    setIsRecurring(false);
+    setRecurringDay("1");
     setInitialized(true);
   }
   if (!visible && initialized) {
@@ -146,17 +152,37 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
         accountTag,
       });
     } else {
+      const scheduledId = isRecurring ? generateId() : undefined;
       const txn: Transaction = {
         id: generateId(),
         type: mode,
         amount: Math.round(parsed * 100) / 100,
         category,
-        note: note.trim() || undefined,
+        note: isRecurring
+          ? `${note.trim() || category} [recurring:${scheduledId}]`
+          : note.trim() || undefined,
         date: selectedDate.toISOString(),
         createdAt: new Date().toISOString(),
         accountTag,
       };
       onSave(txn);
+
+      // Also create the scheduled transaction if recurring
+      if (isRecurring && scheduledId) {
+        const day = parseInt(recurringDay, 10);
+        const st: ScheduledTransaction = {
+          id: scheduledId,
+          type: mode as "expense" | "income",
+          amount: Math.round(parsed * 100) / 100,
+          category,
+          note: note.trim() || undefined,
+          dayOfMonth: day >= 1 && day <= 31 ? day : 1,
+          accountTag,
+          active: true,
+          createdAt: new Date().toISOString(),
+        };
+        addScheduledTransaction(st);
+      }
     }
 
     setAmount("");
@@ -165,6 +191,8 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     setAccountTag(undefined);
     setSelectedDate(new Date());
     setDateInput("");
+    setIsRecurring(false);
+    setRecurringDay("1");
     onClose();
   };
 
@@ -673,6 +701,40 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
               </Text>
             )}
           </View>
+
+          {/* Recurring toggle (new transactions only, not transfers) */}
+          {!isEditing && mode !== "transfer" && (
+            <View style={styles.recurringRow}>
+              <Pressable
+                onPress={() => { setIsRecurring(!isRecurring); impact("Light"); }}
+                style={[styles.recurringToggle, isRecurring && styles.recurringToggleActive]}
+              >
+                <Text style={{ fontSize: 14 }}>{isRecurring ? "\u{1F501}" : "\u{1F504}"}</Text>
+                <Text style={[styles.recurringToggleText, isRecurring && styles.recurringToggleTextActive]}>
+                  RECURRING
+                </Text>
+              </Pressable>
+              {isRecurring && (
+                <View style={styles.recurringDayRow}>
+                  <Text style={styles.recurringDayLabel}>DAY</Text>
+                  <TextInput
+                    style={styles.recurringDayInput}
+                    value={recurringDay}
+                    onChangeText={(v) => {
+                      const digits = v.replace(/\D/g, "").slice(0, 2);
+                      const num = parseInt(digits, 10);
+                      if (digits === "" || (num >= 1 && num <= 31)) setRecurringDay(digits);
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    placeholder="1"
+                    placeholderTextColor={colors.dimmed}
+                  />
+                  <Text style={styles.recurringDayLabel}>OF MONTH</Text>
+                </View>
+              )}
+            </View>
+          )}
           </ScrollView>
 
           {/* Action buttons */}
@@ -975,6 +1037,60 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     letterSpacing: 1,
+  },
+
+  // Recurring styles
+  recurringRow: {
+    gap: spacing.sm,
+  },
+  recurringToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.bg,
+    alignSelf: "flex-start",
+  },
+  recurringToggleActive: {
+    borderColor: "#8B5CF6",
+    backgroundColor: "rgba(139,92,246,0.1)",
+  },
+  recurringToggleText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  recurringToggleTextActive: {
+    color: "#8B5CF6",
+  },
+  recurringDayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  recurringDayLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  recurringDayInput: {
+    width: 50,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.3)",
+    borderRadius: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
   },
 
   // Split mode styles

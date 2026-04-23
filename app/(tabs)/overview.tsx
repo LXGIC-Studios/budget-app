@@ -156,7 +156,7 @@ export default function OverviewScreen() {
   // Filter transactions by month or custom date range
   const filteredTxns = useMemo(() =>
     transactions.filter((t) => {
-      if (t.type === "transfer") return false;
+      if (t.type === "transfer" || t.category === "transfer") return false;
       if (accountFilter && t.accountTag !== accountFilter) return false;
       if (mode === "custom" && customStart && customEnd) {
         const d = new Date(t.date);

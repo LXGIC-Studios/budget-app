@@ -7,6 +7,7 @@ import type {
   Debt,
   Household,
   HouseholdMember,
+  ScheduledTransaction,
 } from "./types";
 
 // Cached auth/household context to avoid redundant DB round trips
@@ -504,6 +505,69 @@ export async function addUserAccount(label: string, emoji: string): Promise<{ id
 
 export async function deleteUserAccount(id: string): Promise<void> {
   await supabase.from("user_accounts").delete().eq("id", id);
+}
+
+// Scheduled (recurring) transactions
+export async function getScheduledTransactions(): Promise<ScheduledTransaction[]> {
+  const ctx = await getAuthContext();
+  if (!ctx) return [];
+
+  const { data } = await supabase
+    .from("scheduled_transactions")
+    .select("*")
+    .eq("user_id", ctx.userId)
+    .order("day_of_month", { ascending: true });
+
+  if (!data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    type: row.type as "expense" | "income",
+    amount: Number(row.amount),
+    category: row.category,
+    note: row.note || undefined,
+    dayOfMonth: Number(row.day_of_month),
+    accountTag: row.account_tag || undefined,
+    active: row.active ?? true,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function addScheduledTransaction(st: ScheduledTransaction): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx) return;
+
+  await supabase.from("scheduled_transactions").insert({
+    id: st.id,
+    user_id: ctx.userId,
+    type: st.type,
+    amount: st.amount,
+    category: st.category,
+    note: st.note || null,
+    day_of_month: st.dayOfMonth,
+    account_tag: st.accountTag || null,
+    active: st.active,
+    created_at: st.createdAt,
+  });
+}
+
+export async function updateScheduledTransaction(
+  id: string,
+  updates: Partial<Omit<ScheduledTransaction, "id" | "createdAt">>
+): Promise<void> {
+  const updateData: Record<string, unknown> = {};
+  if (updates.type !== undefined) updateData.type = updates.type;
+  if (updates.amount !== undefined) updateData.amount = updates.amount;
+  if (updates.category !== undefined) updateData.category = updates.category;
+  if (updates.note !== undefined) updateData.note = updates.note;
+  if (updates.dayOfMonth !== undefined) updateData.day_of_month = updates.dayOfMonth;
+  if (updates.accountTag !== undefined) updateData.account_tag = updates.accountTag;
+  if (updates.active !== undefined) updateData.active = updates.active;
+  await supabase.from("scheduled_transactions").update(updateData).eq("id", id);
+}
+
+export async function deleteScheduledTransaction(id: string): Promise<void> {
+  await supabase.from("scheduled_transactions").delete().eq("id", id);
 }
 
 // Account starting balances (stored locally - no DB needed)

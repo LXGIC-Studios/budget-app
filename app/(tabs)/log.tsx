@@ -152,8 +152,15 @@ export default function LogScreen() {
                 <Text style={styles.txnEmoji}>{getIcon(t.category)}</Text>
               </View>
               <View style={styles.txnMeta}>
-                <Text style={styles.txnCategory}>{t.category}</Text>
-                {t.note && <Text style={styles.txnNote} numberOfLines={1}>{t.note}</Text>}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.txnCategory}>{t.category}</Text>
+                  {t.note?.includes("[recurring:") && (
+                    <View style={styles.recurringBadge}>
+                      <Text style={styles.recurringBadgeText}>{"\u{1F501}"} RECURRING</Text>
+                    </View>
+                  )}
+                </View>
+                {t.note && <Text style={styles.txnNote} numberOfLines={1}>{t.note.replace(/\s*\[recurring:[^\]]+\]/, "")}</Text>}
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={styles.txnDate}>{formatShortDate(t.date)}</Text>
                   {getTagInfo(t.accountTag) && (
@@ -367,6 +374,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     paddingHorizontal: spacing.xl,
+  },
+  recurringBadge: {
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.3)",
+    backgroundColor: "rgba(139,92,246,0.1)",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 2,
+  },
+  recurringBadgeText: {
+    color: "#8B5CF6",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   acctChip: {
     borderWidth: 1,

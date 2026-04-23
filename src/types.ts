@@ -115,6 +115,18 @@ export const INCOME_CATEGORIES = [
   { id: "other_income", name: "Other Income", emoji: "📦" },
 ] as const;
 
+export interface ScheduledTransaction {
+  id: string;
+  type: "expense" | "income";
+  amount: number;
+  category: string;
+  note?: string;
+  dayOfMonth: number; // 1-31
+  accountTag?: string;
+  active: boolean;
+  createdAt: string;
+}
+
 export const BILL_PRESETS: Bill[] = [
   { name: "Rent", amount: 0, emoji: "\uD83C\uDFE0" },
   { name: "Car", amount: 0, emoji: "\uD83D\uDE97" },

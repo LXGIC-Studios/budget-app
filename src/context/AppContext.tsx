@@ -7,11 +7,11 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember, AccountTag } from "../types";
+import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember, AccountTag, ScheduledTransaction } from "../types";
 import * as storage from "../storage";
 import { invalidateAuthCache } from "../storage";
 import { supabase } from "../lib/supabase";
-import { getMonthKey } from "../utils";
+import { getMonthKey, generateId } from "../utils";
 
 // Known ending balance from bank data as of Dec 31, 2025
 const DEC_2025_ENDING_BALANCE = 1373;
@@ -26,6 +26,7 @@ interface AppState {
   loading: boolean;
   household: Household | null;
   householdMembers: HouseholdMember[];
+  scheduledTransactions: ScheduledTransaction[];
 }
 
 interface AppContextValue extends AppState {
@@ -44,6 +45,9 @@ interface AppContextValue extends AppState {
   addUserAccount: (label: string, emoji: string) => Promise<void>;
   deleteUserAccount: (id: string) => Promise<void>;
   updateEmergencyFund: (amount: number) => Promise<void>;
+  addScheduledTransaction: (st: ScheduledTransaction) => Promise<void>;
+  updateScheduledTransaction: (id: string, updates: Partial<Omit<ScheduledTransaction, "id" | "createdAt">>) => Promise<void>;
+  deleteScheduledTransaction: (id: string) => Promise<void>;
   resetAll: () => Promise<void>;
   createHousehold: (name: string) => Promise<boolean>;
   joinHousehold: (code: string) => Promise<boolean>;
@@ -63,11 +67,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loading: true,
     household: null,
     householdMembers: [],
+    scheduledTransactions: [],
   });
 
   const loadData = useCallback(async (month?: string) => {
     const targetMonth = month ?? getMonthKey();
-    const [profile, transactions, budget, debts, userAccounts, household, householdMembers] = await Promise.all([
+    const [profile, transactions, budget, debts, userAccounts, household, householdMembers, scheduledTransactions] = await Promise.all([
       storage.getProfile(),
       storage.getTransactions(),
       storage.getBudgetForMonth(targetMonth),
@@ -75,7 +80,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       storage.getUserAccounts(),
       storage.getHousehold(),
       storage.getHouseholdMembers(),
+      storage.getScheduledTransactions(),
     ]);
+
+    // Auto-create transactions for any scheduled items due today
+    const today = new Date();
+    const todayDay = today.getDate();
+    const todayKey = today.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    const dueScheduled = scheduledTransactions.filter((st) => st.active && st.dayOfMonth === todayDay);
+    const newTxns: Transaction[] = [];
+
+    for (const st of dueScheduled) {
+      // Check if we already created a transaction for this scheduled item today
+      const alreadyCreated = transactions.some(
+        (t) =>
+          t.date.slice(0, 10) === todayKey &&
+          t.note?.includes(`[recurring:${st.id}]`)
+      );
+      if (alreadyCreated) continue;
+
+      const txn: Transaction = {
+        id: generateId(),
+        type: st.type,
+        amount: st.amount,
+        category: st.category,
+        note: st.note ? `${st.note} [recurring:${st.id}]` : `[recurring:${st.id}]`,
+        date: today.toISOString(),
+        createdAt: new Date().toISOString(),
+        accountTag: st.accountTag,
+      };
+      newTxns.push(txn);
+    }
+
+    if (newTxns.length > 0) {
+      await storage.addTransactions(newTxns);
+      transactions.unshift(...newTxns);
+    }
+
     setState((prev) => ({
       ...prev,
       profile,
@@ -86,6 +128,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       userAccounts,
       household,
       householdMembers,
+      scheduledTransactions,
       loading: false,
     }));
   }, []);
@@ -326,6 +369,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
 
+  const addScheduledTransactionAction = useCallback(
+    async (st: ScheduledTransaction) => {
+      setState((prev) => ({
+        ...prev,
+        scheduledTransactions: [...prev.scheduledTransactions, st],
+      }));
+      try {
+        await storage.addScheduledTransaction(st);
+      } catch (err) {
+        console.error("addScheduledTransaction failed:", err);
+        setState((prev) => ({
+          ...prev,
+          scheduledTransactions: prev.scheduledTransactions.filter((s) => s.id !== st.id),
+        }));
+      }
+    },
+    []
+  );
+
+  const updateScheduledTransactionAction = useCallback(
+    async (id: string, updates: Partial<Omit<ScheduledTransaction, "id" | "createdAt">>) => {
+      setState((prev) => ({
+        ...prev,
+        scheduledTransactions: prev.scheduledTransactions.map((s) =>
+          s.id === id ? { ...s, ...updates } : s
+        ),
+      }));
+      try {
+        await storage.updateScheduledTransaction(id, updates);
+      } catch (err) {
+        console.error("updateScheduledTransaction failed:", err);
+      }
+    },
+    []
+  );
+
+  const deleteScheduledTransactionAction = useCallback(
+    async (id: string) => {
+      setState((prev) => ({
+        ...prev,
+        scheduledTransactions: prev.scheduledTransactions.filter((s) => s.id !== id),
+      }));
+      try {
+        await storage.deleteScheduledTransaction(id);
+      } catch (err) {
+        console.error("deleteScheduledTransaction failed:", err);
+      }
+    },
+    []
+  );
+
   const updateEmergencyFund = useCallback(
     async (amount: number) => {
       if (!state.profile) return;
@@ -409,6 +503,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       loading: false,
       household: null,
       householdMembers: [],
+      scheduledTransactions: [],
     });
   }, []);
 
@@ -431,6 +526,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addUserAccount: addUserAccountAction,
         deleteUserAccount: deleteUserAccountAction,
         updateEmergencyFund,
+        addScheduledTransaction: addScheduledTransactionAction,
+        updateScheduledTransaction: updateScheduledTransactionAction,
+        deleteScheduledTransaction: deleteScheduledTransactionAction,
         resetAll,
         createHousehold: createHouseholdAction,
         joinHousehold: joinHouseholdAction,
@@ -470,7 +568,11 @@ export function useApp(): AppContextValue {
       addUserAccount: async () => {},
       deleteUserAccount: async () => {},
       updateEmergencyFund: async () => {},
+      addScheduledTransaction: async () => {},
+      updateScheduledTransaction: async () => {},
+      deleteScheduledTransaction: async () => {},
       resetAll: async () => {},
+      scheduledTransactions: [],
       createHousehold: async () => false,
       joinHousehold: async () => false,
       leaveHousehold: async () => {},
