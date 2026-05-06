@@ -10,13 +10,14 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react-native";
 import { notification, impact } from "../lib/haptics";
 import { colors, spacing, radius } from "../theme";
 import { CategoryPill } from "./CategoryPill";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
-import type { Transaction, ScheduledTransaction } from "../types";
+import type { Transaction, ScheduledTransaction, RecurringFrequency } from "../types";
 import { useApp } from "../context/AppContext";
-import { generateId, formatShortDate, formatCurrency } from "../utils";
+import { generateId, formatShortDate, formatCurrency, formatDateShort, getTodayCT, dateToNoonISO, shiftMonth, formatMonthLabel } from "../utils";
 
 interface SplitRow {
   category: string;
@@ -43,14 +44,19 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   const [accountTag, setAccountTag] = useState<string | undefined>(undefined);
   const [transferFrom, setTransferFrom] = useState<string | undefined>(undefined);
   const [transferTo, setTransferTo] = useState<string | undefined>(undefined);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [dateInput, setDateInput] = useState("");
+  const [selectedDate, setSelectedDate] = useState(getTodayCT);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = getTodayCT();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [initialized, setInitialized] = useState(false);
   // selectedAccountId removed - using accountTag state above
 
   // Recurring transaction state
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringDay, setRecurringDay] = useState("1");
+  const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>("monthly");
+  const [recurringDay, setRecurringDay] = useState("1"); // day-of-month (1-31) for monthly, day-of-week (0-6) for weekly/biweekly
 
   // Split mode state
   const [splitMode, setSplitMode] = useState(false);
@@ -64,8 +70,9 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
       setAmount(String(editTransaction.amount));
       setCategory(editTransaction.category);
       setNote(editTransaction.note ?? "");
-      setSelectedDate(new Date(editTransaction.date));
-      setDateInput("");
+      const editDate = new Date(editTransaction.date);
+      setSelectedDate(editDate);
+      setCalendarMonth(`${editDate.getFullYear()}-${String(editDate.getMonth() + 1).padStart(2, "0")}`);
       setAccountTag(editTransaction.accountTag ?? undefined);
       setTransferFrom(undefined);
       setTransferTo(undefined);
@@ -80,6 +87,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     setSplitRows([]);
     setEditingSplitCategory(null);
     setIsRecurring(false);
+    setRecurringFrequency("monthly");
     setRecurringDay("1");
     setInitialized(true);
   }
@@ -105,7 +113,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
       const fromName = userAccounts.find((a) => a.id === transferFrom)?.label ?? "Account";
       const toName = userAccounts.find((a) => a.id === transferTo)?.label ?? "Account";
       const transferNote = note.trim() || `${fromName} → ${toName}`;
-      const now = selectedDate.toISOString();
+      const now = dateToNoonISO(selectedDate);
       const createdAt = new Date().toISOString();
 
       // Expense from source account
@@ -136,8 +144,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
       setNote("");
       setTransferFrom(undefined);
       setTransferTo(undefined);
-      setSelectedDate(new Date());
-      setDateInput("");
+      setSelectedDate(getTodayCT());
       onClose();
       return;
     }
@@ -148,7 +155,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
         amount: Math.round(parsed * 100) / 100,
         category,
         note: note.trim() || undefined,
-        date: selectedDate.toISOString(),
+        date: dateToNoonISO(selectedDate),
         accountTag,
       });
     } else {
@@ -161,7 +168,7 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
         note: isRecurring
           ? `${note.trim() || category} [recurring:${scheduledId}]`
           : note.trim() || undefined,
-        date: selectedDate.toISOString(),
+        date: dateToNoonISO(selectedDate),
         createdAt: new Date().toISOString(),
         accountTag,
       };
@@ -170,13 +177,24 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
       // Also create the scheduled transaction if recurring
       if (isRecurring && scheduledId) {
         const day = parseInt(recurringDay, 10);
+        let safeDay = 1;
+        if (recurringFrequency === "monthly") {
+          safeDay = day >= 1 && day <= 31 ? day : 1;
+        } else {
+          // weekly/biweekly: day is 0-6 (Mon-Sun)
+          safeDay = day >= 0 && day <= 6 ? day : 0;
+        }
         const st: ScheduledTransaction = {
           id: scheduledId,
           type: mode as "expense" | "income",
           amount: Math.round(parsed * 100) / 100,
           category,
           note: note.trim() || undefined,
-          dayOfMonth: day >= 1 && day <= 31 ? day : 1,
+          dayOfMonth: safeDay,
+          frequency: recurringFrequency,
+          startDate: recurringFrequency === "biweekly"
+            ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`
+            : undefined,
           accountTag,
           active: true,
           createdAt: new Date().toISOString(),
@@ -189,9 +207,11 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
     setCategory(mode === "expense" ? "food" : "salary");
     setNote("");
     setAccountTag(undefined);
-    setSelectedDate(new Date());
-    setDateInput("");
+    const resetDate = getTodayCT();
+    setSelectedDate(resetDate);
+    setCalendarMonth(`${resetDate.getFullYear()}-${String(resetDate.getMonth() + 1).padStart(2, "0")}`);
     setIsRecurring(false);
+    setRecurringFrequency("monthly");
     setRecurringDay("1");
     onClose();
   };
@@ -199,8 +219,9 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   const handleClose = () => {
     setAmount("");
     setNote("");
-    setSelectedDate(new Date());
-    setDateInput("");
+    const resetDate = getTodayCT();
+    setSelectedDate(resetDate);
+    setCalendarMonth(`${resetDate.getFullYear()}-${String(resetDate.getMonth() + 1).padStart(2, "0")}`);
     setSplitMode(false);
     setSplitRows([]);
     setEditingSplitCategory(null);
@@ -208,57 +229,50 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
   };
 
   const setToday = () => {
-    setSelectedDate(new Date());
-    setDateInput("");
+    const d = getTodayCT();
+    setSelectedDate(d);
+    setCalendarMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
     impact("Light");
   };
 
   const setYesterday = () => {
-    const d = new Date();
+    const d = getTodayCT();
     d.setDate(d.getDate() - 1);
     setSelectedDate(d);
-    setDateInput("");
+    setCalendarMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
     impact("Light");
   };
 
-  const handleDateInput = (text: string) => {
-    const digits = text.replace(/\D/g, "");
-    let formatted = digits;
-    if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
-    if (digits.length > 4) formatted = digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4, 8);
-    setDateInput(formatted);
-
-    if (digits.length === 8) {
-      const month = parseInt(digits.slice(0, 2), 10);
-      const day = parseInt(digits.slice(2, 4), 10);
-      const year = parseInt(digits.slice(4, 8), 10);
-      if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 2000) {
-        const parsed = new Date(year, month - 1, day);
-        if (!isNaN(parsed.getTime())) {
-          setSelectedDate(parsed);
-        }
-      }
+  const getCalendarDays = (month: string) => {
+    const [y, m] = month.split("-").map(Number);
+    const firstDay = new Date(y, m - 1, 1);
+    const lastDay = new Date(y, m, 0);
+    const daysInMonth = lastDay.getDate();
+    const startPadding = firstDay.getDay();
+    const days: { day: number; date: Date | null; isCurrentMonth: boolean }[] = [];
+    for (let i = 0; i < startPadding; i++) {
+      days.push({ day: 0, date: null, isCurrentMonth: false });
     }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({ day: i, date: new Date(y, m - 1, i), isCurrentMonth: true });
+    }
+    return days;
   };
 
-  const isToday = (() => {
-    const now = new Date();
-    return (
-      selectedDate.getFullYear() === now.getFullYear() &&
-      selectedDate.getMonth() === now.getMonth() &&
-      selectedDate.getDate() === now.getDate()
-    );
-  })();
+  const today = getTodayCT();
 
-  const isYesterday = (() => {
-    const yest = new Date();
-    yest.setDate(yest.getDate() - 1);
-    return (
-      selectedDate.getFullYear() === yest.getFullYear() &&
-      selectedDate.getMonth() === yest.getMonth() &&
-      selectedDate.getDate() === yest.getDate()
-    );
-  })();
+  const isToday =
+    selectedDate.getFullYear() === today.getFullYear() &&
+    selectedDate.getMonth() === today.getMonth() &&
+    selectedDate.getDate() === today.getDate();
+
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const isYesterday =
+    selectedDate.getFullYear() === yesterday.getFullYear() &&
+    selectedDate.getMonth() === yesterday.getMonth() &&
+    selectedDate.getDate() === yesterday.getDate();
 
   const switchMode = (m: "expense" | "income" | "transfer") => {
     setMode(m);
@@ -686,21 +700,75 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
                 YESTERDAY
               </Text>
             </Pressable>
-            <TextInput
-              style={styles.dateInput}
-              placeholder="MM/DD/YYYY"
-              placeholderTextColor={colors.dimmed}
-              value={dateInput}
-              onChangeText={handleDateInput}
-              keyboardType="number-pad"
-              maxLength={10}
-            />
-            {!isToday && !isYesterday && !dateInput && (
-              <Text style={styles.dateLabel}>
-                {formatShortDate(selectedDate.toISOString())}
+            <Pressable
+              onPress={() => { setShowCalendar(true); impact("Light"); }}
+              style={[styles.dateCalBtn, !isToday && !isYesterday && styles.dateCalBtnActive]}
+            >
+              <Calendar size={14} color={!isToday && !isYesterday ? colors.primary : colors.textSecondary} strokeWidth={2.5} />
+              <Text style={[styles.dateCalBtnText, !isToday && !isYesterday && styles.dateCalBtnTextActive]}>
+                {isToday ? "PICK DATE" : isYesterday ? "PICK DATE" : formatDateShort(selectedDate).toUpperCase()}
               </Text>
-            )}
+            </Pressable>
           </View>
+
+          {/* Calendar Modal */}
+          <Modal visible={showCalendar} transparent animationType="slide" onRequestClose={() => setShowCalendar(false)}>
+            <Pressable style={calStyles.overlay} onPress={() => setShowCalendar(false)}>
+              <Pressable style={calStyles.sheet} onPress={(e) => e.stopPropagation()}>
+                <View style={calStyles.header}>
+                  <Pressable onPress={() => setCalendarMonth(prev => shiftMonth(prev, -1))} hitSlop={12}>
+                    <ChevronLeft size={24} color={colors.white} />
+                  </Pressable>
+                  <Text style={calStyles.monthLabel}>{formatMonthLabel(calendarMonth).toUpperCase()}</Text>
+                  <Pressable onPress={() => setCalendarMonth(prev => shiftMonth(prev, 1))} hitSlop={12}>
+                    <ChevronRight size={24} color={colors.white} />
+                  </Pressable>
+                </View>
+                <View style={calStyles.weekDays}>
+                  {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                    <Text key={i} style={calStyles.weekDay}>{d}</Text>
+                  ))}
+                </View>
+                <View style={calStyles.grid}>
+                  {getCalendarDays(calendarMonth).map((day, i) => {
+                    const isSelected = day.date &&
+                      day.date.getFullYear() === selectedDate.getFullYear() &&
+                      day.date.getMonth() === selectedDate.getMonth() &&
+                      day.date.getDate() === selectedDate.getDate();
+                    return (
+                      <Pressable
+                        key={i}
+                        style={[
+                          calStyles.dayBtn,
+                          day.isCurrentMonth && calStyles.dayBtnActive,
+                          isSelected && calStyles.dayBtnSelected,
+                        ]}
+                        onPress={() => {
+                          if (day.date) {
+                            setSelectedDate(day.date);
+                            setShowCalendar(false);
+                            impact("Light");
+                          }
+                        }}
+                        disabled={!day.isCurrentMonth}
+                      >
+                        <Text style={[
+                          calStyles.dayText,
+                          !day.isCurrentMonth && { color: "#333" },
+                          isSelected && calStyles.dayTextSelected,
+                        ]}>
+                          {day.day || ""}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Pressable style={calStyles.cancelBtn} onPress={() => setShowCalendar(false)}>
+                  <Text style={calStyles.cancelBtnText}>CANCEL</Text>
+                </Pressable>
+              </Pressable>
+            </Pressable>
+          </Modal>
 
           {/* Recurring toggle (new transactions only, not transfers) */}
           {!isEditing && mode !== "transfer" && (
@@ -715,22 +783,77 @@ export function QuickAddSheet({ visible, onClose, onSave, editTransaction, onUpd
                 </Text>
               </Pressable>
               {isRecurring && (
-                <View style={styles.recurringDayRow}>
-                  <Text style={styles.recurringDayLabel}>DAY</Text>
-                  <TextInput
-                    style={styles.recurringDayInput}
-                    value={recurringDay}
-                    onChangeText={(v) => {
-                      const digits = v.replace(/\D/g, "").slice(0, 2);
-                      const num = parseInt(digits, 10);
-                      if (digits === "" || (num >= 1 && num <= 31)) setRecurringDay(digits);
-                    }}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    placeholder="1"
-                    placeholderTextColor={colors.dimmed}
-                  />
-                  <Text style={styles.recurringDayLabel}>OF MONTH</Text>
+                <View style={styles.recurringOptions}>
+                  {/* Frequency picker */}
+                  <View style={styles.freqRow}>
+                    {(["monthly", "biweekly", "weekly"] as RecurringFrequency[]).map((freq) => (
+                      <Pressable
+                        key={freq}
+                        onPress={() => { setRecurringFrequency(freq); setRecurringDay("1"); impact("Light"); }}
+                        style={[styles.freqBtn, recurringFrequency === freq && styles.freqBtnActive]}
+                      >
+                        <Text style={[styles.freqBtnText, recurringFrequency === freq && styles.freqBtnTextActive]}>
+                          {freq === "monthly" ? "MONTHLY" : freq === "biweekly" ? "BIWEEKLY" : "WEEKLY"}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  {/* Monthly: day of month */}
+                  {recurringFrequency === "monthly" && (
+                    <View style={styles.recurringDayRow}>
+                      <Text style={styles.recurringDayLabel}>DAY</Text>
+                      <TextInput
+                        style={styles.recurringDayInput}
+                        value={recurringDay}
+                        onChangeText={(v) => {
+                          const digits = v.replace(/\D/g, "").slice(0, 2);
+                          const num = parseInt(digits, 10);
+                          if (digits === "" || (num >= 1 && num <= 31)) setRecurringDay(digits);
+                        }}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        placeholder="1"
+                        placeholderTextColor={colors.dimmed}
+                      />
+                      <Text style={styles.recurringDayLabel}>OF MONTH</Text>
+                    </View>
+                  )}
+
+                  {/* Weekly: day of week picker */}
+                  {recurringFrequency === "weekly" && (
+                    <View style={styles.weekdayRow}>
+                      {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                        <Pressable
+                          key={i}
+                          onPress={() => { setRecurringDay(String(i)); impact("Light"); }}
+                          style={[styles.weekdayBtn, parseInt(recurringDay) === i && styles.weekdayBtnActive]}
+                        >
+                          <Text style={[styles.weekdayBtnText, parseInt(recurringDay) === i && styles.weekdayBtnTextActive]}>{d}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Biweekly: day of week + uses selected date as anchor */}
+                  {recurringFrequency === "biweekly" && (
+                    <View style={styles.recurringOptions}>
+                      <View style={styles.weekdayRow}>
+                        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                          <Pressable
+                            key={i}
+                            onPress={() => { setRecurringDay(String(i)); impact("Light"); }}
+                            style={[styles.weekdayBtn, parseInt(recurringDay) === i && styles.weekdayBtnActive]}
+                          >
+                            <Text style={[styles.weekdayBtnText, parseInt(recurringDay) === i && styles.weekdayBtnTextActive]}>{d}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                      <Text style={styles.recurringHint}>
+                        ANCHOR: {selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} (repeats every 14 days)
+                      </Text>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
@@ -931,22 +1054,31 @@ const styles = StyleSheet.create({
   dateQuickBtnTextActive: {
     color: colors.primaryText,
   },
-  dateInput: {
+  dateCalBtn: {
     flex: 1,
-    backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 204, 0.3)',
-    borderRadius: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     paddingVertical: 8,
     paddingHorizontal: spacing.sm,
-    color: colors.white,
-    fontSize: 14,
-    textAlign: "center",
+    borderRadius: 2,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
-  dateLabel: {
+  dateCalBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: "rgba(0,255,204,0.08)",
+  },
+  dateCalBtnText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  dateCalBtnTextActive: {
     color: colors.primary,
-    fontSize: 13,
-    fontWeight: "600",
   },
   accountRow: {
     gap: 6,
@@ -1091,6 +1223,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     textAlign: "center",
+  },
+  recurringOptions: {
+    gap: 10,
+  },
+  freqRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  freqBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.3)",
+    borderRadius: 2,
+    backgroundColor: colors.bg,
+  },
+  freqBtnActive: {
+    borderColor: "#8B5CF6",
+    backgroundColor: "rgba(139,92,246,0.15)",
+  },
+  freqBtnText: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  freqBtnTextActive: {
+    color: "#8B5CF6",
+  },
+  weekdayRow: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  weekdayBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.3)",
+    borderRadius: 2,
+    backgroundColor: colors.bg,
+  },
+  weekdayBtnActive: {
+    borderColor: "#8B5CF6",
+    backgroundColor: "rgba(139,92,246,0.2)",
+  },
+  weekdayBtnText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  weekdayBtnTextActive: {
+    color: "#8B5CF6",
+  },
+  recurringHint: {
+    color: colors.dimmed,
+    fontSize: 10,
+    letterSpacing: 1,
+    fontWeight: "600",
   },
 
   // Split mode styles
@@ -1241,6 +1433,84 @@ const styles = StyleSheet.create({
   splitBalanceText: {
     fontSize: 13,
     fontWeight: "800",
+    letterSpacing: 2,
+  },
+});
+
+const calStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: "#050505",
+    borderTopWidth: 2,
+    borderTopColor: colors.primary,
+    padding: spacing.lg,
+    paddingBottom: 52,
+    gap: 12,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  monthLabel: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
+  weekDays: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 4,
+  },
+  weekDay: {
+    color: "#666",
+    fontSize: 12,
+    fontWeight: "700",
+    width: 40,
+    textAlign: "center",
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  dayBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayBtnActive: {
+    backgroundColor: "transparent",
+  },
+  dayBtnSelected: {
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+  dayText: {
+    color: "#666",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  dayTextSelected: {
+    color: "#000",
+  },
+  cancelBtn: {
+    backgroundColor: "#1a1a1a",
+    padding: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  cancelBtnText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "700",
     letterSpacing: 2,
   },
 });

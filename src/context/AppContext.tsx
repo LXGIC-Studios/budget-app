@@ -11,7 +11,7 @@ import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, Househol
 import * as storage from "../storage";
 import { invalidateAuthCache } from "../storage";
 import { supabase } from "../lib/supabase";
-import { getMonthKey, generateId } from "../utils";
+import { getMonthKey, generateId, getTodayCT, dateToNoonISO } from "../utils";
 
 // Known ending balance from bank data as of Dec 31, 2025
 const DEC_2025_ENDING_BALANCE = 1373;
@@ -83,12 +83,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       storage.getScheduledTransactions(),
     ]);
 
-    // Auto-create transactions for any scheduled items due today
-    const today = new Date();
-    const todayDay = today.getDate();
-    const todayKey = today.toISOString().slice(0, 10); // YYYY-MM-DD
+    // Auto-create transactions for any scheduled items due today (CT date)
+    const today = getTodayCT();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-    const dueScheduled = scheduledTransactions.filter((st) => st.active && st.dayOfMonth === todayDay);
+    // Helper: check if a scheduled transaction is due today
+    function isScheduledDueToday(st: { frequency: string; dayOfMonth: number; startDate?: string }): boolean {
+      const freq = st.frequency || "monthly";
+      if (freq === "monthly") {
+        return today.getDate() === st.dayOfMonth;
+      }
+      if (freq === "weekly") {
+        // dayOfMonth stores day-of-week: 0=Mon, 1=Tue, ... 6=Sun
+        const jsDay = today.getDay(); // 0=Sun..6=Sat
+        const isoDay = jsDay === 0 ? 6 : jsDay - 1; // convert to 0=Mon..6=Sun
+        return isoDay === st.dayOfMonth;
+      }
+      if (freq === "biweekly") {
+        // startDate anchors a known occurrence. Check if today is exactly N*14 days from anchor.
+        if (!st.startDate) return false;
+        const anchor = new Date(st.startDate);
+        const anchorMidnight = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+        const diffDays = Math.round((today.getTime() - anchorMidnight.getTime()) / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays % 14 === 0;
+      }
+      return false;
+    }
+
+    const dueScheduled = scheduledTransactions.filter((st) => st.active && isScheduledDueToday(st));
     const newTxns: Transaction[] = [];
 
     for (const st of dueScheduled) {
@@ -106,7 +128,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         amount: st.amount,
         category: st.category,
         note: st.note ? `${st.note} [recurring:${st.id}]` : `[recurring:${st.id}]`,
-        date: today.toISOString(),
+        date: dateToNoonISO(today),
         createdAt: new Date().toISOString(),
         accountTag: st.accountTag,
       };

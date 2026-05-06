@@ -206,6 +206,49 @@ export async function updateTransaction(
 }
 
 // Budgets
+
+// Helper: find the most recent prior month that has budget data for this user
+async function findPriorMonthBudget(
+  targetMonth: string,
+  ctx: NonNullable<Awaited<ReturnType<typeof getAuthContext>>>
+): Promise<{ month: string; categories: BudgetCategory[] } | null> {
+  // Look back up to 12 months for a prior budget
+  const [ty, tm] = targetMonth.split("-").map(Number);
+  for (let i = 1; i <= 12; i++) {
+    const priorDate = new Date(ty, tm - 1 - i);
+    const priorMonth = `${priorDate.getFullYear()}-${(priorDate.getMonth() + 1).toString().padStart(2, "0")}`;
+
+    let query = supabase
+      .from("budget_categories")
+      .select("*")
+      .eq("month", priorMonth)
+      .order("created_at", { ascending: true });
+
+    if (ctx.householdId) {
+      query = query.in("user_id", ctx.memberIds);
+    } else {
+      query = query.eq("user_id", ctx.userId);
+    }
+
+    const { data } = await query;
+    if (!data || data.length === 0) continue;
+
+    const categories: BudgetCategory[] = data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      emoji: row.emoji || "",
+      allocated: Number(row.allocated),
+      type: row.type as "fixed" | "flexible",
+      frequency: row.frequency || "monthly",
+      dueDay: row.due_day ? Number(row.due_day) : undefined,
+      defaultAccountTag: row.default_account_tag || undefined,
+    }));
+
+    return { month: priorMonth, categories };
+  }
+  return null;
+}
+
 export async function getBudgetForMonth(
   month: string
 ): Promise<MonthlyBudget | null> {
@@ -226,9 +269,46 @@ export async function getBudgetForMonth(
 
   const { data } = await query;
 
-  if (!data || data.length === 0) return null;
+  if (data && data.length > 0) {
+    const categories: BudgetCategory[] = data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      emoji: row.emoji || "",
+      allocated: Number(row.allocated),
+      type: row.type as "fixed" | "flexible",
+      frequency: row.frequency || "monthly",
+      dueDay: row.due_day ? Number(row.due_day) : undefined,
+      defaultAccountTag: row.default_account_tag || undefined,
+    }));
 
-  const categories: BudgetCategory[] = data.map((row) => ({
+    return { month, categories };
+  }
+
+  // No budget for this month -- auto-carry-forward from the most recent prior month
+  const prior = await findPriorMonthBudget(month, ctx);
+  if (!prior) return null;
+
+  // Copy prior month's categories into this month with new rows
+  const rows = prior.categories.map((cat) => ({
+    user_id: ctx.userId,
+    name: cat.name,
+    emoji: cat.emoji,
+    allocated: cat.allocated,
+    type: cat.type,
+    month,
+    frequency: cat.frequency || "monthly",
+    due_day: cat.dueDay || null,
+    default_account_tag: cat.defaultAccountTag || null,
+  }));
+
+  const { data: inserted } = await supabase
+    .from("budget_categories")
+    .insert(rows)
+    .select();
+
+  if (!inserted || inserted.length === 0) return null;
+
+  const newCategories: BudgetCategory[] = inserted.map((row) => ({
     id: row.id,
     name: row.name,
     emoji: row.emoji || "",
@@ -239,7 +319,7 @@ export async function getBudgetForMonth(
     defaultAccountTag: row.default_account_tag || undefined,
   }));
 
-  return { month, categories };
+  return { month, categories: newCategories };
 }
 
 export async function saveBudgetForMonth(
@@ -527,6 +607,8 @@ export async function getScheduledTransactions(): Promise<ScheduledTransaction[]
     category: row.category,
     note: row.note || undefined,
     dayOfMonth: Number(row.day_of_month),
+    frequency: (row.frequency as "monthly" | "weekly" | "biweekly") || "monthly",
+    startDate: row.start_date || undefined,
     accountTag: row.account_tag || undefined,
     active: row.active ?? true,
     createdAt: row.created_at,
@@ -545,6 +627,8 @@ export async function addScheduledTransaction(st: ScheduledTransaction): Promise
     category: st.category,
     note: st.note || null,
     day_of_month: st.dayOfMonth,
+    frequency: st.frequency || "monthly",
+    start_date: st.startDate || null,
     account_tag: st.accountTag || null,
     active: st.active,
     created_at: st.createdAt,
@@ -561,6 +645,8 @@ export async function updateScheduledTransaction(
   if (updates.category !== undefined) updateData.category = updates.category;
   if (updates.note !== undefined) updateData.note = updates.note;
   if (updates.dayOfMonth !== undefined) updateData.day_of_month = updates.dayOfMonth;
+  if (updates.frequency !== undefined) updateData.frequency = updates.frequency;
+  if (updates.startDate !== undefined) updateData.start_date = updates.startDate;
   if (updates.accountTag !== undefined) updateData.account_tag = updates.accountTag;
   if (updates.active !== undefined) updateData.active = updates.active;
   await supabase.from("scheduled_transactions").update(updateData).eq("id", id);

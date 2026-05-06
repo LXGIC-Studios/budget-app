@@ -10,12 +10,13 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, X, Check, Settings, ArrowLeftRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, X, Check, Settings, ArrowLeftRight, RefreshCw } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { impact, notification } from "../../src/lib/haptics";
 import { colors, spacing, fonts } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import { QuickAddSheet } from "../../src/components/QuickAddSheet";
+import { RecurringSheet } from "../../src/components/RecurringSheet";
 import { FAB } from "../../src/components/FAB";
 import {
   formatCurrency,
@@ -27,8 +28,10 @@ import {
   getMonthlyAmount,
   generateId,
   formatDueDay,
+  getTodayCT,
+  dateToNoonISO,
 } from "../../src/utils";
-import type { Transaction, BudgetCategory } from "../../src/types";
+import type { Transaction, BudgetCategory, ScheduledTransaction } from "../../src/types";
 
 
 function billsDueInWeek(cat: BudgetCategory, start: Date, end: Date): boolean {
@@ -344,8 +347,45 @@ const ts = StyleSheet.create({
   btnText: { color: colors.white, fontSize: 15, fontWeight: "900", letterSpacing: 3, fontFamily: fonts.heading as any },
 });
 
+// Helper: compute next N occurrences of a scheduled transaction after `after`
+function getNextOccurrence(st: ScheduledTransaction, after: Date): Date | null {
+  const freq = st.frequency || "monthly";
+  if (freq === "monthly") {
+    // Find next month where dayOfMonth is valid
+    for (let i = 0; i <= 12; i++) {
+      const candidate = new Date(after.getFullYear(), after.getMonth() + i, st.dayOfMonth);
+      if (isNaN(candidate.getTime())) continue;
+      if (candidate > after) return candidate;
+    }
+    return null;
+  }
+  if (freq === "weekly") {
+    // dayOfMonth = 0=Mon..6=Sun (ISO weekday)
+    const jsDay = after.getDay(); // 0=Sun..6=Sat
+    const isoDay = jsDay === 0 ? 6 : jsDay - 1;
+    let daysAhead = (st.dayOfMonth - isoDay + 7) % 7;
+    if (daysAhead === 0) daysAhead = 7; // skip today itself, get next week
+    const next = new Date(after);
+    next.setDate(after.getDate() + daysAhead);
+    return next;
+  }
+  if (freq === "biweekly" && st.startDate) {
+    const anchor = new Date(st.startDate);
+    const anchorMidnight = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+    // Find the number of 14-day cycles from anchor to get past `after`
+    const afterMidnight = new Date(after.getFullYear(), after.getMonth(), after.getDate());
+    const diffDays = Math.round((afterMidnight.getTime() - anchorMidnight.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return anchorMidnight > after ? anchorMidnight : null;
+    const cycles = Math.floor(diffDays / 14);
+    const next = new Date(anchorMidnight);
+    next.setDate(anchorMidnight.getDate() + (cycles + 1) * 14);
+    return next;
+  }
+  return null;
+}
+
 export default function HomeScreen() {
-  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction, userAccounts } = useApp();
+  const { transactions, currentBudget, addTransaction, updateTransaction, deleteTransaction, userAccounts, scheduledTransactions } = useApp();
   const router = useRouter();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -353,6 +393,7 @@ export default function HomeScreen() {
   const [payingBill, setPayingBill] = useState<BudgetCategory | null>(null);
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [transferVisible, setTransferVisible] = useState(false);
+  const [recurringVisible, setRecurringVisible] = useState(false);
 
   const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
 
@@ -456,6 +497,18 @@ export default function HomeScreen() {
       return s + amount;
     }, 0);
 
+  // Upcoming scheduled transactions in next 14 days
+  const upcomingScheduled = useMemo(() => {
+    const today = getTodayCT();
+    const in14 = new Date(today);
+    in14.setDate(today.getDate() + 14);
+    return scheduledTransactions
+      .filter((st) => st.active)
+      .map((st) => ({ st, next: getNextOccurrence(st, new Date(today.getTime() - 1)) }))
+      .filter(({ next }) => next !== null && next >= today && next <= in14)
+      .sort((a, b) => a.next!.getTime() - b.next!.getTime());
+  }, [scheduledTransactions]);
+
   const flexCategories = useMemo(() => currentBudget?.categories.filter((c) => c.type === "flexible") ?? [], [currentBudget]);
 
   // ALL expense transactions this week (ignoring account filter) for global spending + bills
@@ -501,7 +554,7 @@ export default function HomeScreen() {
     await addTransaction({
       id: generateId(), type: "expense", amount,
       category: "bills", note: `Paid: ${bill.name}`,
-      date: new Date().toISOString(), createdAt: new Date().toISOString(),
+      date: dateToNoonISO(getTodayCT()), createdAt: new Date().toISOString(),
       ...(accountTag ? { accountTag } : {}),
     });
     setPayingBill(null);
@@ -511,20 +564,21 @@ export default function HomeScreen() {
     const fromName = userAccounts.find((a) => a.id === fromId)?.label ?? "Account";
     const toName = userAccounts.find((a) => a.id === toId)?.label ?? "Account";
     const amt = Math.round(amount * 100) / 100;
-    const now = new Date().toISOString();
+    const txnDate = dateToNoonISO(getTodayCT());
+    const createdAt = new Date().toISOString();
 
     notification("Success");
     // Transfer OUT from source account
     await addTransaction({
       id: generateId(), type: "transfer", amount: amt,
       category: "transfer", note: transferNote || `${fromName} \u2192 ${toName}`,
-      date: now, createdAt: now, accountTag: fromId,
+      date: txnDate, createdAt, accountTag: fromId,
     });
     // Transfer IN to destination account
     await addTransaction({
       id: generateId(), type: "transfer", amount: amt,
       category: "transfer", note: transferNote || `${fromName} \u2192 ${toName}`,
-      date: now, createdAt: now, accountTag: toId,
+      date: txnDate, createdAt, accountTag: toId,
     });
     setTransferVisible(false);
   };
@@ -548,6 +602,9 @@ export default function HomeScreen() {
                 <Text style={s.paydayText}>$ PAYDAY</Text>
               </View>
             )}
+            <Pressable onPress={() => setRecurringVisible(true)} style={s.recurringBtn}>
+              <RefreshCw size={16} color="#8B5CF6" strokeWidth={2.5} />
+            </Pressable>
             {userAccounts.length >= 2 && (
               <Pressable onPress={() => setTransferVisible(true)} style={s.transferBtn}>
                 <ArrowLeftRight size={16} color="#6366f1" strokeWidth={2.5} />
@@ -691,6 +748,50 @@ export default function HomeScreen() {
           </>
         )}
 
+        {/* ── UPCOMING RECURRING ── */}
+        {upcomingScheduled.length > 0 && (
+          <>
+            <View style={s.sectionLabel}>
+              <View style={[s.sectionLabelAccent, { backgroundColor: "#8B5CF6" }]} />
+              <Text style={s.sectionLabelText}>UPCOMING (14 DAYS)</Text>
+              <Text style={s.sectionLabelAmt}>
+                {formatCurrency(
+                  upcomingScheduled
+                    .filter(({ st }) => st.type === "expense")
+                    .reduce((sum, { st }) => sum + st.amount, 0)
+                )}
+              </Text>
+            </View>
+            {upcomingScheduled.map(({ st, next }) => {
+              const acct = userAccounts.find((a) => a.id === st.accountTag);
+              const daysUntil = Math.round((next!.getTime() - getTodayCT().getTime()) / (1000 * 60 * 60 * 24));
+              const isToday = daysUntil === 0;
+              return (
+                <View key={st.id} style={s.upcomingRow}>
+                  <View style={[s.upcomingPip, { backgroundColor: st.type === "expense" ? "#8B5CF6" : colors.primary }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.upcomingName}>{st.note || st.category}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={s.upcomingSub}>
+                        {isToday ? "TODAY" : next!.toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase()}
+                        {!isToday && ` · IN ${daysUntil}D`}
+                      </Text>
+                      {acct && (
+                        <View style={s.acctChip}>
+                          <Text style={s.acctChipText}>{acct.emoji} {acct.label}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  <Text style={[s.upcomingAmt, { color: st.type === "expense" ? "#8B5CF6" : colors.primary }]}>
+                    {st.type === "expense" ? "-" : "+"}{formatCurrency(st.amount)}
+                  </Text>
+                </View>
+              );
+            })}
+          </>
+        )}
+
         {/* ── FLEX SPENDING ── */}
         {flexCategories.length > 0 && (
           <>
@@ -820,6 +921,11 @@ export default function HomeScreen() {
         onTransfer={handleTransfer}
       />
 
+      <RecurringSheet
+        visible={recurringVisible}
+        onClose={() => setRecurringVisible(false)}
+      />
+
     </SafeAreaView>
   );
 }
@@ -840,6 +946,10 @@ const s = StyleSheet.create({
   logoSub: {
     color: colors.textSecondary, fontSize: 12, letterSpacing: 4, marginTop: 1,
     fontFamily: fonts.mono as any,
+  },
+  recurringBtn: {
+    width: 36, height: 36, alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(139,92,246,0.4)", backgroundColor: "rgba(139,92,246,0.08)",
   },
   transferBtn: {
     width: 36, height: 36, alignItems: "center", justifyContent: "center",
@@ -1027,4 +1137,15 @@ const s = StyleSheet.create({
     fontFamily: fonts.mono as any,
   },
   filterPillTextActive: { color: colors.primary },
+
+  // Upcoming recurring
+  upcomingRow: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    paddingHorizontal: spacing.lg, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: "#080808",
+  },
+  upcomingPip: { width: 3, height: 28 },
+  upcomingName: { color: colors.white, fontSize: 15, fontWeight: "700", fontFamily: fonts.body as any },
+  upcomingSub: { color: "#aaa", fontSize: 11, letterSpacing: 1, marginTop: 2, fontFamily: fonts.mono as any },
+  upcomingAmt: { fontSize: 17, fontWeight: "900", fontFamily: fonts.mono as any },
 });

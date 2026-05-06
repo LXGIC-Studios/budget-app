@@ -136,3 +136,38 @@ export function shiftWeek(weekKey: string, delta: number): string {
   start.setDate(start.getDate() + delta * 7);
   return getWeekKey(start);
 }
+
+// Format a Date object as "Jan 5" style
+export function formatDateShort(date: Date): string {
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Get today's date in Central Time (America/Chicago).
+// Returns a Date whose year/month/day reflect the current CT date at local midnight.
+export function getTodayCT(): Date {
+  const now = new Date();
+  // Get CT date string "M/D/YYYY"
+  const ctStr = now.toLocaleDateString("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  const [m, d, y] = ctStr.split("/").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Get the CT-aware month key (YYYY-MM)
+export function getMonthKeyCT(): string {
+  return getMonthKey(getTodayCT());
+}
+
+// Convert a Date (year/month/day only) to an ISO string at noon local time.
+// Using noon avoids UTC-offset day-boundary issues when the stored date is
+// parsed back: "2026-05-04T12:00:00" stays on May 4 in any US timezone.
+export function dateToNoonISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}T12:00:00.000`;
+}

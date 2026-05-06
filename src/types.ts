@@ -115,13 +115,19 @@ export const INCOME_CATEGORIES = [
   { id: "other_income", name: "Other Income", emoji: "📦" },
 ] as const;
 
+export type RecurringFrequency = 'monthly' | 'weekly' | 'biweekly';
+
 export interface ScheduledTransaction {
   id: string;
   type: "expense" | "income";
   amount: number;
   category: string;
   note?: string;
-  dayOfMonth: number; // 1-31
+  /** For monthly: day of month (1-31). For weekly: day of week (0=Mon..6=Sun). For biweekly: day of week (0=Mon..6=Sun). */
+  dayOfMonth: number;
+  frequency: RecurringFrequency; // default 'monthly' for backward compat
+  /** ISO date string anchor for biweekly (the date of a known occurrence). */
+  startDate?: string;
   accountTag?: string;
   active: boolean;
   createdAt: string;
