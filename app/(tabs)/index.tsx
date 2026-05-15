@@ -25,7 +25,7 @@ import {
 import type { Transaction } from "../../src/types";
 
 export default function HomeScreen() {
-  const { transactions, addTransaction, userAccounts } = useApp();
+  const { transactions, addTransaction, userAccounts, currentBudget } = useApp();
   const router = useRouter();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -81,7 +81,33 @@ export default function HomeScreen() {
     return balance;
   }, [transactions, weekRange, accountFilter]);
 
-  const billsDue = 0; // TODO: Calculate from budget categories
+  // Calculate bills due this week
+  const billsDue = useMemo(() => {
+    if (!currentBudget?.categories) return 0;
+    
+    const weekStart = weekRange.start;
+    const weekEnd = weekRange.end;
+    
+    return currentBudget.categories
+      .filter(cat => cat.type === 'fixed' && cat.frequency === 'monthly' && cat.dueDay)
+      .filter(cat => {
+        // Check if due day falls within this week
+        const dueDay = cat.dueDay!;
+        
+        // Check current month
+        const currentMonthDue = new Date(weekStart.getFullYear(), weekStart.getMonth(), dueDay);
+        if (currentMonthDue >= weekStart && currentMonthDue <= weekEnd) return true;
+        
+        // Check next month if week spans month boundary
+        if (weekStart.getMonth() !== weekEnd.getMonth()) {
+          const nextMonthDue = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), dueDay);
+          if (nextMonthDue >= weekStart && nextMonthDue <= weekEnd) return true;
+        }
+        
+        return false;
+      })
+      .reduce((sum, cat) => sum + cat.allocated, 0);
+  }, [currentBudget, weekRange]);
   const available = weekNet + weekRollover;
 
   const incomeTxns = useMemo(() => 
@@ -219,6 +245,45 @@ export default function HomeScreen() {
               </View>
             );
           })
+        )}
+
+        {/* ── BILLS DUE THIS WEEK ── */}
+        {billsDue > 0 && (
+          <>
+            <View style={styles.sectionLabel}>
+              <View style={[styles.sectionLabelAccent, { backgroundColor: colors.red }]} />
+              <Text style={styles.sectionLabelText}>BILLS DUE THIS WEEK</Text>
+              <Text style={styles.sectionLabelAmt}>{formatCurrency(billsDue)}</Text>
+            </View>
+            {currentBudget?.categories
+              ?.filter(cat => cat.type === 'fixed' && cat.frequency === 'monthly' && cat.dueDay)
+              ?.filter(cat => {
+                const dueDay = cat.dueDay!;
+                const weekStart = weekRange.start;
+                const weekEnd = weekRange.end;
+                
+                const currentMonthDue = new Date(weekStart.getFullYear(), weekStart.getMonth(), dueDay);
+                if (currentMonthDue >= weekStart && currentMonthDue <= weekEnd) return true;
+                
+                if (weekStart.getMonth() !== weekEnd.getMonth()) {
+                  const nextMonthDue = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), dueDay);
+                  if (nextMonthDue >= weekStart && nextMonthDue <= weekEnd) return true;
+                }
+                
+                return false;
+              })
+              ?.map((bill) => (
+                <View key={bill.id} style={styles.billRow}>
+                  <View style={styles.redPip} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.billName}>{bill.emoji} {bill.name.toUpperCase()}</Text>
+                    <Text style={styles.billDue}>DUE {bill.dueDay}</Text>
+                  </View>
+                  <Text style={styles.billAmount}>{formatCurrency(bill.allocated)}</Text>
+                </View>
+              ))
+            }
+          </>
         )}
 
         {/* ── LOGGED TRANSACTIONS ── */}
@@ -529,5 +594,32 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     fontFamily: fonts.body as any,
   },
-});// Force update Thu May 14 17:20:07 CDT 2026
+
+  // Bills due
+  billRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  billName: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: fonts.body as any,
+  },
+  billDue: {
+    color: "#999",
+    fontSize: 13,
+    marginTop: 2,
+    fontFamily: fonts.mono as any,
+  },
+  billAmount: {
+    color: colors.red,
+    fontSize: 18,
+    fontWeight: "800",
+    fontFamily: fonts.mono as any,
+  },
+});// Force update Thu May 14 20:22:00 CDT 2026
 // FORCE REBUILD Thu May 14 20:19:07 CDT 2026
