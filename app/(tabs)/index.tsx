@@ -7,269 +7,332 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, Settings, RefreshCw } from "lucide-react-native";
-import { useRouter } from "expo-router";
-import { impact } from "../../src/lib/haptics";
-import { colors, spacing, fonts } from "../../src/theme";
+import { ChevronLeft, ChevronRight, Check } from "lucide-react-native";
+import { impact, notification } from "../../src/lib/haptics";
+import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
-import { FAB } from "../../src/components/FAB";
-import { QuickAddSheet } from "../../src/components/QuickAddSheet";
+import { StatCard } from "../../src/components/StatCard";
 import {
   formatCurrency,
   getWeekKey,
   getWeekRange,
   formatWeekLabel,
   shiftWeek,
-  formatShortDate,
+  getMonthlyAmount,
+  generateId,
 } from "../../src/utils";
 import type { Transaction } from "../../src/types";
 
-export default function HomeScreen() {
-  const { transactions, addTransaction, userAccounts, currentBudget } = useApp();
-  const router = useRouter();
+export default function Dashboard() {
+  const { profile, addTransaction, currentBudget } = useApp();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
-  const [sheetVisible, setSheetVisible] = useState(false);
+  const [paidBills, setPaidBills] = useState<Set<string>>(new Set());
+
+  const monthlyIncome = profile?.monthlyIncome ?? 12926; // Your calculated income
+
+  // Fixed outgoing = sum of all fixed budget categories
+  const fixedOutgoing = useMemo(() => {
+    const cats = currentBudget?.categories ?? [];
+    return cats
+      .filter((c) => c.type === "fixed")
+      .reduce((s, c) => s + getMonthlyAmount(c.allocated, c.frequency || "monthly"), 0);
+  }, [currentBudget]);
 
   const weekRange = useMemo(() => getWeekRange(currentWeek), [currentWeek]);
 
-  // Calculate week totals
-  const weekIncome = useMemo(() => {
-    // Get total weekly income expected: $3,231/week
-    return 3231;
-  }, []);
+  // Bills due this week
+  const billsDueThisWeek = useMemo(() => {
+    if (!currentBudget?.categories) return [];
+    
+    const weekStart = weekRange.start;
+    const weekEnd = weekRange.end;
+    
+    return currentBudget.categories
+      .filter(cat => cat.type === 'fixed' && cat.frequency === 'monthly' && cat.dueDay)
+      .filter(cat => {
+        const dueDay = cat.dueDay!;
+        
+        // Check if due day falls in current week
+        const currentMonthDue = new Date(weekStart.getFullYear(), weekStart.getMonth(), dueDay);
+        if (currentMonthDue >= weekStart && currentMonthDue <= weekEnd) return true;
+        
+        // Check next month if week spans boundary
+        if (weekStart.getMonth() !== weekEnd.getMonth()) {
+          const nextMonthDue = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), dueDay);
+          if (nextMonthDue >= weekStart && nextMonthDue <= weekEnd) return true;
+        }
+        
+        return false;
+      })
+      .sort((a, b) => a.dueDay! - b.dueDay!);
+  }, [currentBudget, weekRange]);
 
-  const weekFixedExpenses = useMemo(() => {
-    // Get total weekly fixed expenses: $1,410/week 
-    return 1410;
-  }, []);
+  const navigateWeek = (delta: number) => {
+    impact("Light");
+    setCurrentWeek(shiftWeek(currentWeek, delta));
+  };
 
-  const available = weekIncome - weekFixedExpenses;
-  const isPaycheckWeek = true; // Show payday for now
-
-  const navigate = (delta: number) => { 
-    impact("Light"); 
-    setCurrentWeek(shiftWeek(currentWeek, delta)); 
+  const markBillPaid = async (bill: any) => {
+    notification("Success");
+    setPaidBills(prev => new Set([...prev, bill.id]));
+    
+    // Add transaction record
+    await addTransaction({
+      id: generateId(),
+      type: "expense",
+      amount: bill.allocated,
+      category: bill.name,
+      note: `Paid: ${bill.name}`,
+      date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+    });
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-
-        {/* ── MASTHEAD ── */}
-        <View style={styles.masthead}>
-          <View>
-            <Text style={styles.logo}>STACKD</Text>
-            <Text style={styles.logoSub}>HOUSEHOLD BUDGET</Text>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            {isPaycheckWeek && (
-              <View style={styles.paydayChip}>
-                <Text style={styles.paydayText}>$ PAYDAY</Text>
-              </View>
-            )}
-            <Pressable style={styles.recurringBtn}>
-              <RefreshCw size={16} color="#8B5CF6" strokeWidth={2.5} />
-            </Pressable>
-            <Pressable onPress={() => router.push("/(tabs)/settings")} style={styles.settingsBtn}>
-              <Settings size={18} color={colors.primary} strokeWidth={2} />
-            </Pressable>
-          </View>
+        
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>STACKD</Text>
+          <Text style={styles.headerSubtitle}>Your financial command center</Text>
         </View>
 
-        {/* ── WEEK NAV ── */}
-        <View style={styles.weekRow}>
-          <Pressable onPress={() => navigate(-1)} hitSlop={16} style={styles.navArrow}>
-            <ChevronLeft size={18} color={colors.primary} strokeWidth={3} />
+        {/* Week Navigation */}
+        <View style={styles.monthRow}>
+          <Pressable onPress={() => navigateWeek(-1)} hitSlop={12}>
+            <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.weekLabel}>{formatWeekLabel(currentWeek).toUpperCase()}</Text>
-          <Pressable onPress={() => navigate(1)} hitSlop={16} style={styles.navArrow}>
-            <ChevronRight size={18} color={colors.primary} strokeWidth={3} />
+          <Text style={styles.monthLabel}>{formatWeekLabel(currentWeek).toUpperCase()}</Text>
+          <Pressable onPress={() => navigateWeek(1)} hitSlop={12}>
+            <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
         </View>
 
-
-
-        {/* ── HERO - MASSIVE AVAILABLE AMOUNT ── */}
-        <View style={[styles.hero, { backgroundColor: available >= 0 ? colors.primary : colors.red }]}>
-          <Text style={styles.heroEyebrow}>AVAILABLE</Text>
-          <Text style={styles.heroNum}>{available >= 0 ? "+" : ""}{formatCurrency(available)}</Text>
-          <View style={styles.heroBar}>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatNum}>{formatCurrency(available)}</Text>
-              <Text style={styles.heroStatLabel}>WEEK NET</Text>
-            </View>
-            <View style={styles.heroBarDivider} />
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatNum}>$0.00</Text>
-              <Text style={styles.heroStatLabel}>ROLLOVER</Text>
-            </View>
-            <View style={styles.heroBarDivider} />
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatNum}>$0.00</Text>
-              <Text style={styles.heroStatLabel}>BILLS DUE</Text>
-            </View>
-          </View>
+        {/* Big Income/Expenses Cards */}
+        <View style={styles.statsRow}>
+          <StatCard
+            emoji="💵"
+            label="Monthly Income"
+            value={formatCurrency(monthlyIncome)}
+            accentColor={colors.primary}
+            variant="positive"
+          />
+        </View>
+        
+        <View style={styles.statsRow}>
+          <StatCard
+            emoji="🏠"
+            label="Fixed Expenses"
+            value={formatCurrency(fixedOutgoing)}
+            accentColor={colors.red}
+            variant="negative"
+          />
         </View>
 
-        {/* ── BIG INCOME NUMBER ── */}
-        <View style={styles.bigSection}>
-          <Text style={styles.bigLabel}>WEEKLY INCOME</Text>
-          <Text style={styles.bigIncomeAmount}>+{formatCurrency(weekIncome)}</Text>
-        </View>
-
-        {/* ── BIG EXPENSES NUMBER ── */}
-        <View style={styles.bigSection}>
-          <Text style={styles.bigLabel}>WEEKLY FIXED EXPENSES</Text>
-          <Text style={styles.bigExpenseAmount}>-{formatCurrency(weekFixedExpenses)}</Text>
+        {/* Bills Due This Week */}
+        <View style={styles.billsSection}>
+          <Text style={styles.billsTitle}>BILLS DUE THIS WEEK</Text>
+          <Text style={styles.billsSubtitle}>{billsDueThisWeek.length} bills due</Text>
+          
+          {billsDueThisWeek.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>No bills due this week</Text>
+              <Text style={styles.emptySubtext}>Enjoy the break! 🎉</Text>
+            </View>
+          ) : (
+            billsDueThisWeek.map((bill) => {
+              const isPaid = paidBills.has(bill.id);
+              
+              return (
+                <Pressable
+                  key={bill.id}
+                  style={[styles.billCard, isPaid && styles.billCardPaid]}
+                  onPress={() => !isPaid && markBillPaid(bill)}
+                >
+                  <View style={styles.billContent}>
+                    <View style={styles.billLeft}>
+                      <Text style={styles.billEmoji}>{bill.emoji}</Text>
+                      <View>
+                        <Text style={[styles.billName, isPaid && styles.billNamePaid]}>
+                          {bill.name.toUpperCase()}
+                        </Text>
+                        <Text style={styles.billDue}>DUE {bill.dueDay}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.billRight}>
+                      {isPaid ? (
+                        <View style={styles.paidBadge}>
+                          <Check size={16} color="#000" strokeWidth={3} />
+                          <Text style={styles.paidBadgeText}>PAID</Text>
+                        </View>
+                      ) : (
+                        <View>
+                          <Text style={styles.billAmount}>{formatCurrency(bill.allocated)}</Text>
+                          <Text style={styles.tapToPay}>TAP TO PAY</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })
+          )}
         </View>
 
       </ScrollView>
-
-      <FAB onPress={() => setSheetVisible(true)} />
-      <QuickAddSheet
-        visible={sheetVisible}
-        onClose={() => setSheetVisible(false)}
-        onSave={addTransaction}
-      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
-
-  // Masthead
-  masthead: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  headerRow: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    alignItems: "center",
   },
-  logo: {
-    color: colors.primary,
-    fontSize: 36,
+  headerTitle: {
+    color: colors.white,
+    fontSize: 32,
     fontWeight: "900",
-    letterSpacing: 8,
-    fontFamily: fonts.heading as any,
+    letterSpacing: 4,
+    marginBottom: spacing.xs,
   },
-  logoSub: {
-    color: "#666",
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 2.5,
-    marginTop: -2,
-    fontFamily: fonts.mono as any,
+  headerSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "500",
+    letterSpacing: 1,
   },
-  paydayChip: {
-    backgroundColor: "#BFFF00",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  paydayText: {
-    color: "#000",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.5,
-    fontFamily: fonts.mono as any,
-  },
-  recurringBtn: { padding: 8 },
-  settingsBtn: { padding: 8 },
-
-  // Week nav
-  weekRow: {
+  monthRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: spacing.lg,
-  },
-  navArrow: { padding: 8 },
-  weekLabel: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "800",
-    letterSpacing: 3,
-    fontFamily: fonts.mono as any,
-  },
-
-
-
-  // Hero
-  hero: {
-    paddingVertical: 32,
-    paddingHorizontal: spacing.lg,
-    marginHorizontal: 0,
-    alignItems: "center",
-    gap: 12,
     marginBottom: spacing.lg,
   },
-  heroEyebrow: {
-    color: "#000",
-    fontSize: 14,
+  monthLabel: {
+    color: colors.white,
+    fontSize: 18,
     fontWeight: "700",
-    letterSpacing: 4,
-    fontFamily: fonts.mono as any,
-  },
-  heroNum: {
-    color: "#000",
-    fontSize: 48,
-    fontWeight: "900",
-    fontFamily: fonts.mono as any,
-  },
-  heroBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 20,
-  },
-  heroStat: { alignItems: "center", gap: 4 },
-  heroStatNum: {
-    color: "#000",
-    fontSize: 16,
-    fontWeight: "800",
-    fontFamily: fonts.mono as any,
-  },
-  heroStatLabel: {
-    color: "#000",
-    fontSize: 10,
-    fontWeight: "600",
     letterSpacing: 2,
-    opacity: 0.7,
-    fontFamily: fonts.mono as any,
+    minWidth: 200,
+    textAlign: "center",
   },
-  heroBarDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: "#000",
-    opacity: 0.3,
-  },
-
-  // Big sections
-  bigSection: {
-    paddingVertical: 32,
-    paddingHorizontal: spacing.lg,
-    alignItems: "center",
+  statsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
-  bigLabel: {
+  billsSection: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  billsTitle: {
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: spacing.xs,
+  },
+  billsSubtitle: {
     color: colors.textSecondary,
     fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 3,
+    fontWeight: "500",
+    marginBottom: spacing.lg,
+  },
+  billCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.sm,
     marginBottom: spacing.sm,
-    fontFamily: fonts.mono as any,
+    padding: spacing.md,
   },
-  bigIncomeAmount: {
+  billCardPaid: {
+    backgroundColor: colors.greenBg,
+    borderColor: colors.greenBorder,
+  },
+  billContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  billLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flex: 1,
+  },
+  billEmoji: {
+    fontSize: 20,
+  },
+  billName: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  billNamePaid: {
+    color: colors.textSecondary,
+  },
+  billDue: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  billRight: {
+    alignItems: "flex-end",
+  },
+  billAmount: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  tapToPay: {
     color: colors.primary,
-    fontSize: 48,
-    fontWeight: "900",
-    fontFamily: fonts.mono as any,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
-  bigExpenseAmount: {
-    color: colors.red,
-    fontSize: 48,
-    fontWeight: "900",
-    fontFamily: fonts.mono as any,
+  paidBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 2,
+  },
+  paidBadgeText: {
+    color: "#000",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  empty: {
+    alignItems: "center",
+    paddingVertical: spacing.xl,
+  },
+  emptyText: {
+    color: colors.textSecondary,
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: spacing.xs,
+  },
+  emptySubtext: {
+    color: colors.dimmed,
+    fontSize: 14,
   },
 });
