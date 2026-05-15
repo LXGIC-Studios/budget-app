@@ -7,9 +7,10 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Plus, Edit3, Trash2 } from "lucide-react-native";
+import { Plus, Edit3, Trash2, X } from "lucide-react-native";
 import { impact } from "../../src/lib/haptics";
 import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
@@ -20,9 +21,20 @@ import {
 } from "../../src/utils";
 
 export default function BudgetScreen() {
-  const { profile, updateProfile, currentBudget } = useApp();
+  const { profile, updateProfile, currentBudget, createCategory, updateCategory, deleteCategory } = useApp();
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeValue, setIncomeValue] = useState(profile?.monthlyIncome?.toString() || "12926");
+  
+  // Expense form state
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [expenseForm, setExpenseForm] = useState({
+    name: "",
+    emoji: "💰",
+    allocated: "",
+    frequency: "monthly",
+    dueDay: "",
+  });
 
   const monthlyIncome = profile?.monthlyIncome ?? 12926;
 
@@ -45,6 +57,90 @@ export default function BudgetScreen() {
     await updateProfile({ monthlyIncome: newIncome });
     setEditingIncome(false);
     impact("Light");
+  };
+
+  const openExpenseForm = (expense?: any) => {
+    if (expense) {
+      setEditingExpense(expense);
+      setExpenseForm({
+        name: expense.name,
+        emoji: expense.emoji,
+        allocated: expense.allocated.toString(),
+        frequency: expense.frequency || "monthly",
+        dueDay: expense.dueDay?.toString() || "",
+      });
+    } else {
+      setEditingExpense(null);
+      setExpenseForm({
+        name: "",
+        emoji: "💰",
+        allocated: "",
+        frequency: "monthly",
+        dueDay: "",
+      });
+    }
+    setShowExpenseForm(true);
+  };
+
+  const closeExpenseForm = () => {
+    setShowExpenseForm(false);
+    setEditingExpense(null);
+  };
+
+  const saveExpense = async () => {
+    if (!expenseForm.name.trim() || !expenseForm.allocated) {
+      Alert.alert("Missing Info", "Please enter name and amount");
+      return;
+    }
+
+    const amount = parseFloat(expenseForm.allocated);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert("Invalid Amount", "Please enter a valid amount");
+      return;
+    }
+
+    const expenseData = {
+      name: expenseForm.name.trim(),
+      emoji: expenseForm.emoji,
+      allocated: amount,
+      frequency: expenseForm.frequency,
+      type: "fixed" as const,
+      dueDay: expenseForm.dueDay ? parseInt(expenseForm.dueDay) : undefined,
+    };
+
+    try {
+      if (editingExpense) {
+        await updateCategory(editingExpense.id, expenseData);
+      } else {
+        await createCategory(expenseData);
+      }
+      closeExpenseForm();
+      impact("Light");
+    } catch (error) {
+      Alert.alert("Error", "Failed to save expense");
+    }
+  };
+
+  const handleDeleteExpense = (expense: any) => {
+    Alert.alert(
+      "Delete Expense",
+      `Are you sure you want to delete "${expense.name}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteCategory(expense.id);
+              impact("Light");
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete expense");
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -117,7 +213,7 @@ export default function BudgetScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>FIXED EXPENSES</Text>
-            <Pressable style={styles.addBtn}>
+            <Pressable style={styles.addBtn} onPress={() => openExpenseForm()}>
               <Plus size={16} color={colors.primary} strokeWidth={2.5} />
               <Text style={styles.addBtnText}>ADD</Text>
             </Pressable>
@@ -152,10 +248,10 @@ export default function BudgetScreen() {
                     </View>
                     
                     <View style={styles.expenseActions}>
-                      <Pressable style={styles.actionBtn}>
+                      <Pressable style={styles.actionBtn} onPress={() => openExpenseForm(expense)}>
                         <Edit3 size={16} color={colors.textSecondary} />
                       </Pressable>
-                      <Pressable style={styles.actionBtn}>
+                      <Pressable style={styles.actionBtn} onPress={() => handleDeleteExpense(expense)}>
                         <Trash2 size={16} color={colors.red} />
                       </Pressable>
                     </View>
@@ -167,6 +263,86 @@ export default function BudgetScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Expense Form Modal */}
+      <Modal
+        visible={showExpenseForm}
+        transparent
+        animationType="slide"
+        onRequestClose={closeExpenseForm}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {editingExpense ? "EDIT EXPENSE" : "ADD EXPENSE"}
+              </Text>
+              <Pressable onPress={closeExpenseForm} style={styles.closeBtn}>
+                <X size={20} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.fieldLabel}>NAME</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={expenseForm.name}
+                onChangeText={(text) => setExpenseForm({...expenseForm, name: text})}
+                placeholder="e.g. Rent, Utilities, etc."
+                placeholderTextColor={colors.textSecondary}
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.fieldLabel}>EMOJI</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={expenseForm.emoji}
+                onChangeText={(text) => setExpenseForm({...expenseForm, emoji: text})}
+                placeholder="💰"
+                placeholderTextColor={colors.textSecondary}
+              />
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formField, {flex: 1}]}>
+                <Text style={styles.fieldLabel}>AMOUNT</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={expenseForm.allocated}
+                  onChangeText={(text) => setExpenseForm({...expenseForm, allocated: text})}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={[styles.formField, {flex: 1}]}>
+                <Text style={styles.fieldLabel}>DUE DAY (optional)</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={expenseForm.dueDay}
+                  onChangeText={(text) => setExpenseForm({...expenseForm, dueDay: text})}
+                  placeholder="15"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <Pressable onPress={closeExpenseForm} style={styles.modalCancelBtn}>
+                <Text style={styles.modalCancelText}>CANCEL</Text>
+              </Pressable>
+              <Pressable onPress={saveExpense} style={styles.modalSaveBtn}>
+                <Text style={styles.modalSaveText}>
+                  {editingExpense ? "UPDATE" : "ADD"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -381,5 +557,88 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: colors.dimmed,
     fontSize: 14,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderRadius: radius.sm,
+    padding: spacing.lg,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.lg,
+  },
+  modalTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  closeBtn: {
+    padding: spacing.xs,
+  },
+  formField: {
+    marginBottom: spacing.md,
+  },
+  formRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  fieldLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 1,
+    marginBottom: spacing.xs,
+  },
+  fieldInput: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+  },
+  modalCancelText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  modalSaveBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+  },
+  modalSaveText: {
+    color: "#000",
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
 });
