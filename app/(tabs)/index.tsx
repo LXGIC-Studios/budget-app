@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react-native";
 import { impact, notification } from "../../src/lib/haptics";
@@ -27,6 +28,32 @@ export default function Dashboard() {
   const { profile, addTransaction, currentBudget } = useApp();
   const [currentWeek, setCurrentWeek] = useState(getWeekKey());
   const [paidBills, setPaidBills] = useState<Set<string>>(new Set());
+
+  // Load paid bills from storage on mount
+  useEffect(() => {
+    loadPaidBills();
+  }, []);
+
+  const loadPaidBills = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('paidBills');
+      if (saved) {
+        const paidArray = JSON.parse(saved);
+        setPaidBills(new Set(paidArray));
+      }
+    } catch (error) {
+      console.log('Error loading paid bills:', error);
+    }
+  };
+
+  const savePaidBills = async (newPaidBills: Set<string>) => {
+    try {
+      const paidArray = Array.from(newPaidBills);
+      await AsyncStorage.setItem('paidBills', JSON.stringify(paidArray));
+    } catch (error) {
+      console.log('Error saving paid bills:', error);
+    }
+  };
 
   const monthlyIncome = profile?.monthlyIncome ?? 12926; // Your calculated income
 
@@ -74,7 +101,9 @@ export default function Dashboard() {
 
   const markBillPaid = async (bill: any) => {
     notification("Success");
-    setPaidBills(prev => new Set([...prev, bill.id]));
+    const newPaidBills = new Set([...paidBills, bill.id]);
+    setPaidBills(newPaidBills);
+    await savePaidBills(newPaidBills);
     
     // Add transaction record
     await addTransaction({
@@ -155,8 +184,24 @@ export default function Dashboard() {
 
         {/* Bills Due This Week */}
         <View style={styles.billsSection}>
-          <Text style={styles.billsTitle}>BILLS DUE THIS WEEK</Text>
-          <Text style={styles.billsSubtitle}>{billsDueThisWeek.length} bills due</Text>
+          <View style={styles.billsHeader}>
+            <View>
+              <Text style={styles.billsTitle}>BILLS DUE THIS WEEK</Text>
+              <Text style={styles.billsSubtitle}>{billsDueThisWeek.length} bills due</Text>
+            </View>
+            {paidBills.size > 0 && (
+              <Pressable 
+                style={styles.clearBtn}
+                onPress={async () => {
+                  setPaidBills(new Set());
+                  await AsyncStorage.removeItem('paidBills');
+                  impact('Light');
+                }}
+              >
+                <Text style={styles.clearBtnText}>CLEAR PAID</Text>
+              </Pressable>
+            )}
+          </View>
           
           {billsDueThisWeek.length === 0 ? (
             <View style={styles.empty}>
@@ -342,6 +387,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
+  billsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: spacing.lg,
+  },
   billsTitle: {
     color: colors.white,
     fontSize: 20,
@@ -353,7 +404,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: spacing.lg,
+  },
+  clearBtn: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  clearBtnText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   billCard: {
     backgroundColor: colors.card,
