@@ -138,46 +138,24 @@ export default function Dashboard() {
           </Pressable>
         </View>
 
-        {/* Big Income Hero */}
-        <View style={styles.incomeHero}>
-          <Text style={styles.heroLabel}>💵 MONTHLY INCOME</Text>
-          <Text style={styles.heroAmount}>{formatCurrency(monthlyIncome)}</Text>
-          <View style={styles.heroBreakdown}>
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownAmount}>{formatCurrency(monthlyIncome)}</Text>
-              <Text style={styles.breakdownLabel}>TOTAL</Text>
+        {/* ── HERO - MASSIVE AVAILABLE AMOUNT ── */}
+        <View style={[styles.hero, { backgroundColor: (monthlyIncome - fixedOutgoing) >= 0 ? colors.primary : colors.red }]}>
+          <Text style={styles.heroEyebrow}>AVAILABLE</Text>
+          <Text style={styles.heroNum}>{(monthlyIncome - fixedOutgoing) >= 0 ? "+" : ""}{formatCurrency(monthlyIncome - fixedOutgoing)}</Text>
+          <View style={styles.heroBar}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(monthlyIncome)}</Text>
+              <Text style={styles.heroStatLabel}>INCOME</Text>
             </View>
-            <View style={styles.breakdownDivider} />
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownAmount}>$0.00</Text>
-              <Text style={styles.breakdownLabel}>BONUS</Text>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(fixedOutgoing)}</Text>
+              <Text style={styles.heroStatLabel}>EXPENSES</Text>
             </View>
-            <View style={styles.breakdownDivider} />
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownAmount}>$0.00</Text>
-              <Text style={styles.breakdownLabel}>OTHER</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Big Expenses Hero */}
-        <View style={styles.expenseHero}>
-          <Text style={styles.heroLabelRed}>🏠 FIXED EXPENSES</Text>
-          <Text style={styles.heroAmountRed}>{formatCurrency(fixedOutgoing)}</Text>
-          <View style={styles.heroBreakdown}>
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownAmountRed}>{formatCurrency(fixedOutgoing)}</Text>
-              <Text style={styles.breakdownLabelRed}>TOTAL</Text>
-            </View>
-            <View style={styles.breakdownDividerRed} />
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownAmountRed}>$0.00</Text>
-              <Text style={styles.breakdownLabelRed}>VARIABLE</Text>
-            </View>
-            <View style={styles.breakdownDividerRed} />
-            <View style={styles.breakdownItem}>
-              <Text style={styles.breakdownAmountRed}>$0.00</Text>
-              <Text style={styles.breakdownLabelRed}>EXTRA</Text>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{billsDueThisWeek.length}</Text>
+              <Text style={styles.heroStatLabel}>BILLS DUE</Text>
             </View>
           </View>
         </View>
@@ -295,89 +273,48 @@ const styles = StyleSheet.create({
     minWidth: 200,
     textAlign: "center",
   },
-  // Hero sections
-  incomeHero: {
-    backgroundColor: colors.primary,
-    paddingVertical: 40,
+  // Hero - EXACT STACKD STYLING
+  hero: {
+    paddingVertical: 32,
     paddingHorizontal: spacing.lg,
     marginHorizontal: 0,
-    marginBottom: spacing.md,
     alignItems: "center",
-  },
-  expenseHero: {
-    backgroundColor: colors.red,
-    paddingVertical: 40,
-    paddingHorizontal: spacing.lg,
-    marginHorizontal: 0,
+    gap: 12,
     marginBottom: spacing.lg,
-    alignItems: "center",
   },
-  heroLabel: {
+  heroEyebrow: {
     color: "#000",
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 3,
-    marginBottom: spacing.sm,
+    letterSpacing: 4,
   },
-  heroLabelRed: {
-    color: "#000",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 3,
-    marginBottom: spacing.sm,
-  },
-  heroAmount: {
+  heroNum: {
     color: "#000",
     fontSize: 48,
     fontWeight: "900",
-    marginBottom: spacing.lg,
   },
-  heroAmountRed: {
-    color: "#000",
-    fontSize: 48,
-    fontWeight: "900",
-    marginBottom: spacing.lg,
-  },
-  heroBreakdown: {
+  heroBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 24,
+    gap: 20,
   },
-  breakdownItem: {
-    alignItems: "center",
-    gap: 4,
+  heroStat: { 
+    alignItems: "center", 
+    gap: 4 
   },
-  breakdownAmount: {
+  heroStatNum: {
     color: "#000",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
   },
-  breakdownAmountRed: {
-    color: "#000",
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  breakdownLabel: {
+  heroStatLabel: {
     color: "#000",
     fontSize: 10,
     fontWeight: "600",
-    letterSpacing: 1.5,
-    opacity: 0.8,
+    letterSpacing: 2,
+    opacity: 0.7,
   },
-  breakdownLabelRed: {
-    color: "#000",
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 1.5,
-    opacity: 0.8,
-  },
-  breakdownDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: "#000",
-    opacity: 0.3,
-  },
-  breakdownDividerRed: {
+  heroBarDivider: {
     width: 1,
     height: 24,
     backgroundColor: "#000",
