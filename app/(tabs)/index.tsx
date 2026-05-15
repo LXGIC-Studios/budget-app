@@ -87,24 +87,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* ── ACCOUNT FILTER ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterBar}>
-          <Pressable style={[styles.filterPill, styles.filterPillActive]}>
-            <Text style={[styles.filterPillText, styles.filterPillTextActive]}>ALL</Text>
-          </Pressable>
-          <Pressable style={styles.filterPill}>
-            <Text style={styles.filterPillEmoji}>🏦</Text>
-            <Text style={styles.filterPillText}>MAIN CHASE</Text>
-          </Pressable>
-          <Pressable style={styles.filterPill}>
-            <Text style={styles.filterPillEmoji}>👤</Text>
-            <Text style={styles.filterPillText}>DARTH VADER</Text>
-          </Pressable>
-          <Pressable style={styles.filterPill}>
-            <Text style={styles.filterPillEmoji}>🇺🇸</Text>
-            <Text style={styles.filterPillText}>USAA</Text>
-          </Pressable>
-        </ScrollView>
+
 
         {/* ── HERO - MASSIVE AVAILABLE AMOUNT ── */}
         <View style={[styles.hero, { backgroundColor: available >= 0 ? colors.primary : colors.red }]}>
@@ -211,35 +194,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.mono as any,
   },
 
-  // Filter bar
-  filterBar: {
-    paddingHorizontal: spacing.lg,
-    gap: 8,
-    marginBottom: spacing.lg,
-  },
-  filterPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#333",
-    backgroundColor: "#111",
-  },
-  filterPillActive: {
-    borderColor: colors.primary,
-    backgroundColor: "rgba(0,255,204,0.1)",
-  },
-  filterPillEmoji: { fontSize: 14 },
-  filterPillText: {
-    color: "#666",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    fontFamily: fonts.mono as any,
-  },
-  filterPillTextActive: { color: colors.primary },
+
 
   // Hero
   hero: {
