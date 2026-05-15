@@ -5,7 +5,7 @@ import { colors, fonts } from "../../src/theme";
 
 const TABS = [
   { name: "index", label: "HOME", Icon: Home },
-  { name: "income-expenses", label: "BUDGET", Icon: DollarSign },
+  { name: "budget", label: "BUDGET", Icon: DollarSign },
   { name: "bills-calendar", label: "BILLS", Icon: Calendar },
   { name: "monthly-view", label: "MONTHLY", Icon: Grid3x3 },
 ];
@@ -83,7 +83,7 @@ export default function TabLayout() {
         screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen name="index" />
-        <Tabs.Screen name="income-expenses" />
+        <Tabs.Screen name="budget" />
         <Tabs.Screen name="bills-calendar" />
         <Tabs.Screen name="monthly-view" />
         <Tabs.Screen name="debt" options={{ href: null }} />
@@ -91,7 +91,7 @@ export default function TabLayout() {
         <Tabs.Screen name="history" options={{ href: null }} />
         <Tabs.Screen name="household" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ href: null }} />
-        <Tabs.Screen name="budget" options={{ href: null }} />
+        <Tabs.Screen name="income-expenses" options={{ href: null }} />
         <Tabs.Screen name="log" options={{ href: null }} />
         <Tabs.Screen name="overview" options={{ href: null }} />
       </Tabs>
