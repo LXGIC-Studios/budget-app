@@ -138,24 +138,46 @@ export default function Dashboard() {
           </Pressable>
         </View>
 
-        {/* ── HERO - MASSIVE AVAILABLE AMOUNT ── */}
-        <View style={[styles.hero, { backgroundColor: (monthlyIncome - fixedOutgoing) >= 0 ? colors.primary : colors.red }]}>
-          <Text style={styles.heroEyebrow}>AVAILABLE</Text>
-          <Text style={styles.heroNum}>{(monthlyIncome - fixedOutgoing) >= 0 ? "+" : ""}{formatCurrency(monthlyIncome - fixedOutgoing)}</Text>
+        {/* Big Income Hero */}
+        <View style={styles.incomeHero}>
+          <Text style={styles.heroEyebrow}>💵 MONTHLY INCOME</Text>
+          <Text style={styles.heroNum}>{formatCurrency(monthlyIncome)}</Text>
           <View style={styles.heroBar}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatNum}>{formatCurrency(monthlyIncome)}</Text>
-              <Text style={styles.heroStatLabel}>INCOME</Text>
+              <Text style={styles.heroStatLabel}>TOTAL</Text>
             </View>
             <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>$0.00</Text>
+              <Text style={styles.heroStatLabel}>BONUS</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>$0.00</Text>
+              <Text style={styles.heroStatLabel}>OTHER</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Big Expenses Hero */}
+        <View style={styles.expenseHero}>
+          <Text style={styles.heroEyebrow}>🏠 FIXED EXPENSES</Text>
+          <Text style={styles.heroNum}>{formatCurrency(fixedOutgoing)}</Text>
+          <View style={styles.heroBar}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatNum}>{formatCurrency(fixedOutgoing)}</Text>
-              <Text style={styles.heroStatLabel}>EXPENSES</Text>
+              <Text style={styles.heroStatLabel}>TOTAL</Text>
             </View>
             <View style={styles.heroBarDivider} />
             <View style={styles.heroStat}>
-              <Text style={styles.heroStatNum}>{billsDueThisWeek.length}</Text>
-              <Text style={styles.heroStatLabel}>BILLS DUE</Text>
+              <Text style={styles.heroStatNum}>$0.00</Text>
+              <Text style={styles.heroStatLabel}>VARIABLE</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>$0.00</Text>
+              <Text style={styles.heroStatLabel}>EXTRA</Text>
             </View>
           </View>
         </View>
@@ -273,13 +295,23 @@ const styles = StyleSheet.create({
     minWidth: 200,
     textAlign: "center",
   },
-  // Hero - EXACT STACKD STYLING
-  hero: {
+  // Hero sections with EXACT STACKD CSS
+  incomeHero: {
     paddingVertical: 32,
     paddingHorizontal: spacing.lg,
     marginHorizontal: 0,
     alignItems: "center",
     gap: 12,
+    backgroundColor: colors.primary,
+    marginBottom: spacing.md,
+  },
+  expenseHero: {
+    paddingVertical: 32,
+    paddingHorizontal: spacing.lg,
+    marginHorizontal: 0,
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.red,
     marginBottom: spacing.lg,
   },
   heroEyebrow: {
