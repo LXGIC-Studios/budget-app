@@ -18,6 +18,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // DEV BYPASS: Auto-login with mock session for local testing
+    if (__DEV__ || process.env.NODE_ENV === 'development') {
+      const mockSession = {
+        user: {
+          id: 'dev-user-123',
+          email: 'dev@example.com',
+          aud: 'authenticated',
+          role: 'authenticated',
+          app_metadata: {},
+          user_metadata: {},
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          email_confirmed_at: new Date().toISOString()
+        },
+        access_token: 'dev-token',
+        refresh_token: 'dev-refresh',
+        expires_at: Date.now() / 1000 + 3600,
+        expires_in: 3600,
+        token_type: 'bearer'
+      } as Session;
+      setSession(mockSession);
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
