@@ -1,13 +1,13 @@
 import { Tabs } from "expo-router";
 import { Platform, View, Text, Pressable, StyleSheet } from "react-native";
-import { Home, PlusCircle, BarChart3, Sliders } from "lucide-react-native";
+import { Home, DollarSign, Calendar, Grid3x3 } from "lucide-react-native";
 import { colors, fonts } from "../../src/theme";
 
 const TABS = [
   { name: "index", label: "HOME", Icon: Home },
-  { name: "log", label: "LOG", Icon: PlusCircle },
-  { name: "overview", label: "CHARTS", Icon: BarChart3 },
-  { name: "budget", label: "BUDGET", Icon: Sliders },
+  { name: "income-expenses", label: "BUDGET", Icon: DollarSign },
+  { name: "bills-calendar", label: "BILLS", Icon: Calendar },
+  { name: "monthly-view", label: "MONTHLY", Icon: Grid3x3 },
 ];
 
 function CustomTabBar({ state, navigation }: any) {
@@ -83,14 +83,17 @@ export default function TabLayout() {
         screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen name="index" />
-        <Tabs.Screen name="log" />
-        <Tabs.Screen name="overview" />
-        <Tabs.Screen name="budget" />
+        <Tabs.Screen name="income-expenses" />
+        <Tabs.Screen name="bills-calendar" />
+        <Tabs.Screen name="monthly-view" />
         <Tabs.Screen name="debt" options={{ href: null }} />
         <Tabs.Screen name="insights" options={{ href: null }} />
         <Tabs.Screen name="history" options={{ href: null }} />
         <Tabs.Screen name="household" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ href: null }} />
+        <Tabs.Screen name="budget" options={{ href: null }} />
+        <Tabs.Screen name="log" options={{ href: null }} />
+        <Tabs.Screen name="overview" options={{ href: null }} />
       </Tabs>
     </View>
   );
