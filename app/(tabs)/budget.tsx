@@ -10,15 +10,13 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, Plus, Edit3, Trash2, X } from "lucide-react-native";
+import { Plus, Edit3, Trash2, X } from "lucide-react-native";
 import { impact } from "../../src/lib/haptics";
 import { colors, spacing, radius } from "../../src/theme";
 import { useApp } from "../../src/context/AppContext";
 import {
   formatCurrency,
   getMonthlyAmount,
-  formatMonthLabel,
-  shiftMonth,
 } from "../../src/utils";
 
 type BillFrequency = "weekly" | "biweekly" | "monthly" | "bimonthly" | "quarterly" | "yearly";
@@ -32,94 +30,44 @@ const FREQUENCY_OPTIONS: { value: BillFrequency; label: string }[] = [
   { value: "yearly", label: "Yearly" },
 ];
 
-export default function BillsCalendarScreen() {
-  const { profile, updateProfile, currentBudget, currentMonth, setCurrentMonth, 
-          createCategory, updateCategory, deleteCategory } = useApp();
+export default function BudgetScreen() {
+  const { profile, currentBudget, createCategory, updateCategory, deleteCategory } = useApp();
   
   // Form states
   const [showItemForm, setShowItemForm] = useState(false);
-  const [showDayModal, setShowDayModal] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [itemForm, setItemForm] = useState({
     name: "",
-    emoji: "💰",
+    emoji: "🛒",
     allocated: "",
     frequency: "monthly" as BillFrequency,
-    dueDay: "",
   });
 
   const monthlyIncome = profile?.monthlyIncome ?? 0;
   
-  // Get fixed bills only (not flexible spending)
-  const allItems = useMemo(() => {
-    const items = [];
-    
-    // Add monthly income as an item (if set)
-    if (monthlyIncome > 0) {
-      items.push({
-        id: 'monthly-income',
-        name: 'Monthly Income',
-        emoji: '💵',
-        allocated: monthlyIncome,
-        frequency: 'monthly',
-        type: 'income',
-        dueDay: 1,
-      });
-    }
-    
-    // Add only FIXED budget categories (bills)
+  // Get flexible (variable) budget categories only
+  const flexibleItems = useMemo(() => {
     const cats = currentBudget?.categories ?? [];
-    const fixedBills = cats.filter(cat => cat.type === 'fixed');
-    items.push(...fixedBills.map(cat => ({
-      ...cat,
-      type: 'expense'
-    })));
-    
-    return items;
-  }, [currentBudget, monthlyIncome]);
+    return cats.filter(cat => cat.type === "flexible");
+  }, [currentBudget]);
 
-  // Bills by day for calendar
-  const billsByDay = useMemo(() => {
-    const grouped: Record<number, any[]> = {};
-    allItems.forEach(item => {
-      if (item.dueDay) {
-        const day = item.dueDay;
-        if (!grouped[day]) grouped[day] = [];
-        grouped[day].push(item);
-      }
-    });
-    return grouped;
-  }, [allItems]);
+  // Get fixed expenses for calculation
+  const fixedExpenses = useMemo(() => {
+    const cats = currentBudget?.categories ?? [];
+    return cats
+      .filter(cat => cat.type === "fixed")
+      .reduce((total, cat) => total + getMonthlyAmount(cat.allocated, cat.frequency || "monthly"), 0);
+  }, [currentBudget]);
 
-  const navigateMonth = (delta: number) => {
-    impact("Light");
-    setCurrentMonth(shiftMonth(currentMonth, delta));
-  };
+  // Calculate totals
+  const totalFlexibleBudget = flexibleItems.reduce((total, item) => 
+    total + getMonthlyAmount(item.allocated, item.frequency || "monthly"), 0
+  );
+  
+  const availableAfterFixed = monthlyIncome - fixedExpenses;
+  const remainingToBudget = availableAfterFixed - totalFlexibleBudget;
 
   const openItemForm = (item?: any) => {
-    if (item && item.id === 'monthly-income') {
-      // Edit monthly income directly with prompt
-      Alert.prompt(
-        "Monthly Income",
-        "Enter your monthly income:",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Save",
-            onPress: (value) => {
-              if (value) {
-                updateProfile({ monthlyIncome: parseFloat(value) || 0 });
-              }
-            }
-          }
-        ],
-        "plain-text",
-        monthlyIncome.toString()
-      );
-      return;
-    }
-    
     if (item) {
       setEditingItem(item);
       setItemForm({
@@ -127,16 +75,14 @@ export default function BillsCalendarScreen() {
         emoji: item.emoji,
         allocated: item.allocated.toString(),
         frequency: (item.frequency as BillFrequency) || "monthly",
-        dueDay: item.dueDay?.toString() || "",
       });
     } else {
       setEditingItem(null);
       setItemForm({
         name: "",
-        emoji: "💰",
+        emoji: "🛒",
         allocated: "",
         frequency: "monthly",
-        dueDay: "",
       });
     }
     setShowItemForm(true);
@@ -164,8 +110,7 @@ export default function BillsCalendarScreen() {
       emoji: itemForm.emoji,
       allocated: amount,
       frequency: itemForm.frequency,
-      type: "fixed" as const, // Fixed bills only
-      dueDay: itemForm.dueDay ? parseInt(itemForm.dueDay) : undefined,
+      type: "flexible" as const, // This is variable spending
     };
 
     try {
@@ -184,24 +129,8 @@ export default function BillsCalendarScreen() {
   };
 
   const handleDeleteItem = (item: any) => {
-    if (item.id === 'monthly-income') {
-      Alert.alert(
-        "Reset Income",
-        "Set monthly income to $0?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Reset",
-            style: "destructive",
-            onPress: () => updateProfile({ monthlyIncome: 0 }),
-          },
-        ]
-      );
-      return;
-    }
-    
     Alert.alert(
-      "Delete Item",
+      "Delete Budget Item",
       `Are you sure you want to delete "${item.name}"?`,
       [
         { text: "Cancel", style: "cancel" },
@@ -221,141 +150,58 @@ export default function BillsCalendarScreen() {
     );
   };
 
-  const openDayModal = (day: number) => {
-    setSelectedDay(day);
-    setShowDayModal(true);
-    impact("Light");
-  };
-
-  // Generate calendar days
-  const dayNumbers = Array.from({ length: 31 }, (_, i) => i + 1);
-  const selectedDayItems = selectedDay ? billsByDay[selectedDay] || [] : [];
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         
-        {/* Month Navigation */}
-        <View style={styles.monthRow}>
-          <Pressable onPress={() => navigateMonth(-1)} hitSlop={12}>
-            <ChevronLeft size={24} color={colors.textSecondary} strokeWidth={2} />
-          </Pressable>
-          <Text style={styles.monthLabel}>{formatMonthLabel(currentMonth).toUpperCase()}</Text>
-          <Pressable onPress={() => navigateMonth(1)} hitSlop={12}>
-            <ChevronRight size={24} color={colors.textSecondary} strokeWidth={2} />
-          </Pressable>
-        </View>
-
-        {/* Clean Calendar - NO GRAND TOTALS */}
-        <View style={styles.calendarSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CALENDAR</Text>
-            <Text style={styles.sectionSubtitle}>Tap days to see bills due</Text>
-          </View>
-          
-          <View style={styles.calendarGrid}>
-            {dayNumbers.map(day => {
-              const items = billsByDay[day] || [];
-              const hasItems = items.length > 0;
-              const totalForDay = items.reduce((sum, item) => {
-                const amount = getMonthlyAmount(item.allocated, item.frequency || "monthly");
-                return sum + (item.type === 'income' ? amount : -amount);
-              }, 0);
-              
-              return (
-                <Pressable 
-                  key={day} 
-                  style={[styles.dayCard, hasItems && styles.dayCardWithItems]}
-                  onPress={() => hasItems ? openDayModal(day) : null}
-                >
-                  <Text style={[styles.dayNumber, hasItems && styles.dayNumberActive]}>{day}</Text>
-                  
-                  {hasItems && (
-                    <View style={styles.dayIndicator}>
-                      <Text style={styles.dayCount}>{items.length}</Text>
-                      <Text style={[styles.dayAmount, totalForDay >= 0 ? styles.dayAmountPositive : styles.dayAmountNegative]}>
-                        {formatCurrency(Math.abs(totalForDay))}
-                      </Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Income Section */}
-        <View style={styles.itemsSection}>
-          <View style={styles.itemsHeader}>
-            <Text style={styles.sectionTitle}>💵 INCOME SOURCES</Text>
-            <Pressable style={styles.addBtn} onPress={() => openItemForm()}>
-              <Plus size={16} color={colors.primary} strokeWidth={2.5} />
-              <Text style={styles.addBtnText}>ADD</Text>
-            </Pressable>
-          </View>
-          
-          {/* Monthly Income */}
-          {monthlyIncome > 0 && (
-            <View style={[styles.itemCard, styles.incomeCard]}>
-              <View style={styles.itemContent}>
-                <View style={[styles.dueDateBadge, styles.incomeBadge]}>
-                  <Text style={styles.dueDateNumber}>1</Text>
-                </View>
-                
-                <View style={styles.itemDetails}>
-                  <Text style={styles.itemEmoji}>💵</Text>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>MONTHLY INCOME</Text>
-                    <Text style={styles.itemFreq}>MONTHLY</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.itemAmount}>
-                  <Text style={[styles.itemAmountNum, styles.incomeAmount]}>{formatCurrency(monthlyIncome)}</Text>
-                  <Text style={styles.itemAmountLabel}>per month</Text>
-                </View>
-                
-                <View style={styles.itemActions}>
-                  <Pressable style={styles.actionBtn} onPress={() => openItemForm({id: 'monthly-income', name: 'Monthly Income', allocated: monthlyIncome})}>
-                    <Edit3 size={16} color={colors.textSecondary} />
-                  </Pressable>
-                  <Pressable style={styles.actionBtn} onPress={() => handleDeleteItem({id: 'monthly-income', name: 'Monthly Income'})}>
-                    <Trash2 size={16} color={colors.red} />
-                  </Pressable>
-                </View>
-              </View>
+        {/* Available Amount Hero */}
+        <View style={[styles.availableHero, remainingToBudget >= 0 ? styles.availablePositive : styles.availableNegative]}>
+          <Text style={styles.heroEyebrow}>💰 AVAILABLE TO BUDGET</Text>
+          <Text style={styles.heroNum}>{formatCurrency(remainingToBudget)}</Text>
+          <View style={styles.heroBar}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(availableAfterFixed)}</Text>
+              <Text style={styles.heroStatLabel}>AFTER BILLS</Text>
             </View>
-          )}
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(totalFlexibleBudget)}</Text>
+              <Text style={styles.heroStatLabel}>BUDGETED</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(remainingToBudget)}</Text>
+              <Text style={styles.heroStatLabel}>REMAINING</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Fixed Bills Section */}
+        {/* Variable Spending Categories */}
         <View style={styles.itemsSection}>
           <View style={styles.itemsHeader}>
-            <Text style={styles.sectionTitle}>🏠 FIXED BILLS</Text>
+            <View>
+              <Text style={styles.sectionTitle}>🛒 VARIABLE SPENDING</Text>
+              <Text style={styles.sectionSubtitle}>Groceries, dining out, entertainment, etc.</Text>
+            </View>
             <Pressable style={styles.addBtn} onPress={() => openItemForm()}>
               <Plus size={16} color={colors.primary} strokeWidth={2.5} />
               <Text style={styles.addBtnText}>ADD</Text>
             </Pressable>
           </View>
           
-          {(currentBudget?.categories ?? []).length === 0 ? (
+          {flexibleItems.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No fixed bills yet</Text>
-              <Text style={styles.emptySubtext}>Add fixed bills like rent, utilities, subscriptions</Text>
+              <Text style={styles.emptyEmoji}>🛒</Text>
+              <Text style={styles.emptyText}>No budget categories yet</Text>
+              <Text style={styles.emptySubtext}>Add spending categories like groceries, dining, entertainment</Text>
             </View>
           ) : (
-            (currentBudget?.categories ?? []).map((item) => {
+            flexibleItems.map((item) => {
               const monthlyAmount = getMonthlyAmount(item.allocated, item.frequency || "monthly");
               
               return (
                 <View key={item.id} style={styles.itemCard}>
                   <View style={styles.itemContent}>
-                    {item.dueDay && (
-                      <View style={styles.dueDateBadge}>
-                        <Text style={styles.dueDateNumber}>{item.dueDay}</Text>
-                      </View>
-                    )}
-                    
                     <View style={styles.itemDetails}>
                       <Text style={styles.itemEmoji}>{item.emoji}</Text>
                       <View style={styles.itemInfo}>
@@ -392,65 +238,41 @@ export default function BillsCalendarScreen() {
           )}
         </View>
 
-      </ScrollView>
-
-      {/* Day Modal - Shows bills due on selected day */}
-      <Modal
-        visible={showDayModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDayModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {selectedDay ? `${formatMonthLabel(currentMonth).toUpperCase()} ${selectedDay}` : "DAY"}
-              </Text>
-              <Pressable onPress={() => setShowDayModal(false)} style={styles.closeBtn}>
-                <X size={20} color={colors.textSecondary} />
-              </Pressable>
+        {/* Budget Summary */}
+        <View style={styles.summarySection}>
+          <Text style={styles.sectionTitle}>📊 BUDGET SUMMARY</Text>
+          
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Monthly Income</Text>
+              <Text style={styles.summaryAmount}>{formatCurrency(monthlyIncome)}</Text>
             </View>
-
-            {selectedDayItems.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>No bills due this day</Text>
-              </View>
-            ) : (
-              <ScrollView style={styles.dayItemsList}>
-                {selectedDayItems.map(item => {
-                  const monthlyAmount = getMonthlyAmount(item.allocated, item.frequency || "monthly");
-                  
-                  return (
-                    <View key={item.id} style={[styles.itemCard, item.type === 'income' && styles.incomeCard]}>
-                      <View style={styles.itemContent}>
-                        <View style={styles.itemDetails}>
-                          <Text style={styles.itemEmoji}>{item.emoji}</Text>
-                          <View style={styles.itemInfo}>
-                            <Text style={styles.itemName}>{item.name.toUpperCase()}</Text>
-                            <Text style={styles.itemFreq}>
-                              {item.frequency?.toUpperCase() || "MONTHLY"}
-                            </Text>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.itemAmount}>
-                          <Text style={[styles.itemAmountNum, item.type === 'income' && styles.incomeAmount]}>
-                            {formatCurrency(monthlyAmount)}
-                          </Text>
-                          <Text style={styles.itemAmountLabel}>per month</Text>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            )}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Fixed Bills</Text>
+              <Text style={[styles.summaryAmount, styles.expense]}>-{formatCurrency(fixedExpenses)}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Available for Budget</Text>
+              <Text style={styles.summaryAmount}>{formatCurrency(availableAfterFixed)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Variable Spending</Text>
+              <Text style={[styles.summaryAmount, styles.expense]}>-{formatCurrency(totalFlexibleBudget)}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, styles.totalLabel]}>Remaining</Text>
+              <Text style={[styles.summaryAmount, styles.totalAmount, remainingToBudget >= 0 ? styles.positive : styles.negative]}>
+                {formatCurrency(remainingToBudget)}
+              </Text>
+            </View>
           </View>
         </View>
-      </Modal>
 
-      {/* Item Form Modal - Fixed save functionality */}
+      </ScrollView>
+
+      {/* Item Form Modal */}
       <Modal
         visible={showItemForm}
         transparent
@@ -461,7 +283,7 @@ export default function BillsCalendarScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingItem ? "EDIT ITEM" : "ADD ITEM"}
+                {editingItem ? "EDIT BUDGET ITEM" : "ADD BUDGET ITEM"}
               </Text>
               <Pressable onPress={closeItemForm} style={styles.closeBtn}>
                 <X size={20} color={colors.textSecondary} />
@@ -469,12 +291,12 @@ export default function BillsCalendarScreen() {
             </View>
 
             <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>NAME</Text>
+              <Text style={styles.fieldLabel}>CATEGORY NAME</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={itemForm.name}
                 onChangeText={(text) => setItemForm({...itemForm, name: text})}
-                placeholder="e.g. Rent, Utilities, Subscriptions"
+                placeholder="e.g. Groceries, Dining Out, Entertainment"
                 placeholderTextColor={colors.textSecondary}
               />
             </View>
@@ -486,7 +308,7 @@ export default function BillsCalendarScreen() {
                   style={styles.fieldInput}
                   value={itemForm.emoji}
                   onChangeText={(text) => setItemForm({...itemForm, emoji: text})}
-                  placeholder="💰"
+                  placeholder="🛒"
                   placeholderTextColor={colors.textSecondary}
                 />
               </View>
@@ -529,18 +351,6 @@ export default function BillsCalendarScreen() {
               </View>
             </View>
 
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>DUE DAY (optional)</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={itemForm.dueDay}
-                onChangeText={(text) => setItemForm({...itemForm, dueDay: text})}
-                placeholder="15"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="numeric"
-              />
-            </View>
-
             <View style={styles.modalActions}>
               <Pressable onPress={closeItemForm} style={styles.modalCancelBtn}>
                 <Text style={styles.modalCancelText}>CANCEL</Text>
@@ -563,30 +373,77 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  monthRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+
+  // Available Amount Hero
+  availableHero: {
+    paddingVertical: 40,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    gap: spacing.lg,
-    marginBottom: spacing.lg,
+    marginHorizontal: 0,
+    alignItems: "center",
+    gap: 16,
+    marginBottom: spacing.xl,
   },
-  monthLabel: {
-    color: colors.white,
-    fontSize: 18,
+  availablePositive: {
+    backgroundColor: "#00ffcc",
+  },
+  availableNegative: {
+    backgroundColor: "#ff0040",
+  },
+  heroEyebrow: {
+    color: "#000000",
+    fontSize: 16,
     fontWeight: "700",
-    letterSpacing: 2,
-    minWidth: 200,
+    letterSpacing: 4,
+    textTransform: "uppercase",
+  },
+  heroNum: {
+    color: "#000000",
+    fontSize: 48,
+    fontWeight: "900",
+    lineHeight: 48,
     textAlign: "center",
   },
+  heroBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 24,
+  },
+  heroStat: { 
+    alignItems: "center", 
+    gap: 4,
+    minWidth: 80,
+  },
+  heroStatNum: {
+    color: "#000000",
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  heroStatLabel: {
+    color: "#000000",
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 2,
+    opacity: 0.7,
+    textTransform: "uppercase",
+    textAlign: "center",
+  },
+  heroBarDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "#000000",
+    opacity: 0.3,
+  },
 
-  // Calendar Section - NO HEROES
-  calendarSection: {
+  // Items Section
+  itemsSection: {
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.xl,
   },
-  sectionHeader: {
+  itemsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: spacing.lg,
   },
   sectionTitle: {
@@ -600,66 +457,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     fontWeight: "500",
-  },
-  calendarGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    justifyContent: "space-between",
-  },
-  dayCard: {
-    width: "12.5%",
-    aspectRatio: 1,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    borderRadius: radius.sm,
-    padding: 4,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dayCardWithItems: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primaryBorder,
-  },
-  dayNumber: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  dayNumberActive: {
-    color: colors.primary,
-  },
-  dayIndicator: {
-    alignItems: "center",
-  },
-  dayCount: {
-    color: colors.primary,
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  dayAmount: {
-    fontSize: 8,
-    fontWeight: "600",
-  },
-  dayAmountPositive: {
-    color: colors.primary,
-  },
-  dayAmountNegative: {
-    color: colors.red,
-  },
-
-  // Items Sections
-  itemsSection: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  itemsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.lg,
   },
   addBtn: {
     flexDirection: "row",
@@ -686,30 +483,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     padding: spacing.md,
   },
-  incomeCard: {
-    backgroundColor: colors.greenBg,
-    borderColor: colors.greenBorder,
-  },
   itemContent: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-  },
-  dueDateBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    minWidth: 40,
-    alignItems: "center",
-  },
-  incomeBadge: {
-    backgroundColor: colors.primary,
-  },
-  dueDateNumber: {
-    color: "#000",
-    fontSize: 14,
-    fontWeight: "800",
   },
   itemDetails: {
     flexDirection: "row",
@@ -742,12 +519,9 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   itemAmountNum: {
-    color: colors.red,
+    color: colors.orange,
     fontSize: 16,
     fontWeight: "800",
-  },
-  incomeAmount: {
-    color: colors.primary,
   },
   itemAmountLabel: {
     color: colors.textSecondary,
@@ -767,6 +541,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     gap: spacing.sm,
   },
+  emptyEmoji: {
+    fontSize: 48,
+  },
   emptyText: {
     color: colors.textSecondary,
     fontSize: 16,
@@ -775,6 +552,60 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: colors.dimmed,
     fontSize: 14,
+    textAlign: "center",
+    maxWidth: 250,
+  },
+
+  // Summary Section
+  summarySection: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  summaryCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: radius.sm,
+    padding: spacing.lg,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.xs,
+  },
+  summaryLabel: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  summaryAmount: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  expense: {
+    color: colors.red,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: colors.cardBorder,
+    marginVertical: spacing.sm,
+  },
+  totalLabel: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  totalAmount: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  positive: {
+    color: colors.primary,
+  },
+  negative: {
+    color: colors.red,
   },
 
   // Modal styles
@@ -804,9 +635,6 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     padding: spacing.xs,
-  },
-  dayItemsList: {
-    maxHeight: 300,
   },
   formField: {
     marginBottom: spacing.md,

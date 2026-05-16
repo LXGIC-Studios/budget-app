@@ -6,6 +6,7 @@ import { colors, fonts } from "../../src/theme";
 const TABS = [
   { name: "index", label: "HOME", Icon: Home },
   { name: "bills-calendar", label: "BILLS", Icon: Calendar },
+  { name: "budget", label: "BUDGET", Icon: DollarSign },
 ];
 
 function CustomTabBar({ state, navigation }: any) {
@@ -82,6 +83,7 @@ export default function TabLayout() {
       >
         <Tabs.Screen name="index" />
         <Tabs.Screen name="bills-calendar" />
+        <Tabs.Screen name="budget" />
         <Tabs.Screen name="debt" options={{ href: null }} />
         <Tabs.Screen name="insights" options={{ href: null }} />
         <Tabs.Screen name="history" options={{ href: null }} />

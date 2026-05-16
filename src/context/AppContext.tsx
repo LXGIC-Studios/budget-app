@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import type { Transaction, UserProfile, MonthlyBudget, Debt, Household, HouseholdMember, AccountTag, ScheduledTransaction } from "../types";
+import type { Transaction, UserProfile, MonthlyBudget, BudgetCategory, Debt, Household, HouseholdMember, AccountTag, ScheduledTransaction } from "../types";
 import * as storage from "../storage";
 import { invalidateAuthCache } from "../storage";
 import { supabase } from "../lib/supabase";
@@ -52,6 +52,10 @@ interface AppContextValue extends AppState {
   createHousehold: (name: string) => Promise<boolean>;
   joinHousehold: (code: string) => Promise<boolean>;
   leaveHousehold: () => Promise<void>;
+  createCategory: (category: Omit<BudgetCategory, 'id'>) => Promise<void>;
+  updateCategory: (id: string, updates: Partial<Omit<BudgetCategory, 'id'>>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -529,6 +533,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const createCategory = useCallback(async (categoryData: Omit<BudgetCategory, 'id'>) => {
+    const newCategory: BudgetCategory = {
+      ...categoryData,
+      id: generateId(),
+    };
+    
+    let budget = state.currentBudget;
+    if (!budget) {
+      budget = {
+        month: state.currentMonth,
+        categories: [],
+      };
+    }
+    
+    const updatedBudget = {
+      ...budget,
+      categories: [...budget.categories, newCategory],
+    };
+    
+    await storage.saveBudgetForMonth(state.currentMonth, updatedBudget);
+    setState(prev => ({ ...prev, currentBudget: updatedBudget }));
+  }, [state.currentBudget, state.currentMonth]);
+
+  const updateCategory = useCallback(async (id: string, updates: Partial<Omit<BudgetCategory, 'id'>>) => {
+    if (!state.currentBudget) return;
+    
+    const updatedBudget = {
+      ...state.currentBudget,
+      categories: state.currentBudget.categories.map(cat => 
+        cat.id === id ? { ...cat, ...updates } : cat
+      ),
+    };
+    
+    await storage.saveBudgetForMonth(state.currentMonth, updatedBudget);
+    setState(prev => ({ ...prev, currentBudget: updatedBudget }));
+  }, [state.currentBudget, state.currentMonth]);
+
+  const deleteCategory = useCallback(async (id: string) => {
+    if (!state.currentBudget) return;
+    
+    const updatedBudget = {
+      ...state.currentBudget,
+      categories: state.currentBudget.categories.filter(cat => cat.id !== id),
+    };
+    
+    await storage.saveBudgetForMonth(state.currentMonth, updatedBudget);
+    setState(prev => ({ ...prev, currentBudget: updatedBudget }));
+  }, [state.currentBudget, state.currentMonth]);
+
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    if (!state.profile) return;
+    
+    const updatedProfile = {
+      ...state.profile,
+      ...updates,
+    };
+    
+    await storage.saveProfile(updatedProfile);
+    setState(prev => ({ ...prev, profile: updatedProfile }));
+  }, [state.profile]);
+
   return (
     <AppContext.Provider
       value={{
@@ -555,6 +620,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         createHousehold: createHouseholdAction,
         joinHousehold: joinHouseholdAction,
         leaveHousehold: leaveHouseholdAction,
+        createCategory,
+        updateCategory,
+        deleteCategory,
+        updateProfile,
       }}
     >
       {children}
@@ -598,6 +667,10 @@ export function useApp(): AppContextValue {
       createHousehold: async () => false,
       joinHousehold: async () => false,
       leaveHousehold: async () => {},
+      createCategory: async () => {},
+      updateCategory: async () => {},
+      deleteCategory: async () => {},
+      updateProfile: async () => {},
     } as AppContextValue;
   }
   return ctx;
