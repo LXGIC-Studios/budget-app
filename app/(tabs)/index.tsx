@@ -257,8 +257,12 @@ export default function Dashboard() {
                   <View style={styles.billContent}>
                     <View style={styles.billLeft}>
                       <Text style={styles.billEmoji}>{bill.emoji}</Text>
-                      <View>
-                        <Text style={[styles.billName, isPaid && styles.billNamePaid]}>
+                      <View style={styles.billInfo}>
+                        <Text 
+                          style={[styles.billName, isPaid && styles.billNamePaid]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
                           {bill.name.toUpperCase()}
                         </Text>
                         <Text style={styles.billDue}>DUE {bill.dueDay}</Text>
@@ -466,9 +470,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
+    minWidth: 0, // Allow shrinking
   },
   billEmoji: {
     fontSize: 24,
+  },
+  billInfo: {
+    flex: 1,
+    minWidth: 0, // Allow shrinking
   },
   billName: {
     color: colors.white,
