@@ -17,11 +17,13 @@ import { useApp } from "../../src/context/AppContext";
 import {
   formatCurrency,
   getMonthlyAmount,
+  getMonthKey,
   formatMonthLabel,
   shiftMonth,
 } from "../../src/utils";
 
 type BillFrequency = "weekly" | "biweekly" | "monthly" | "bimonthly" | "quarterly" | "yearly";
+type ItemType = "income" | "expense";
 
 const FREQUENCY_OPTIONS: { value: BillFrequency; label: string }[] = [
   { value: "weekly", label: "Weekly" },
@@ -32,16 +34,15 @@ const FREQUENCY_OPTIONS: { value: BillFrequency; label: string }[] = [
   { value: "yearly", label: "Yearly" },
 ];
 
-export default function BillsCalendarScreen() {
+export default function UltimateBillsScreen() {
   const { profile, updateProfile, currentBudget, currentMonth, setCurrentMonth, 
           createCategory, updateCategory, deleteCategory } = useApp();
   
   // Form states
   const [showItemForm, setShowItemForm] = useState(false);
-  const [showDayModal, setShowDayModal] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [itemForm, setItemForm] = useState({
+    type: "expense" as ItemType,
     name: "",
     emoji: "💰",
     allocated: "",
@@ -51,11 +52,11 @@ export default function BillsCalendarScreen() {
 
   const monthlyIncome = profile?.monthlyIncome ?? 0;
   
-  // Get all items (income from profile + expenses from budget)
+  // Get all items (income + expenses)
   const allItems = useMemo(() => {
     const items = [];
     
-    // Add monthly income as an item (if set)
+    // Add monthly income as an item
     if (monthlyIncome > 0) {
       items.push({
         id: 'monthly-income',
@@ -64,11 +65,11 @@ export default function BillsCalendarScreen() {
         allocated: monthlyIncome,
         frequency: 'monthly',
         type: 'income',
-        dueDay: 1,
+        dueDay: 1, // Income comes on 1st
       });
     }
     
-    // Add all budget categories as expenses
+    // Add all budget categories
     const cats = currentBudget?.categories ?? [];
     items.push(...cats.map(cat => ({
       ...cat,
@@ -77,6 +78,21 @@ export default function BillsCalendarScreen() {
     
     return items;
   }, [currentBudget, monthlyIncome]);
+
+  // Separate income and expenses
+  const incomeItems = allItems.filter(item => item.type === 'income');
+  const expenseItems = allItems.filter(item => item.type === 'expense');
+  
+  // Calculate totals
+  const totalIncome = incomeItems.reduce((sum, item) => 
+    sum + getMonthlyAmount(item.allocated, item.frequency || "monthly"), 0
+  );
+  
+  const totalExpenses = expenseItems.reduce((sum, item) => 
+    sum + getMonthlyAmount(item.allocated, item.frequency || "monthly"), 0
+  );
+  
+  const netAmount = totalIncome - totalExpenses;
 
   // Bills by day for calendar
   const billsByDay = useMemo(() => {
@@ -96,32 +112,20 @@ export default function BillsCalendarScreen() {
     setCurrentMonth(shiftMonth(currentMonth, delta));
   };
 
-  const openItemForm = (item?: any) => {
+  const openItemForm = (type: ItemType, item?: any) => {
     if (item && item.id === 'monthly-income') {
-      // Edit monthly income directly with prompt
-      Alert.prompt(
-        "Monthly Income",
-        "Enter your monthly income:",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Save",
-            onPress: (value) => {
-              if (value) {
-                updateProfile({ monthlyIncome: parseFloat(value) || 0 });
-              }
-            }
-          }
-        ],
-        "plain-text",
-        monthlyIncome.toString()
-      );
+      // Edit monthly income directly
+      const newIncome = prompt("Enter monthly income:");
+      if (newIncome) {
+        updateProfile({ monthlyIncome: parseFloat(newIncome) || 0 });
+      }
       return;
     }
     
     if (item) {
       setEditingItem(item);
       setItemForm({
+        type: item.type,
         name: item.name,
         emoji: item.emoji,
         allocated: item.allocated.toString(),
@@ -131,8 +135,9 @@ export default function BillsCalendarScreen() {
     } else {
       setEditingItem(null);
       setItemForm({
+        type,
         name: "",
-        emoji: "💰",
+        emoji: type === 'income' ? "💵" : "💰",
         allocated: "",
         frequency: "monthly",
         dueDay: "",
@@ -158,24 +163,29 @@ export default function BillsCalendarScreen() {
       return;
     }
 
-    const itemData = {
-      name: itemForm.name.trim(),
-      emoji: itemForm.emoji,
-      allocated: amount,
-      frequency: itemForm.frequency,
-      type: "fixed" as const,
-      dueDay: itemForm.dueDay ? parseInt(itemForm.dueDay) : undefined,
-    };
+    if (itemForm.type === 'income') {
+      // For now, just update monthly income (could expand later)
+      await updateProfile({ monthlyIncome: amount });
+    } else {
+      const itemData = {
+        name: itemForm.name.trim(),
+        emoji: itemForm.emoji,
+        allocated: amount,
+        frequency: itemForm.frequency,
+        type: "fixed" as const,
+        dueDay: itemForm.dueDay ? parseInt(itemForm.dueDay) : undefined,
+      };
 
-    try {
-      if (editingItem) {
-        await updateCategory(editingItem.id, itemData);
-      } else {
-        await createCategory(itemData);
+      try {
+        if (editingItem) {
+          await updateCategory(editingItem.id, itemData);
+        } else {
+          await createCategory(itemData);
+        }
+      } catch (error) {
+        Alert.alert("Error", "Failed to save item");
+        return;
       }
-    } catch (error) {
-      Alert.alert("Error", "Failed to save item");
-      return;
     }
     
     closeItemForm();
@@ -220,15 +230,8 @@ export default function BillsCalendarScreen() {
     );
   };
 
-  const openDayModal = (day: number) => {
-    setSelectedDay(day);
-    setShowDayModal(true);
-    impact("Light");
-  };
-
   // Generate calendar days
   const dayNumbers = Array.from({ length: 31 }, (_, i) => i + 1);
-  const selectedDayItems = selectedDay ? billsByDay[selectedDay] || [] : [];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -245,12 +248,74 @@ export default function BillsCalendarScreen() {
           </Pressable>
         </View>
 
-        {/* Clean Calendar - NO GRAND TOTALS */}
-        <View style={styles.calendarSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CALENDAR</Text>
-            <Text style={styles.sectionSubtitle}>Tap days to see bills due</Text>
+        {/* Financial Overview Heroes */}
+        <View style={styles.incomeHero}>
+          <Text style={styles.heroEyebrow}>💵 TOTAL INCOME</Text>
+          <Text style={styles.heroNum}>{formatCurrency(totalIncome)}</Text>
+          <View style={styles.heroBar}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(totalIncome)}</Text>
+              <Text style={styles.heroStatLabel}>MONTHLY</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(totalIncome / 4.33)}</Text>
+              <Text style={styles.heroStatLabel}>WEEKLY</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{incomeItems.length}</Text>
+              <Text style={styles.heroStatLabel}>SOURCES</Text>
+            </View>
           </View>
+        </View>
+
+        <View style={styles.expenseHero}>
+          <Text style={styles.heroEyebrow}>🏠 TOTAL EXPENSES</Text>
+          <Text style={styles.heroNum}>{formatCurrency(totalExpenses)}</Text>
+          <View style={styles.heroBar}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(totalExpenses)}</Text>
+              <Text style={styles.heroStatLabel}>MONTHLY</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(totalExpenses / 4.33)}</Text>
+              <Text style={styles.heroStatLabel}>WEEKLY</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{expenseItems.length}</Text>
+              <Text style={styles.heroStatLabel}>BILLS</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={[styles.netHero, netAmount >= 0 ? styles.netPositive : styles.netNegative]}>
+          <Text style={styles.heroEyebrow}>✨ NET AVAILABLE</Text>
+          <Text style={styles.heroNum}>{netAmount >= 0 ? '+' : ''}{formatCurrency(netAmount)}</Text>
+          <View style={styles.heroBar}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(netAmount)}</Text>
+              <Text style={styles.heroStatLabel}>MONTHLY</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{formatCurrency(netAmount / 4.33)}</Text>
+              <Text style={styles.heroStatLabel}>WEEKLY</Text>
+            </View>
+            <View style={styles.heroBarDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatNum}>{((totalExpenses / totalIncome) * 100).toFixed(0)}%</Text>
+              <Text style={styles.heroStatLabel}>SPENT</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Clean Calendar */}
+        <View style={styles.calendarSection}>
+          <Text style={styles.sectionTitle}>CALENDAR VIEW</Text>
+          <Text style={styles.sectionSubtitle}>Income & bills by day of month</Text>
           
           <View style={styles.calendarGrid}>
             {dayNumbers.map(day => {
@@ -265,7 +330,7 @@ export default function BillsCalendarScreen() {
                 <Pressable 
                   key={day} 
                   style={[styles.dayCard, hasItems && styles.dayCardWithItems]}
-                  onPress={() => hasItems ? openDayModal(day) : null}
+                  onPress={() => hasItems && impact("Light")}
                 >
                   <Text style={[styles.dayNumber, hasItems && styles.dayNumberActive]}>{day}</Text>
                   
@@ -287,63 +352,77 @@ export default function BillsCalendarScreen() {
         <View style={styles.itemsSection}>
           <View style={styles.itemsHeader}>
             <Text style={styles.sectionTitle}>💵 INCOME SOURCES</Text>
-            <Pressable style={styles.addBtn} onPress={() => openItemForm()}>
+            <Pressable style={styles.addBtn} onPress={() => openItemForm('income')}>
               <Plus size={16} color={colors.primary} strokeWidth={2.5} />
-              <Text style={styles.addBtnText}>ADD</Text>
+              <Text style={styles.addBtnText}>ADD INCOME</Text>
             </Pressable>
           </View>
           
-          {/* Monthly Income */}
-          {monthlyIncome > 0 && (
-            <View style={[styles.itemCard, styles.incomeCard]}>
-              <View style={styles.itemContent}>
-                <View style={[styles.dueDateBadge, styles.incomeBadge]}>
-                  <Text style={styles.dueDateNumber}>1</Text>
-                </View>
-                
-                <View style={styles.itemDetails}>
-                  <Text style={styles.itemEmoji}>💵</Text>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>MONTHLY INCOME</Text>
-                    <Text style={styles.itemFreq}>MONTHLY</Text>
+          {incomeItems.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>No income sources</Text>
+              <Text style={styles.emptySubtext}>Add your income sources</Text>
+            </View>
+          ) : (
+            incomeItems.map((item) => {
+              const monthlyAmount = getMonthlyAmount(item.allocated, item.frequency || "monthly");
+              
+              return (
+                <View key={item.id} style={[styles.itemCard, styles.incomeCard]}>
+                  <View style={styles.itemContent}>
+                    {item.dueDay && (
+                      <View style={[styles.dueDateBadge, styles.incomeBadge]}>
+                        <Text style={styles.dueDateNumber}>{item.dueDay}</Text>
+                      </View>
+                    )}
+                    
+                    <View style={styles.itemDetails}>
+                      <Text style={styles.itemEmoji}>{item.emoji}</Text>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName}>{item.name.toUpperCase()}</Text>
+                        <Text style={styles.itemFreq}>
+                          {item.frequency?.toUpperCase() || "MONTHLY"}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.itemAmount}>
+                      <Text style={[styles.itemAmountNum, styles.incomeAmount]}>{formatCurrency(monthlyAmount)}</Text>
+                      <Text style={styles.itemAmountLabel}>per month</Text>
+                    </View>
+                    
+                    <View style={styles.itemActions}>
+                      <Pressable style={styles.actionBtn} onPress={() => openItemForm('income', item)}>
+                        <Edit3 size={16} color={colors.textSecondary} />
+                      </Pressable>
+                      <Pressable style={styles.actionBtn} onPress={() => handleDeleteItem(item)}>
+                        <Trash2 size={16} color={colors.red} />
+                      </Pressable>
+                    </View>
                   </View>
                 </View>
-                
-                <View style={styles.itemAmount}>
-                  <Text style={[styles.itemAmountNum, styles.incomeAmount]}>{formatCurrency(monthlyIncome)}</Text>
-                  <Text style={styles.itemAmountLabel}>per month</Text>
-                </View>
-                
-                <View style={styles.itemActions}>
-                  <Pressable style={styles.actionBtn} onPress={() => openItemForm({id: 'monthly-income', name: 'Monthly Income', allocated: monthlyIncome})}>
-                    <Edit3 size={16} color={colors.textSecondary} />
-                  </Pressable>
-                  <Pressable style={styles.actionBtn} onPress={() => handleDeleteItem({id: 'monthly-income', name: 'Monthly Income'})}>
-                    <Trash2 size={16} color={colors.red} />
-                  </Pressable>
-                </View>
-              </View>
-            </View>
+              );
+            })
           )}
         </View>
 
-        {/* Bills/Expenses Section */}
+        {/* Expenses Section */}
         <View style={styles.itemsSection}>
           <View style={styles.itemsHeader}>
-            <Text style={styles.sectionTitle}>🏠 BILLS & EXPENSES</Text>
-            <Pressable style={styles.addBtn} onPress={() => openItemForm()}>
+            <Text style={styles.sectionTitle}>🏠 EXPENSES & BILLS</Text>
+            <Pressable style={styles.addBtn} onPress={() => openItemForm('expense')}>
               <Plus size={16} color={colors.primary} strokeWidth={2.5} />
-              <Text style={styles.addBtnText}>ADD</Text>
+              <Text style={styles.addBtnText}>ADD EXPENSE</Text>
             </Pressable>
           </View>
           
-          {(currentBudget?.categories ?? []).length === 0 ? (
+          {expenseItems.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No bills yet</Text>
+              <Text style={styles.emptyText}>No expenses</Text>
               <Text style={styles.emptySubtext}>Add your bills and expenses</Text>
             </View>
           ) : (
-            (currentBudget?.categories ?? []).map((item) => {
+            expenseItems.map((item) => {
               const monthlyAmount = getMonthlyAmount(item.allocated, item.frequency || "monthly");
               
               return (
@@ -358,13 +437,7 @@ export default function BillsCalendarScreen() {
                     <View style={styles.itemDetails}>
                       <Text style={styles.itemEmoji}>{item.emoji}</Text>
                       <View style={styles.itemInfo}>
-                        <Text 
-                          style={styles.itemName}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {item.name.toUpperCase()}
-                        </Text>
+                        <Text style={styles.itemName}>{item.name.toUpperCase()}</Text>
                         <Text style={styles.itemFreq}>
                           {item.frequency?.toUpperCase() || "MONTHLY"}
                         </Text>
@@ -377,7 +450,7 @@ export default function BillsCalendarScreen() {
                     </View>
                     
                     <View style={styles.itemActions}>
-                      <Pressable style={styles.actionBtn} onPress={() => openItemForm(item)}>
+                      <Pressable style={styles.actionBtn} onPress={() => openItemForm('expense', item)}>
                         <Edit3 size={16} color={colors.textSecondary} />
                       </Pressable>
                       <Pressable style={styles.actionBtn} onPress={() => handleDeleteItem(item)}>
@@ -393,63 +466,7 @@ export default function BillsCalendarScreen() {
 
       </ScrollView>
 
-      {/* Day Modal - Shows bills due on selected day */}
-      <Modal
-        visible={showDayModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDayModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {selectedDay ? `${formatMonthLabel(currentMonth).toUpperCase()} ${selectedDay}` : "DAY"}
-              </Text>
-              <Pressable onPress={() => setShowDayModal(false)} style={styles.closeBtn}>
-                <X size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            {selectedDayItems.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>No bills due this day</Text>
-              </View>
-            ) : (
-              <ScrollView style={styles.dayItemsList}>
-                {selectedDayItems.map(item => {
-                  const monthlyAmount = getMonthlyAmount(item.allocated, item.frequency || "monthly");
-                  
-                  return (
-                    <View key={item.id} style={[styles.itemCard, item.type === 'income' && styles.incomeCard]}>
-                      <View style={styles.itemContent}>
-                        <View style={styles.itemDetails}>
-                          <Text style={styles.itemEmoji}>{item.emoji}</Text>
-                          <View style={styles.itemInfo}>
-                            <Text style={styles.itemName}>{item.name.toUpperCase()}</Text>
-                            <Text style={styles.itemFreq}>
-                              {item.frequency?.toUpperCase() || "MONTHLY"}
-                            </Text>
-                          </View>
-                        </View>
-                        
-                        <View style={styles.itemAmount}>
-                          <Text style={[styles.itemAmountNum, item.type === 'income' && styles.incomeAmount]}>
-                            {formatCurrency(monthlyAmount)}
-                          </Text>
-                          <Text style={styles.itemAmountLabel}>per month</Text>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Item Form Modal - Fixed save functionality */}
+      {/* Item Form Modal */}
       <Modal
         visible={showItemForm}
         transparent
@@ -460,7 +477,7 @@ export default function BillsCalendarScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingItem ? "EDIT ITEM" : "ADD ITEM"}
+                {editingItem ? `EDIT ${itemForm.type.toUpperCase()}` : `ADD ${itemForm.type.toUpperCase()}`}
               </Text>
               <Pressable onPress={closeItemForm} style={styles.closeBtn}>
                 <X size={20} color={colors.textSecondary} />
@@ -473,7 +490,7 @@ export default function BillsCalendarScreen() {
                 style={styles.fieldInput}
                 value={itemForm.name}
                 onChangeText={(text) => setItemForm({...itemForm, name: text})}
-                placeholder="e.g. Rent, Utilities, Netflix"
+                placeholder={itemForm.type === 'income' ? "e.g. Salary, Freelance" : "e.g. Rent, Utilities"}
                 placeholderTextColor={colors.textSecondary}
               />
             </View>
@@ -485,7 +502,7 @@ export default function BillsCalendarScreen() {
                   style={styles.fieldInput}
                   value={itemForm.emoji}
                   onChangeText={(text) => setItemForm({...itemForm, emoji: text})}
-                  placeholder="💰"
+                  placeholder={itemForm.type === 'income' ? "💵" : "💰"}
                   placeholderTextColor={colors.textSecondary}
                 />
               </View>
@@ -503,6 +520,7 @@ export default function BillsCalendarScreen() {
               </View>
             </View>
 
+            {/* Frequency picker */}
             <View style={styles.formField}>
               <Text style={styles.fieldLabel}>FREQUENCY</Text>
               <View style={styles.freqRow}>
@@ -529,7 +547,9 @@ export default function BillsCalendarScreen() {
             </View>
 
             <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>DUE DAY (optional)</Text>
+              <Text style={styles.fieldLabel}>
+                {itemForm.type === 'income' ? 'PAY DAY (optional)' : 'DUE DAY (optional)'}
+              </Text>
               <TextInput
                 style={styles.fieldInput}
                 value={itemForm.dueDay}
@@ -580,13 +600,89 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Calendar Section - NO HEROES
+  // Hero Sections
+  incomeHero: {
+    paddingVertical: 40,
+    paddingHorizontal: spacing.lg,
+    marginHorizontal: 0,
+    alignItems: "center",
+    gap: 16,
+    backgroundColor: "#00ffcc",
+    marginBottom: 0,
+  },
+  expenseHero: {
+    paddingVertical: 40,
+    paddingHorizontal: spacing.lg,
+    marginHorizontal: 0,
+    alignItems: "center",
+    gap: 16,
+    backgroundColor: "#ff0040",
+    marginBottom: 0,
+  },
+  netHero: {
+    paddingVertical: 40,
+    paddingHorizontal: spacing.lg,
+    marginHorizontal: 0,
+    alignItems: "center",
+    gap: 16,
+    marginBottom: spacing.xl,
+  },
+  netPositive: {
+    backgroundColor: "#00ffcc",
+  },
+  netNegative: {
+    backgroundColor: "#ff0040",
+  },
+  heroEyebrow: {
+    color: "#000000",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 4,
+    textTransform: "uppercase",
+  },
+  heroNum: {
+    color: "#000000",
+    fontSize: 48,
+    fontWeight: "900",
+    lineHeight: 48,
+    textAlign: "center",
+  },
+  heroBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 24,
+  },
+  heroStat: { 
+    alignItems: "center", 
+    gap: 4,
+    minWidth: 80,
+  },
+  heroStatNum: {
+    color: "#000000",
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  heroStatLabel: {
+    color: "#000000",
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 2,
+    opacity: 0.7,
+    textTransform: "uppercase",
+    textAlign: "center",
+  },
+  heroBarDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "#000000",
+    opacity: 0.3,
+  },
+
+  // Calendar Section
   calendarSection: {
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.xl,
-  },
-  sectionHeader: {
-    marginBottom: spacing.lg,
   },
   sectionTitle: {
     color: colors.white,
@@ -599,6 +695,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     fontWeight: "500",
+    marginBottom: spacing.lg,
   },
   calendarGrid: {
     flexDirection: "row",
@@ -715,14 +812,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
-    minWidth: 0,
   },
   itemEmoji: {
     fontSize: 20,
   },
   itemInfo: {
     flex: 1,
-    minWidth: 0,
   },
   itemName: {
     color: colors.white,
@@ -803,9 +898,6 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     padding: spacing.xs,
-  },
-  dayItemsList: {
-    maxHeight: 300,
   },
   formField: {
     marginBottom: spacing.md,
