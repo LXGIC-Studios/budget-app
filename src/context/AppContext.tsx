@@ -552,7 +552,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       categories: [...budget.categories, newCategory],
     };
     
-    await storage.saveBudgetForMonth(state.currentMonth, updatedBudget);
+    await storage.saveBudgetForMonth(updatedBudget);
     setState(prev => ({ ...prev, currentBudget: updatedBudget }));
   }, [state.currentBudget, state.currentMonth]);
 
@@ -566,20 +566,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ),
     };
     
-    await storage.saveBudgetForMonth(state.currentMonth, updatedBudget);
+    await storage.saveBudgetForMonth(updatedBudget);
     setState(prev => ({ ...prev, currentBudget: updatedBudget }));
   }, [state.currentBudget, state.currentMonth]);
 
   const deleteCategory = useCallback(async (id: string) => {
-    if (!state.currentBudget) return;
+    console.log('deleteCategory called with ID:', id);
+    if (!state.currentBudget) {
+      console.log('No current budget found');
+      return;
+    }
     
+    console.log('Current budget categories:', state.currentBudget.categories.length);
     const updatedBudget = {
       ...state.currentBudget,
       categories: state.currentBudget.categories.filter(cat => cat.id !== id),
     };
     
-    await storage.saveBudgetForMonth(state.currentMonth, updatedBudget);
-    setState(prev => ({ ...prev, currentBudget: updatedBudget }));
+    console.log('Updated budget categories:', updatedBudget.categories.length);
+    
+    try {
+      await storage.saveBudgetForMonth(updatedBudget);
+      console.log('Budget saved successfully');
+      setState(prev => ({ ...prev, currentBudget: updatedBudget }));
+      console.log('State updated');
+    } catch (error) {
+      console.error('Error saving budget:', error);
+      throw error;
+    }
   }, [state.currentBudget, state.currentMonth]);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {

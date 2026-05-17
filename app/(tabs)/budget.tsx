@@ -129,6 +129,7 @@ export default function BudgetScreen() {
   };
 
   const handleDeleteItem = (item: any) => {
+    console.log('Attempting to delete item:', item.id, item.name);
     Alert.alert(
       "Delete Budget Item",
       `Are you sure you want to delete "${item.name}"?`,
@@ -139,10 +140,13 @@ export default function BudgetScreen() {
           style: "destructive",
           onPress: async () => {
             try {
+              console.log('Calling deleteCategory with ID:', item.id);
               await deleteCategory(item.id);
+              console.log('Delete successful');
               impact("Light");
             } catch (error) {
-              Alert.alert("Error", "Failed to delete item");
+              console.error('Delete error:', error);
+              Alert.alert("Error", `Failed to delete item: ${error.message || error}`);
             }
           },
         },
@@ -197,7 +201,9 @@ export default function BudgetScreen() {
             </View>
           ) : (
             flexibleItems.map((item) => {
+              console.log('Rendering item:', item.name, 'allocated:', item.allocated, 'frequency:', item.frequency);
               const monthlyAmount = getMonthlyAmount(item.allocated, item.frequency || "monthly");
+              console.log('Calculated monthlyAmount:', monthlyAmount);
               
               return (
                 <View key={item.id} style={styles.itemCard}>
@@ -219,7 +225,9 @@ export default function BudgetScreen() {
                     </View>
                     
                     <View style={styles.itemAmount}>
-                      <Text style={styles.itemAmountNum}>{formatCurrency(monthlyAmount)}</Text>
+                      <Text style={styles.itemAmountNum}>
+                        {monthlyAmount > 0 ? formatCurrency(monthlyAmount) : "$0.00"}
+                      </Text>
                       <Text style={styles.itemAmountLabel}>per month</Text>
                     </View>
                     
@@ -520,8 +528,9 @@ const styles = StyleSheet.create({
   },
   itemAmountNum: {
     color: colors.orange,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
+    textAlign: "right",
   },
   itemAmountLabel: {
     color: colors.textSecondary,
