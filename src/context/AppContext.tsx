@@ -103,197 +103,126 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const isoDay = jsDay === 0 ? 6 : jsDay - 1; // convert to 0=Mon..6=Sun
         return isoDay === st.dayOfMonth;
       }
-      if (freq === "biweekly") {
-        // startDate anchors a known occurrence. Check if today is exactly N*14 days from anchor.
-        if (!st.startDate) return false;
-        const anchor = new Date(st.startDate);
-        const anchorMidnight = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
-        const diffDays = Math.round((today.getTime() - anchorMidnight.getTime()) / (1000 * 60 * 60 * 24));
-        return diffDays >= 0 && diffDays % 14 === 0;
-      }
       return false;
     }
 
-    const dueScheduled = scheduledTransactions.filter((st) => st.active && isScheduledDueToday(st));
-    const newTxns: Transaction[] = [];
-
-    for (const st of dueScheduled) {
-      // Check if we already created a transaction for this scheduled item today
-      const alreadyCreated = transactions.some(
-        (t) =>
-          t.date.slice(0, 10) === todayKey &&
-          t.note?.includes(`[recurring:${st.id}]`)
+    // Check if we've already created this scheduled transaction today
+    const hasTransactionToday = (st: any): boolean => {
+      return transactions.some(
+        (txn) =>
+          txn.date === todayKey &&
+          txn.category === st.category &&
+          txn.amount === st.amount &&
+          txn.type === st.type
       );
-      if (alreadyCreated) continue;
+    };
 
-      const txn: Transaction = {
-        id: generateId(),
-        type: st.type,
-        amount: st.amount,
-        category: st.category,
-        note: st.note ? `${st.note} [recurring:${st.id}]` : `[recurring:${st.id}]`,
-        date: dateToNoonISO(today),
-        createdAt: new Date().toISOString(),
-        accountTag: st.accountTag,
-      };
-      newTxns.push(txn);
+    // Auto-create scheduled transactions
+    for (const st of scheduledTransactions) {
+      if (isScheduledDueToday(st) && !hasTransactionToday(st)) {
+        try {
+          const newTxn: Transaction = {
+            id: generateId(),
+            type: st.type,
+            amount: st.amount,
+            category: st.category,
+            note: `Auto: ${st.description}`,
+            date: todayKey,
+            createdAt: new Date().toISOString(),
+          };
+          await storage.addTransaction(newTxn);
+        } catch (error) {
+          console.warn("Failed to auto-create scheduled transaction:", error);
+        }
+      }
     }
 
-    if (newTxns.length > 0) {
-      await storage.addTransactions(newTxns);
-      transactions.unshift(...newTxns);
-    }
-
-    setState((prev) => ({
-      ...prev,
+    setState({
       profile,
       transactions,
       currentBudget: budget,
       currentMonth: targetMonth,
       debts,
       userAccounts,
+      loading: false,
       household,
       householdMembers,
       scheduledTransactions,
-      loading: false,
-    }));
+    });
   }, []);
 
-  useEffect(() => {
-    loadData();
-
-    // Re-load data when auth state changes (login/logout)
-    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
-        invalidateAuthCache();
-        loadData();
-      }
-    });
-
-    // Re-load data when app comes back to foreground
-    const appStateSub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        loadData();
-      }
-    });
-
-    return () => {
-      appStateSub.remove();
-      authSub.unsubscribe();
-    };
-  }, [loadData]);
+  const reload = useCallback(() => loadData(state.currentMonth), [loadData, state.currentMonth]);
 
   const setCurrentMonth = useCallback(
-    (month: string) => {
-      loadData(month);
+    async (month: string) => {
+      setState((prev) => ({ ...prev, currentMonth: month }));
+      await loadData(month);
     },
     [loadData]
   );
 
-  const reload = useCallback(() => loadData(state.currentMonth), [loadData, state.currentMonth]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  const saveProfile = useCallback(
-    async (profile: UserProfile) => {
-      await storage.saveProfile(profile);
-      setState((prev) => ({ ...prev, profile }));
-    },
-    []
-  );
+  // Handle app state changes
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        // App became active, reload data to get latest
+        reload();
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [reload]);
+
+  const saveProfile = useCallback(async (profile: UserProfile) => {
+    setState((prev) => ({ ...prev, profile }));
+    await storage.saveProfile(profile);
+  }, []);
 
   const addTransaction = useCallback(
     async (txn: Transaction) => {
-      // Optimistic: add to local state immediately
       setState((prev) => ({
         ...prev,
         transactions: [txn, ...prev.transactions],
       }));
-      try {
-        await storage.addTransaction(txn);
-      } catch (err) {
-        console.error("addTransaction failed:", err);
-        // Rollback on failure
-        setState((prev) => ({
-          ...prev,
-          transactions: prev.transactions.filter((t) => t.id !== txn.id),
-        }));
-      }
+      await storage.addTransaction(txn);
     },
     []
   );
 
   const addTransactions = useCallback(
     async (txns: Transaction[]) => {
-      const ids = new Set(txns.map((t) => t.id));
-      // Optimistic: add all to local state
       setState((prev) => ({
         ...prev,
         transactions: [...txns, ...prev.transactions],
       }));
-      try {
-        await storage.addTransactions(txns);
-      } catch {
-        // Rollback on failure
-        setState((prev) => ({
-          ...prev,
-          transactions: prev.transactions.filter((t) => !ids.has(t.id)),
-        }));
-      }
+      await storage.addTransactions(txns);
     },
     []
   );
 
-  const deleteTransaction = useCallback(
-    async (id: string) => {
-      // Save for rollback
-      let removed: Transaction | undefined;
-      setState((prev) => {
-        removed = prev.transactions.find((t) => t.id === id);
-        return {
-          ...prev,
-          transactions: prev.transactions.filter((t) => t.id !== id),
-        };
-      });
-      try {
-        await storage.deleteTransaction(id);
-      } catch {
-        // Rollback on failure
-        if (removed) {
-          setState((prev) => ({
-            ...prev,
-            transactions: [removed!, ...prev.transactions],
-          }));
-        }
-      }
-    },
-    []
-  );
+  const deleteTransaction = useCallback(async (id: string) => {
+    setState((prev) => ({
+      ...prev,
+      transactions: prev.transactions.filter((txn) => txn.id !== id),
+    }));
+    await storage.deleteTransaction(id);
+  }, []);
 
   const updateTransaction = useCallback(
     async (id: string, updates: Partial<Omit<Transaction, "id" | "createdAt">>) => {
-      // Save old version for rollback
-      let original: Transaction | undefined;
-      setState((prev) => {
-        original = prev.transactions.find((t) => t.id === id);
-        return {
-          ...prev,
-          transactions: prev.transactions.map((t) =>
-            t.id === id ? { ...t, ...updates } : t
-          ),
-        };
-      });
-      try {
-        await storage.updateTransaction(id, updates);
-      } catch {
-        // Rollback on failure
-        if (original) {
-          setState((prev) => ({
-            ...prev,
-            transactions: prev.transactions.map((t) =>
-              t.id === id ? original! : t
-            ),
-          }));
-        }
-      }
+      setState((prev) => ({
+        ...prev,
+        transactions: prev.transactions.map((txn) =>
+          txn.id === id ? { ...txn, ...updates } : txn
+        ),
+      }));
+      await storage.updateTransaction(id, updates);
     },
     []
   );
@@ -302,201 +231,143 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (budget: MonthlyBudget) => {
       // saveBudgetForMonth returns budget with DB-assigned IDs
       const saved = await storage.saveBudgetForMonth(budget);
-      setState((prev) => ({
-        ...prev,
-        currentBudget:
-          saved.month === prev.currentMonth ? saved : prev.currentBudget,
-      }));
+      setState((prev) => ({ ...prev, currentBudget: saved }));
     },
     []
   );
 
-  const addDebt = useCallback(
-    async (debt: Debt) => {
-      // Optimistic: add to local state immediately, sorted by balance
-      setState((prev) => ({
-        ...prev,
-        debts: [...prev.debts, debt].sort((a, b) => a.balance - b.balance),
-      }));
-      try {
-        await storage.addDebt(debt);
-      } catch (err) {
-        console.error("addDebt failed:", err);
-        // Rollback on failure
-        setState((prev) => ({
-          ...prev,
-          debts: prev.debts.filter((d) => d.id !== debt.id),
-        }));
-      }
-    },
-    []
-  );
+  const addDebt = useCallback(async (debt: Debt) => {
+    setState((prev) => ({ ...prev, debts: [...prev.debts, debt] }));
+    await storage.addDebt(debt);
+  }, []);
 
   const updateDebt = useCallback(
     async (id: string, updates: Partial<Omit<Debt, "id" | "createdAt">>) => {
-      let original: Debt | undefined;
-      setState((prev) => {
-        original = prev.debts.find((d) => d.id === id);
-        return {
-          ...prev,
-          debts: prev.debts
-            .map((d) => (d.id === id ? { ...d, ...updates, updatedAt: new Date().toISOString() } : d))
-            .sort((a, b) => a.balance - b.balance),
-        };
-      });
-      try {
-        await storage.updateDebt(id, updates);
-      } catch (err) {
-        console.error("updateDebt failed:", err);
-        if (original) {
-          setState((prev) => ({
-            ...prev,
-            debts: prev.debts.map((d) => (d.id === id ? original! : d)),
-          }));
-        }
-      }
+      setState((prev) => ({
+        ...prev,
+        debts: prev.debts.map((debt) =>
+          debt.id === id ? { ...debt, ...updates, updatedAt: new Date().toISOString() } : debt
+        ),
+      }));
+      await storage.updateDebt(id, updates);
     },
     []
   );
 
-  const deleteDebt = useCallback(
-    async (id: string) => {
-      let removed: Debt | undefined;
-      setState((prev) => {
-        removed = prev.debts.find((d) => d.id === id);
-        return {
-          ...prev,
-          debts: prev.debts.filter((d) => d.id !== id),
-        };
-      });
-      try {
-        await storage.deleteDebt(id);
-      } catch (err) {
-        console.error("deleteDebt failed:", err);
-        if (removed) {
-          setState((prev) => ({
-            ...prev,
-            debts: [...prev.debts, removed!].sort((a, b) => a.balance - b.balance),
-          }));
-        }
-      }
-    },
-    []
-  );
+  const deleteDebt = useCallback(async (id: string) => {
+    setState((prev) => ({
+      ...prev,
+      debts: prev.debts.filter((debt) => debt.id !== id),
+    }));
+    await storage.deleteDebt(id);
+  }, []);
 
+  // User account actions
   const addUserAccountAction = useCallback(async (label: string, emoji: string) => {
-    const result = await storage.addUserAccount(label, emoji);
-    if (result) setState((prev) => ({ ...prev, userAccounts: [...prev.userAccounts, result] }));
+    const id = generateId();
+    const account = { id, label, emoji };
+    setState((prev) => ({ ...prev, userAccounts: [...prev.userAccounts, account] }));
+    await storage.addUserAccount(account);
   }, []);
 
   const deleteUserAccountAction = useCallback(async (id: string) => {
-    setState((prev) => ({ ...prev, userAccounts: prev.userAccounts.filter((a) => a.id !== id) }));
+    setState((prev) => ({
+      ...prev,
+      userAccounts: prev.userAccounts.filter((acc) => acc.id !== id),
+    }));
     await storage.deleteUserAccount(id);
   }, []);
-
-
-  const addScheduledTransactionAction = useCallback(
-    async (st: ScheduledTransaction) => {
-      setState((prev) => ({
-        ...prev,
-        scheduledTransactions: [...prev.scheduledTransactions, st],
-      }));
-      try {
-        await storage.addScheduledTransaction(st);
-      } catch (err) {
-        console.error("addScheduledTransaction failed:", err);
-        setState((prev) => ({
-          ...prev,
-          scheduledTransactions: prev.scheduledTransactions.filter((s) => s.id !== st.id),
-        }));
-      }
-    },
-    []
-  );
-
-  const updateScheduledTransactionAction = useCallback(
-    async (id: string, updates: Partial<Omit<ScheduledTransaction, "id" | "createdAt">>) => {
-      setState((prev) => ({
-        ...prev,
-        scheduledTransactions: prev.scheduledTransactions.map((s) =>
-          s.id === id ? { ...s, ...updates } : s
-        ),
-      }));
-      try {
-        await storage.updateScheduledTransaction(id, updates);
-      } catch (err) {
-        console.error("updateScheduledTransaction failed:", err);
-      }
-    },
-    []
-  );
-
-  const deleteScheduledTransactionAction = useCallback(
-    async (id: string) => {
-      setState((prev) => ({
-        ...prev,
-        scheduledTransactions: prev.scheduledTransactions.filter((s) => s.id !== id),
-      }));
-      try {
-        await storage.deleteScheduledTransaction(id);
-      } catch (err) {
-        console.error("deleteScheduledTransaction failed:", err);
-      }
-    },
-    []
-  );
 
   const updateEmergencyFund = useCallback(
     async (amount: number) => {
       if (!state.profile) return;
       const updated = { ...state.profile, emergencyFundCurrent: amount };
-      // Auto-advance baby step if $1000 reached
-      if (amount >= 1000 && state.profile.babyStep === 1) {
-        updated.babyStep = 2;
-      }
-      // Auto-advance to step 3 if no debts and on step 2
-      if (updated.babyStep === 2 && state.debts.length === 0) {
-        updated.babyStep = 3;
-      }
-      await storage.saveProfile(updated);
       setState((prev) => ({ ...prev, profile: updated }));
+      await storage.saveProfile(updated);
     },
-    [state.profile, state.debts]
+    [state.profile]
   );
 
-  const createHouseholdAction = useCallback(
-    async (name: string): Promise<boolean> => {
-      const result = await storage.createHousehold(name);
-      if (result) {
-        await reload();
-        return true;
-      }
-      return false;
+  // Scheduled transactions
+  const addScheduledTransactionAction = useCallback(async (st: ScheduledTransaction) => {
+    setState((prev) => ({
+      ...prev,
+      scheduledTransactions: [...prev.scheduledTransactions, st],
+    }));
+    await storage.addScheduledTransaction(st);
+  }, []);
+
+  const updateScheduledTransactionAction = useCallback(
+    async (id: string, updates: Partial<Omit<ScheduledTransaction, "id" | "createdAt">>) => {
+      setState((prev) => ({
+        ...prev,
+        scheduledTransactions: prev.scheduledTransactions.map((st) =>
+          st.id === id ? { ...st, ...updates } : st
+        ),
+      }));
+      await storage.updateScheduledTransaction(id, updates);
     },
-    [reload]
+    []
   );
 
-  const joinHouseholdAction = useCallback(
-    async (code: string): Promise<boolean> => {
-      const result = await storage.joinHousehold(code);
-      if (result) {
-        await reload();
-        return true;
-      }
-      return false;
-    },
-    [reload]
-  );
+  const deleteScheduledTransactionAction = useCallback(async (id: string) => {
+    setState((prev) => ({
+      ...prev,
+      scheduledTransactions: prev.scheduledTransactions.filter((st) => st.id !== id),
+    }));
+    await storage.deleteScheduledTransaction(id);
+  }, []);
 
-  const leaveHouseholdAction = useCallback(
-    async () => {
-      await storage.leaveHousehold();
+  // Household actions
+  const createHouseholdAction = useCallback(async (name: string): Promise<boolean> => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return false;
+
+      const { data: household, error } = await supabase.rpc('create_household', { household_name: name });
+      if (error) throw error;
+
+      invalidateAuthCache();
       await reload();
-    },
-    [reload]
-  );
+      return true;
+    } catch (error) {
+      console.error('Create household error:', error);
+      return false;
+    }
+  }, [reload]);
 
-  // Compute rollover balance for the current month.
+  const joinHouseholdAction = useCallback(async (code: string): Promise<boolean> => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return false;
+
+      const { error } = await supabase.rpc('join_household', { invite_code: code });
+      if (error) throw error;
+
+      invalidateAuthCache();
+      await reload();
+      return true;
+    } catch (error) {
+      console.error('Join household error:', error);
+      return false;
+    }
+  }, [reload]);
+
+  const leaveHouseholdAction = useCallback(async () => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return;
+
+      await supabase.from('household_members').delete().eq('user_id', data.user.id);
+      await supabase.from('profiles').update({ household_id: null }).eq('id', data.user.id);
+
+      invalidateAuthCache();
+      await reload();
+    } catch (error) {
+      console.error('Leave household error:', error);
+    }
+  }, [reload]);
+
   // Starting from DEC_2025_ENDING_BALANCE, sum all REAL income and subtract
   // all REAL expenses for every month BEFORE currentMonth.
   // Transfers are excluded - they don't change net worth.
@@ -533,6 +404,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // SIMPLIFIED CATEGORY FUNCTIONS - Direct DB operations instead of full budget save
   const createCategory = useCallback(async (categoryData: Omit<BudgetCategory, 'id'>) => {
     const newCategory: BudgetCategory = {
       ...categoryData,
@@ -552,9 +424,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       categories: [...budget.categories, newCategory],
     };
     
-    await storage.saveBudgetForMonth(updatedBudget);
-    setState(prev => ({ ...prev, currentBudget: updatedBudget }));
-  }, [state.currentBudget, state.currentMonth]);
+    // Use the existing saveBudget function which handles DB sync properly
+    await saveBudget(updatedBudget);
+  }, [state.currentBudget, state.currentMonth, saveBudget]);
 
   const updateCategory = useCallback(async (id: string, updates: Partial<Omit<BudgetCategory, 'id'>>) => {
     if (!state.currentBudget) return;
@@ -566,9 +438,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ),
     };
     
-    await storage.saveBudgetForMonth(updatedBudget);
-    setState(prev => ({ ...prev, currentBudget: updatedBudget }));
-  }, [state.currentBudget, state.currentMonth]);
+    // Use the existing saveBudget function which handles DB sync properly
+    await saveBudget(updatedBudget);
+  }, [state.currentBudget, saveBudget]);
 
   const deleteCategory = useCallback(async (id: string) => {
     console.log('deleteCategory called with ID:', id);
@@ -586,15 +458,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     console.log('Updated budget categories:', updatedBudget.categories.length);
     
     try {
-      await storage.saveBudgetForMonth(updatedBudget);
-      console.log('Budget saved successfully');
-      setState(prev => ({ ...prev, currentBudget: updatedBudget }));
-      console.log('State updated');
+      // Use the existing saveBudget function which handles DB sync properly
+      await saveBudget(updatedBudget);
+      console.log('Budget saved successfully via saveBudget');
     } catch (error) {
       console.error('Error saving budget:', error);
       throw error;
     }
-  }, [state.currentBudget, state.currentMonth]);
+  }, [state.currentBudget, saveBudget]);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     if (!state.profile) return;
@@ -604,8 +475,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...updates,
     };
     
-    await storage.saveProfile(updatedProfile);
     setState(prev => ({ ...prev, profile: updatedProfile }));
+    await storage.saveProfile(updatedProfile);
   }, [state.profile]);
 
   return (

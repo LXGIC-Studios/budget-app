@@ -201,9 +201,17 @@ export default function BudgetScreen() {
             </View>
           ) : (
             flexibleItems.map((item) => {
-              console.log('Rendering item:', item.name, 'allocated:', item.allocated, 'frequency:', item.frequency);
-              const monthlyAmount = getMonthlyAmount(item.allocated, item.frequency || "monthly");
-              console.log('Calculated monthlyAmount:', monthlyAmount);
+              // Debug: Log item data
+              console.log('Rendering item:', {
+                name: item.name,
+                allocated: item.allocated,
+                frequency: item.frequency,
+                type: typeof item.allocated,
+                isValid: !isNaN(item.allocated)
+              });
+              
+              const monthlyAmount = getMonthlyAmount(item.allocated || 0, item.frequency || "monthly");
+              console.log('Calculated monthlyAmount:', monthlyAmount, 'for', item.name);
               
               return (
                 <View key={item.id} style={styles.itemCard}>
@@ -226,7 +234,7 @@ export default function BudgetScreen() {
                     
                     <View style={styles.itemAmount}>
                       <Text style={styles.itemAmountNum}>
-                        {monthlyAmount > 0 ? formatCurrency(monthlyAmount) : "$0.00"}
+                        {formatCurrency(monthlyAmount || 0)}
                       </Text>
                       <Text style={styles.itemAmountLabel}>per month</Text>
                     </View>
