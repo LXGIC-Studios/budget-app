@@ -184,6 +184,8 @@ export default function BillsCalendarScreen() {
   };
 
   const handleDeleteItem = (item: any) => {
+    console.log('Bills page - Attempting to delete item:', item.id, item.name);
+    
     if (item.id === 'monthly-income') {
       Alert.alert(
         "Reset Income",
@@ -201,7 +203,7 @@ export default function BillsCalendarScreen() {
     }
     
     Alert.alert(
-      "Delete Item",
+      "Delete Bill",
       `Are you sure you want to delete "${item.name}"?`,
       [
         { text: "Cancel", style: "cancel" },
@@ -210,10 +212,13 @@ export default function BillsCalendarScreen() {
           style: "destructive",
           onPress: async () => {
             try {
+              console.log('Bills page - Calling deleteCategory with ID:', item.id);
               await deleteCategory(item.id);
+              console.log('Bills page - Delete successful');
               impact("Light");
             } catch (error) {
-              Alert.alert("Error", "Failed to delete item");
+              console.error('Bills page - Delete error:', error);
+              Alert.alert("Error", `Failed to delete bill: ${error.message || error}`);
             }
           },
         },
