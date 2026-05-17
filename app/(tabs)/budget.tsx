@@ -202,16 +202,26 @@ export default function BudgetScreen() {
           ) : (
             flexibleItems.map((item) => {
               // Debug: Log item data
-              console.log('Rendering item:', {
+              console.log('🔍 Rendering budget item:', {
                 name: item.name,
                 allocated: item.allocated,
                 frequency: item.frequency,
                 type: typeof item.allocated,
-                isValid: !isNaN(item.allocated)
+                isValid: !isNaN(item.allocated),
+                rawValue: JSON.stringify(item.allocated)
               });
               
-              const monthlyAmount = getMonthlyAmount(item.allocated || 0, item.frequency || "monthly");
-              console.log('Calculated monthlyAmount:', monthlyAmount, 'for', item.name);
+              // Ensure allocated is a number
+              const allocatedNum = typeof item.allocated === 'string' ? parseFloat(item.allocated) : (item.allocated || 0);
+              const monthlyAmount = getMonthlyAmount(allocatedNum, item.frequency || "monthly");
+              
+              console.log('💰 Amount calculation:', {
+                original: item.allocated,
+                converted: allocatedNum,
+                frequency: item.frequency,
+                monthlyResult: monthlyAmount,
+                formatted: formatCurrency(monthlyAmount)
+              });
               
               return (
                 <View key={item.id} style={styles.itemCard}>
@@ -234,7 +244,12 @@ export default function BudgetScreen() {
                     
                     <View style={styles.itemAmount}>
                       <Text style={styles.itemAmountNum}>
-                        {formatCurrency(monthlyAmount || 0)}
+                        {monthlyAmount > 0 
+                          ? formatCurrency(monthlyAmount)
+                          : allocatedNum > 0 
+                            ? formatCurrency(allocatedNum) + " (raw)"
+                            : "$0.00"
+                        }
                       </Text>
                       <Text style={styles.itemAmountLabel}>per month</Text>
                     </View>
