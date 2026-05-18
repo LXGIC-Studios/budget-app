@@ -258,7 +258,11 @@ export default function BudgetScreen() {
                       <Pressable style={styles.actionBtn} onPress={() => openItemForm(item)}>
                         <Edit3 size={16} color={colors.textSecondary} />
                       </Pressable>
-                      <Pressable style={styles.actionBtn} onPress={() => handleDeleteItem(item)}>
+                      <Pressable 
+                        style={styles.actionBtn} 
+                        onPress={() => handleDeleteItem(item)}
+                        android_ripple={{ color: colors.red, borderless: false }}
+                      >
                         <Trash2 size={16} color={colors.red} />
                       </Pressable>
                     </View>
@@ -567,6 +571,12 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     padding: spacing.xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 4,
+    minWidth: 32,
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   empty: {
     alignItems: "center",

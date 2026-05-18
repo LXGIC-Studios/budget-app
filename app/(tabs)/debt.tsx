@@ -30,7 +30,7 @@ const DEBT_TYPES: { value: DebtType; label: string; emoji: string }[] = [
 
 export default function DebtScreen() {
   const { debts, addDebt, updateDebt, deleteDebt } = useApp();
-  
+
   // Form states
   const [showDebtForm, setShowDebtForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -132,7 +132,7 @@ export default function DebtScreen() {
       Alert.alert("Error", "Failed to save debt");
       return;
     }
-    
+
     closeDebtForm();
     impact("Light");
   };
@@ -189,20 +189,20 @@ export default function DebtScreen() {
     }
 
     const newBalance = selectedDebt.balance - payment;
-    
+
     try {
-      await updateDebt(selectedDebt.id, { 
+      await updateDebt(selectedDebt.id, {
         balance: newBalance,
         updatedAt: new Date().toISOString(),
       });
-      
+
       // Show success message
       Alert.alert(
-        "Payment Applied", 
+        "Payment Applied",
         `$${payment.toFixed(2)} payment applied to ${selectedDebt.name}.\n\nNew balance: ${formatCurrency(newBalance)}`,
         [{ text: "OK", style: "default" }]
       );
-      
+
       closePaymentForm();
       impact("Success");
     } catch (error) {
@@ -217,7 +217,7 @@ export default function DebtScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-        
+
         {/* Total Debt Hero */}
         <View style={styles.debtHero}>
           <Text style={styles.heroEyebrow}>💳 TOTAL DEBT</Text>
@@ -252,7 +252,7 @@ export default function DebtScreen() {
               <Text style={styles.addBtnText}>ADD DEBT</Text>
             </Pressable>
           </View>
-          
+
           {debts.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🎉</Text>
@@ -264,10 +264,10 @@ export default function DebtScreen() {
               .sort((a, b) => b.balance - a.balance) // Sort by balance descending
               .map((debt) => {
                 const debtTypeInfo = getDebtTypeInfo(debt.type);
-                
+
                 return (
                   <Pressable
-                    key={debt.id} 
+                    key={debt.id}
                     style={styles.debtCard}
                     onPress={() => openPaymentForm(debt)}
                   >
@@ -275,7 +275,7 @@ export default function DebtScreen() {
                       <View style={styles.debtLeft}>
                         <Text style={styles.debtEmoji}>{debtTypeInfo.emoji}</Text>
                         <View style={styles.debtInfo}>
-                          <Text 
+                          <Text
                             style={styles.debtName}
                             numberOfLines={1}
                             ellipsizeMode="tail"
@@ -286,16 +286,16 @@ export default function DebtScreen() {
                           <Text style={styles.debtRate}>{debt.interestRate.toFixed(1)}% APR</Text>
                         </View>
                       </View>
-                      
+
                       <View style={styles.debtRight}>
                         <Text style={styles.debtBalance}>{formatCurrency(debt.balance)}</Text>
                         <Text style={styles.debtMinPayment}>Min: {formatCurrency(debt.minimumPayment)}</Text>
                         <Text style={styles.tapToPay}>TAP TO PAY</Text>
                       </View>
-                      
+
                       <View style={styles.debtActions}>
-                        <Pressable 
-                          style={styles.actionBtn} 
+                        <Pressable
+                          style={styles.actionBtn}
                           onPress={(e) => {
                             e.stopPropagation();
                             openDebtForm(debt);
@@ -303,12 +303,13 @@ export default function DebtScreen() {
                         >
                           <Edit3 size={16} color={colors.textSecondary} />
                         </Pressable>
-                        <Pressable 
-                          style={styles.actionBtn} 
+                        <Pressable
+                          style={styles.actionBtn}
                           onPress={(e) => {
                             e.stopPropagation();
                             handleDeleteDebt(debt);
                           }}
+                          android_ripple={{ color: colors.red, borderless: false }}
                         >
                           <Trash2 size={16} color={colors.red} />
                         </Pressable>
@@ -323,7 +324,7 @@ export default function DebtScreen() {
         {/* Debt Summary Stats */}
         <View style={styles.summarySection}>
           <Text style={styles.sectionTitle}>📊 DEBT ANALYSIS</Text>
-          
+
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Total Debt</Text>
@@ -560,8 +561,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 24,
   },
-  heroStat: { 
-    alignItems: "center", 
+  heroStat: {
+    alignItems: "center",
     gap: 4,
     minWidth: 80,
   },
@@ -700,6 +701,12 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     padding: spacing.xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 4,
+    minWidth: 32,
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   empty: {
     alignItems: "center",

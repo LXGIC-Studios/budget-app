@@ -443,26 +443,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [state.currentBudget, saveBudget]);
 
   const deleteCategory = useCallback(async (id: string) => {
-    console.log('deleteCategory called with ID:', id);
+    console.log('🗑️ deleteCategory called with ID:', id);
     if (!state.currentBudget) {
-      console.log('No current budget found');
+      console.log('❌ No current budget found');
       return;
     }
     
-    console.log('Current budget categories:', state.currentBudget.categories.length);
+    console.log('📊 Current budget categories:', state.currentBudget.categories.length);
+    const categoryToDelete = state.currentBudget.categories.find(cat => cat.id === id);
+    console.log('🎯 Found category to delete:', categoryToDelete?.name || 'NOT FOUND');
+    
     const updatedBudget = {
       ...state.currentBudget,
       categories: state.currentBudget.categories.filter(cat => cat.id !== id),
     };
     
-    console.log('Updated budget categories:', updatedBudget.categories.length);
+    console.log('✅ Updated budget categories:', updatedBudget.categories.length);
     
     try {
       // Use the existing saveBudget function which handles DB sync properly
       await saveBudget(updatedBudget);
-      console.log('Budget saved successfully via saveBudget');
+      console.log('💾 Budget saved successfully via saveBudget');
     } catch (error) {
-      console.error('Error saving budget:', error);
+      console.error('💥 Error saving budget:', error);
       throw error;
     }
   }, [state.currentBudget, saveBudget]);
